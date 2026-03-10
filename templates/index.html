@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overall Programs Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .project-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        
+        .project-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .project-manager {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .project-stats {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .project-stat {
+            text-align: center;
+        }
+        
+        .project-stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .project-stat-label {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .project-updated {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+        
+        .empty-state {
+            background: white;
+            padding: 60px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .empty-state h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .empty-state p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .reload-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        
+        .reload-btn:hover {
+            background: #5568d3;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .import-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .import-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 10px rgba(245, 87, 108, 0.3);
+        }
+        
+        .import-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        .import-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .progress-overlay.show {
+            display: flex;
+        }
+        
+        .progress-content {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .message {
+            padding: 15px 25px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .message.show {
+            display: block;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Overall Programs Dashboard</h1>
+            <p class="subtitle">Web-based project dashboard management system</p>
+        </header>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalProjects">-</div>
+                <div class="stat-label">Total Projects</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalTasks">-</div>
+                <div class="stat-label">Total Tasks</div>
+            </div>
+
+        </div>
+        
+        <div class="import-section">
+            <button class="import-btn" id="importBtn" onclick="document.getElementById('fileInput').click()">
+                📁 Import New Project from Excel
+            </button>
+            <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileSelect(event)">
+            <div class="message" id="message"></div>
+        </div>
+        
+        <div id="projectsContainer">
+            <div class="loading">Loading projects...</div>
+        </div>
+    </div>
+    
+    <div class="progress-overlay" id="progressOverlay">
+        <div class="progress-content">
+            <div class="spinner"></div>
+            <div id="progressText">Uploading and processing Excel file...</div>
+        </div>
+    </div>
+    
+    <script>
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                
+                document.getElementById('totalProjects').textContent = stats.total_projects;
+                document.getElementById('totalTasks').textContent = stats.total_tasks;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        async function loadProjects() {
+            try {
+                const response = await fetch('/api/projects');
+                const projects = await response.json();
+                
+                const container = document.getElementById('projectsContainer');
+                
+                if (projects.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <h2>No Projects Found</h2>
+                            <p>Place Excel files in the watched folder to automatically import projects.</p>
+                            <p><strong>Watched folder:</strong> ${await getWatchedFolder()}</p>
+                            <button class="reload-btn" onclick="reloadExcel()">Reload Now</button>
+                        </div>
+                    `;
+                } else {
+                    const projectsHTML = projects.map(project => `
+                        <a href="/project/${encodeURIComponent(project.name)}" class="project-card">
+                            <div class="project-name">${escapeHtml(project.name)}</div>
+                            <div class="project-manager">👤 ${escapeHtml(project.manager || 'No manager')}</div>
+                            <div class="project-stats">
+                                <div class="project-stat">
+                                    <div class="project-stat-value">${project.task_count}</div>
+                                    <div class="project-stat-label">Tasks</div>
+                                </div>
+                            </div>
+                            <div class="project-updated">
+                                Last updated: ${formatDate(project.updated_at)}
+                            </div>
+                        </a>
+                    `).join('');
+                    
+                    container.innerHTML = `<div class="projects-grid">${projectsHTML}</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                document.getElementById('projectsContainer').innerHTML = `
+                    <div class="empty-state">
+                        <h2>Error Loading Projects</h2>
+                        <p>Failed to load projects from server.</p>
+                        <button class="reload-btn" onclick="location.reload()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+        
+        async function getWatchedFolder() {
+            try {
+                const response = await fetch('/api/stats');
+                const stats = await response.json();
+                return stats.watched_folder;
+            } catch {
+                return 'Unknown';
+            }
+        }
+        
+        async function reloadExcel() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Reloading...';
+            
+            try {
+                await fetch('/api/reload');
+                location.reload();
+            } catch (error) {
+                console.error('Error reloading:', error);
+                btn.disabled = false;
+                btn.textContent = 'Reload Now';
+                alert('Failed to reload. Please try again.');
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Never';
+            const date = new Date(dateStr);
+            return date.toLocaleString();
+        }
+        
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.name.endsWith('.xlsx')) {
+                showMessage('Please select a valid Excel file (.xlsx)', 'error');
+                return;
+            }
+            
+            const importBtn = document.getElementById('importBtn');
+            const overlay = document.getElementById('progressOverlay');
+            const progressText = document.getElementById('progressText');
+            
+            // Disable button and show overlay
+            importBtn.disabled = true;
+            overlay.classList.add('show');
+            progressText.textContent = 'Uploading and processing Excel file...';
+            
+            try {
+                // Create FormData and append file
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Upload file
+                const response = await fetch('/api/upload-excel', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Success
+                    progressText.textContent = 'Success! Reloading page...';
+                    showMessage(`Successfully imported project: ${result.project_name || file.name}`, 'success');
+                    
+                    // Reload after a short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    // Error from server
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+                importBtn.disabled = false;
+                overlay.classList.remove('show');
+            }
+            
+            // Reset file input
+            event.target.value = '';
+        }
+        
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type} show`;
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 5000);
+        }
+        
+        // Load data on page load
+        loadStats();
+        loadProjects();
+        
+        // Refresh every 30 seconds
+        setInterval(() => {
+            loadStats();
+            loadProjects();
+        }, 30000);
+    </script>
+</body>
+</html>
