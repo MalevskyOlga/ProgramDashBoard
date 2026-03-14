@@ -411,6 +411,42 @@ def api_delete_dependency_by_tasks(project_name):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/project/<project_name>/gate-sign-offs', methods=['GET'])
+def api_get_gate_sign_offs(project_name):
+    """Get all gate sign-offs for a project"""
+    sign_offs = db_manager.get_gate_sign_offs(project_name)
+    return jsonify(sign_offs)
+
+
+@app.route('/api/project/<project_name>/gate-sign-offs', methods=['POST'])
+def api_upsert_gate_sign_off(project_name):
+    """Create or update a gate sign-off"""
+    data = request.json
+    required = ['gate_name', 'gate_id', 'sign_off_date', 'status']
+    for field in required:
+        if field not in data:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+    if data['status'] == 'Passed with Rework' and not data.get('rework_due_date'):
+        return jsonify({'error': 'rework_due_date is required for Passed with Rework status'}), 400
+    success = db_manager.upsert_gate_sign_off(
+        project_name=project_name,
+        gate_name=data['gate_name'],
+        gate_id=data['gate_id'],
+        sign_off_date=data['sign_off_date'],
+        status=data['status'],
+        rework_due_date=data.get('rework_due_date'),
+        rework_sign_off_date=data.get('rework_sign_off_date')
+    )
+    return jsonify({'success': success})
+
+
+@app.route('/api/project/<project_name>/gate-sign-off/<gate_name>', methods=['DELETE'])
+def api_delete_gate_sign_off(project_name, gate_name):
+    """Remove a gate sign-off"""
+    success = db_manager.delete_gate_sign_off(project_name, gate_name)
+    return jsonify({'success': success})
+
+
 if __name__ == '__main__':
     print("=" * 80)
     print("Dashboard Generator Web Server")

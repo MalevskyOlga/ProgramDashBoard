@@ -20,6 +20,9 @@ if errorlevel 1 (
 echo [INFO] Python found
 echo.
 
+REM Change to the script's directory so relative paths work
+cd /d "%~dp0"
+
 REM Install dependencies if needed
 echo [INFO] Checking dependencies...
 pip install -q -r requirements.txt

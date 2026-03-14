@@ -77,7 +77,43 @@ class DatabaseManager:
             cursor.execute('ALTER TABLE tasks ADD COLUMN tailed_out INTEGER DEFAULT 0')
         except:
             pass  # Column already exists
-        
+
+        try:
+            cursor.execute('ALTER TABLE tasks ADD COLUMN is_rework_cause INTEGER DEFAULT 0')
+        except:
+            pass  # Column already exists
+
+        try:
+            cursor.execute('ALTER TABLE tasks ADD COLUMN rework_original_due TEXT')
+        except:
+            pass  # Column already exists
+
+        try:
+            cursor.execute('ALTER TABLE gate_sign_offs ADD COLUMN rework_sign_off_date TEXT')
+        except:
+            pass  # Column already exists
+
+        try:
+            cursor.execute('ALTER TABLE tasks ADD COLUMN cloned_from_phase TEXT')
+        except:
+            pass  # Column already exists
+
+        # Gate sign-offs table- tracks gate pass/pass-with-rework decisions
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS gate_sign_offs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_name TEXT NOT NULL,
+                gate_name TEXT NOT NULL,
+                gate_id INTEGER NOT NULL,
+                sign_off_date TEXT NOT NULL,
+                rework_due_date TEXT,
+                status TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(project_name, gate_name)
+            )
+        ''')
+
         # Gate baselines table - stores original planned dates for Gates
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS gate_baselines (
@@ -284,7 +320,8 @@ class DatabaseManager:
         
         allowed_fields = ['reference_id', 'name', 'phase', 'owner', 'start_date', 
                          'end_date', 'status', 'date_closed', 'result', 'row_order',
-                         'critical', 'milestone', 'tailed_out']
+                         'critical', 'milestone', 'tailed_out', 'is_rework_cause',
+                         'rework_original_due', 'cloned_from_phase']
         
         for field in allowed_fields:
             if field in task_data:
@@ -513,6 +550,48 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('DELETE FROM task_dependencies WHERE predecessor_id = ? AND successor_id = ?', (predecessor_id, successor_id))
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return success
+
+    # Gate Sign-Off Management
+
+    def get_gate_sign_offs(self, project_name):
+        """Get all gate sign-offs for a project"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM gate_sign_offs WHERE project_name = ? ORDER BY gate_name', (project_name,))
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    def upsert_gate_sign_off(self, project_name, gate_name, gate_id, sign_off_date, status, rework_due_date=None, rework_sign_off_date=None):
+        """Create or update a gate sign-off"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        now = datetime.now().isoformat()
+        cursor.execute('''
+            INSERT INTO gate_sign_offs
+                (project_name, gate_name, gate_id, sign_off_date, rework_due_date, rework_sign_off_date, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(project_name, gate_name) DO UPDATE SET
+                gate_id = excluded.gate_id,
+                sign_off_date = excluded.sign_off_date,
+                rework_due_date = excluded.rework_due_date,
+                rework_sign_off_date = excluded.rework_sign_off_date,
+                status = excluded.status,
+                updated_at = excluded.updated_at
+        ''', (project_name, gate_name, gate_id, sign_off_date, rework_due_date, rework_sign_off_date, status, now, now))
+        conn.commit()
+        conn.close()
+        return True
+
+    def delete_gate_sign_off(self, project_name, gate_name):
+        """Remove a gate sign-off"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM gate_sign_offs WHERE project_name = ? AND gate_name = ?', (project_name, gate_name))
         success = cursor.rowcount > 0
         conn.commit()
         conn.close()

@@ -242,7 +242,7 @@
 
         .table-header {
             display: grid;
-            grid-template-columns: 40px 200px 120px 105px 105px 120px 60px;
+            grid-template-columns: 40px 200px 120px 105px 105px 120px 90px;
             gap: 8px;
             padding: 15px 12px;
             background: #2c5f2d;
@@ -293,7 +293,7 @@
 
         .task-row {
             display: grid;
-            grid-template-columns: 40px 200px 120px 105px 105px 120px 60px;
+            grid-template-columns: 40px 200px 120px 105px 105px 120px 90px;
             gap: 8px;
             padding: 10px 12px;
             border-bottom: 1px solid #e0e0e0;
@@ -650,6 +650,189 @@
         }
         .task-row.tailed-out { opacity: 0.6; }
         .task-row.tailed-out .task-name { text-decoration: line-through; color: #999; }
+
+        /* Rework cause task highlight */
+        .task-row.rework-cause {
+            background: #fff8e1 !important;
+            border-left: 4px solid #ffc107 !important;
+        }
+        .task-row.rework-cause:hover {
+            background: #fff3cd !important;
+        }
+
+        /* Gate passed styles */
+        .task-row.gate-passed {
+            background: #e8f5e9 !important;
+            border-left: 4px solid #4caf50 !important;
+        }
+        .task-row.gate-passed-rework {
+            background: #fff3cd !important;
+            border-left: 4px solid #ff9800 !important;
+        }
+        .task-row.gate-passed-rework:hover {
+            background: #ffe0b2 !important;
+        }
+
+        /* Gate badges */
+        .rework-badge {
+            background: #ff9800;
+            color: white;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 0.78em;
+            font-weight: 700;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .rework-badge-history {
+            background: #ffb74d;
+            color: white;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 0.72em;
+            font-weight: 600;
+            margin-left: 4px;
+            vertical-align: middle;
+            opacity: 0.9;
+        }
+        .passed-badge {
+            background: #4caf50;
+            color: white;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: 0.78em;
+            font-weight: 700;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .rework-tasks-btn {
+            background: #fff3e0;
+            border: 1px solid #e65100;
+            color: #e65100;
+            border-radius: 10px;
+            padding: 1px 8px;
+            font-size: 0.75em;
+            cursor: pointer;
+            font-weight: 600;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+        .rework-tasks-btn:hover { background: #ffe0b2; }
+        .cloned-from-badge {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            font-size: 0.72em;
+            font-weight: 600;
+            padding: 1px 6px;
+            margin-left: 5px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .rework-popup {
+            position: absolute;
+            z-index: 9999;
+            background: #fff;
+            border: 2px solid #e65100;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+            min-width: 430px;
+            max-width: 620px;
+            overflow: hidden;
+        }
+        .rework-popup-header {
+            background: #e65100;
+            color: #fff;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        .rework-log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.84em;
+        }
+        .rework-log-table th {
+            background: #fff8e1;
+            padding: 6px 10px;
+            text-align: left;
+            border-bottom: 1px solid #ffe082;
+            white-space: nowrap;
+        }
+        .rework-log-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .rework-log-table tr:last-child td { border-bottom: none; }
+        .rework-orig-date-input {
+            border: 1px solid #ffb74d;
+            border-radius: 4px;
+            padding: 2px 5px;
+            font-size: 0.82em;
+            color: #555;
+            background: #fff8e1;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .rework-orig-date-input:focus {
+            outline: 2px solid #e65100;
+            background: #fff;
+        }
+
+        /* Gate sign-off button */
+        .gate-signoff-btn {
+            padding: 2px 7px;
+            border: 1px solid #1976d2;
+            background: #e3f2fd;
+            color: #1976d2;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75em;
+            white-space: nowrap;
+        }
+        .gate-signoff-btn:hover { background: #bbdefb; }
+        .gate-signoff-btn.signed-passed {
+            background: #c8e6c9;
+            border-color: #388e3c;
+            color: #1b5e20;
+        }
+        .gate-signoff-btn.signed-rework {
+            background: #ffe0b2;
+            border-color: #e65100;
+            color: #bf360c;
+        }
+
+        /* Rework cause toggle button */
+        .rework-cause-btn {
+            padding: 2px 6px;
+            border: 1px solid #bbb;
+            background: #f5f5f5;
+            color: #888;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        .rework-cause-btn:hover { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+        .rework-cause-btn.active {
+            background: #ff9800;
+            border-color: #e65100;
+            color: white;
+        }
+
+        /* Gantt bars for gate sign-off states */
+        .gantt-bar.gate-passed-bar {
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%) !important;
+            border-color: #1b5e20 !important;
+        }
+        .gantt-bar.gate-rework-bar {
+            background: linear-gradient(135deg, #ff9800 0%, #e65100 100%) !important;
+            border-color: #bf360c !important;
+        }
 
         /* Legend */
         .legend {
@@ -1053,6 +1236,18 @@
             <div class="legend-color" style="width: 20px; height: 20px; transform: rotate(45deg); background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);"></div>
             <span>Milestone</span>
         </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);"></div>
+            <span>✅ Gate Passed</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #ff9800 0%, #e65100 100%);"></div>
+            <span>⚠ Gate Passed with Rework</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #fff8e1; border: 2px solid #ffc107;"></div>
+            <span>⚠ Rework Cause Task</span>
+        </div>
     </div>
 
     <div class="tooltip" id="tooltip">
@@ -1141,9 +1336,12 @@
                     </label>
                 </div>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Task</button>
+                <div class="modal-footer" style="justify-content:space-between;">
+                    <button type="button" id="deleteTaskBtn" class="btn" style="background:#c62828;color:#fff;display:none;" onclick="deleteTask(currentEditId);closeTaskModal()">🗑 Delete Task</button>
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Task</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1158,6 +1356,44 @@
             <div id="tailedOutModalContent" style="padding:20px;max-height:70vh;overflow-y:auto;"></div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="document.getElementById('tailedOutModal').classList.remove('active')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tailed Out Carry Forward Modal -->
+    <div class="modal" id="tailedOutCloneModal">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#757575 0%,#424242 100%);">
+                🚫 Task Tailed Out — Carry Forward?
+            </div>
+            <div style="padding:22px;">
+                <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:12px 16px;margin-bottom:18px;">
+                    <div style="font-weight:700;font-size:1em;color:#333;" id="cloneOriginalTaskName"></div>
+                    <div style="font-size:0.85em;color:#888;margin-top:3px;">Original phase: <span id="cloneOriginalPhase" style="font-weight:600;color:#666;"></span></div>
+                </div>
+                <p style="margin:0 0 18px 0;color:#555;font-size:0.93em;">
+                    Would you like to carry this task forward into a future gate as a new open task?
+                </p>
+                <div style="margin-bottom:16px;">
+                    <label style="font-weight:600;display:block;margin-bottom:7px;color:#444;">Target gate:</label>
+                    <select id="cloneTargetGate" onchange="updateCloneDatePreview()"
+                        style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:0.92em;background:#fff;">
+                    </select>
+                </div>
+                <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 14px;font-size:0.88em;color:#555;margin-bottom:16px;">
+                    📅 Clone start date: <strong id="cloneDatePreview" style="color:#2e7d32;">—</strong>
+                    <span style="color:#999;margin-left:8px;font-size:0.9em;">(= gate due date)</span>
+                </div>
+                <div style="margin-bottom:4px;">
+                    <label style="font-weight:600;display:block;margin-bottom:7px;color:#444;">End date (due date) for clone: <span style="color:#c62828;">*</span></label>
+                    <input type="date" id="cloneEndDate"
+                        style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:0.92em;box-sizing:border-box;">
+                </div>
+                <input type="hidden" id="cloneOriginalTaskId">
+            </div>
+            <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;">
+                <button class="btn btn-secondary" onclick="document.getElementById('tailedOutCloneModal').classList.remove('active')">Skip — No Clone</button>
+                <button class="btn" onclick="createTailedOutClone()" style="background:#4caf50;color:#fff;border-color:#388e3c;">📋 Create Clone in Selected Gate</button>
             </div>
         </div>
     </div>
@@ -1880,6 +2116,8 @@
         let currentZoom = 'year'; // Default to year view for better overview
         let currentGanttView = 'detailed'; // 'detailed' or 'highlevel'
         let dependencies = []; // Task dependency pairs {id, predecessor_id, successor_id}
+        let gateSignOffs = {}; // { gate_name: signOff } — loaded from API
+        let currentGateSignOffTaskId = null;
         const ZOOM_WIDTHS = {
             'month': 120,
             'quarter': 360,
@@ -1910,6 +2148,9 @@
                         critical: task.critical === 1 || task.critical === true,
                         milestone: task.milestone === 1 || task.milestone === true || (task.name && task.name.toLowerCase().includes('gate')),
                         tailed_out: task.tailed_out === 1 || task.tailed_out === true,
+                        is_rework_cause: task.is_rework_cause === 1 || task.is_rework_cause === true,
+                        rework_original_due: task.rework_original_due || null,
+                        cloned_from_phase: task.cloned_from_phase || null,
                         manualUncritical: getManualUncritical().has(task.id)
                     };
                 });
@@ -1945,6 +2186,20 @@
                 sortTasksChronologically();
                 console.log('✓ Tasks loaded from API');
                 console.log('✓ Loaded', tasks.length, 'tasks');
+
+                // Retroactively capture rework_original_due for existing rework tasks that predate the feature
+                const tasksNeedingOriginalDate = tasks.filter(t => t.is_rework_cause && !t.rework_original_due);
+                if (tasksNeedingOriginalDate.length > 0) {
+                    console.log(`🔄 Capturing original dates for ${tasksNeedingOriginalDate.length} rework task(s)...`);
+                    tasksNeedingOriginalDate.forEach(t => {
+                        t.rework_original_due = t.due; // capture current due as original (best effort)
+                        fetch(`/api/task/${t.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ rework_original_due: t.due })
+                        }).catch(e => console.warn('Failed to save rework_original_due for task', t.id, e));
+                    });
+                }
                 
                 // Load dependencies
                 const depsResponse = await fetch(`${API_BASE}/dependencies`);
@@ -2887,8 +3142,9 @@
             const phaseFilter = document.getElementById('phaseFilter').value;
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             
-            // Mark Gates that have been moved from baseline
+            // Mark Gates that have been moved from baseline and load sign-offs
             await markMovedGates();
+            await loadGateSignOffs();
             
             // Get selected status checkboxes
             const statusCheckboxes = document.querySelectorAll('.status-filter-checkbox:checked');
@@ -3097,21 +3353,53 @@
 
             tasksToRender.forEach(task => {
                 const isTaskOverdue = isOverdue(task.due, task.status);
-                const rowClass = `task-row ${task.critical ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''}`;
-                
+                const isGate = task.milestone && task.name && task.name.toLowerCase().includes('gate');
+                const signOff = isGate ? (gateSignOffs[task.phase || task.name] || null) : null;
+                const gatePassedRework = signOff && signOff.status === 'Passed with Rework';
+                const gatePassedAfterRework = signOff && signOff.status === 'Passed' && !!signOff.rework_sign_off_date;
+                const gatePassed = signOff && signOff.status === 'Passed' && !gatePassedAfterRework;
+
+                const rowClass = `task-row ${task.critical ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
+
                 const statusClass = task.status.toLowerCase().replace(' ', '-');
                 const statusLabel = task.status === 'In Process' ? 'In Process' : task.status;
                 const endDateClass = `end-date ${isTaskOverdue ? 'overdue' : ''}`;
 
+                const gateBadge = gatePassedAfterRework
+                    ? `<span class="rework-badge-history">⚠ Rework</span><span class="passed-badge">✅ Passed</span>`
+                    : gatePassedRework
+                        ? `<span class="rework-badge">⚠ Rework</span>`
+                        : gatePassed ? `<span class="passed-badge">✅ Passed</span>` : '';
+
+                const reworkTaskCount = (gatePassedRework || gatePassedAfterRework) ? tasks.filter(t => t.is_rework_cause).length : 0;
+                const reworkTasksBtnHTML = reworkTaskCount > 0
+                    ? `<button class="rework-tasks-btn" onclick="showReworkPanel(${task.id}, this)" title="View rework task log">📋 ${reworkTaskCount} task${reworkTaskCount !== 1 ? 's' : ''}</button>`
+                    : '';
+                const clonedFromBadge = task.cloned_from_phase
+                    ? `<span class="cloned-from-badge" title="Carried forward from ${task.cloned_from_phase}">↩ ${task.cloned_from_phase}</span>`
+                    : '';
+
+                let actionsHTML;
+                if (isGate) {
+                    const signOffClass = gatePassedAfterRework ? 'signed-passed' : gatePassedRework ? 'signed-rework' : gatePassed ? 'signed-passed' : '';
+                    const signOffLabel = gatePassedAfterRework ? '🔏 Done' : gatePassedRework ? '🔏 Rework' : gatePassed ? '🔏 Passed' : '🔏 Sign';
+                    actionsHTML = `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="gate-signoff-btn ${signOffClass}" onclick="openGateSignOff(${task.id})" title="Gate sign-off">${signOffLabel}</button>`;
+                } else {
+                    const reworkActive = task.is_rework_cause ? 'active' : '';
+                    const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
+                    actionsHTML = `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button><button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>`;
+                }
+
+                const showReworkPill = (gatePassedRework || gatePassedAfterRework) && signOff && signOff.rework_due_date;
                 taskHTML += `
                     <div class="${rowClass}" data-task-id="${task.id}">
                         <div>${task.id}</div>
-                        <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''} ${task.name}</div>
+                        <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
                         <div>${task.owner}</div>
                         <div class="date-cell start-date editable" data-task-id="${task.id}" data-date-type="start" data-date-value="${task.entered}">${formatDateShort(task.entered)}</div>
-                        <div class="date-cell ${endDateClass} editable" data-task-id="${task.id}" data-date-type="end" data-date-value="${task.due}">${formatDateShort(task.due)}</div>
+                        <div class="date-cell ${endDateClass} editable" data-task-id="${task.id}" data-date-type="end" data-date-value="${task.due}">${formatDateShort(task.due)}${showReworkPill ? `<br><span style="display:inline-block;margin-top:2px;background:#e65100;color:#fff;font-size:0.78em;font-weight:600;padding:1px 6px;border-radius:8px;white-space:nowrap;">🔄 Rework by: ${formatDateShort(signOff.rework_due_date)}</span>` : ''}</div>
                         <div><span class="status-badge status-${statusClass} editable" data-task-id="${task.id}" data-current-status="${task.status}">${statusLabel}</span></div>
-                        <div style="display:flex;gap:4px;"><button class="edit-task-btn" onclick="editTask(${task.id})">✏️ Edit</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button></div>
+                        <div style="display:flex;gap:4px;flex-wrap:wrap;">${actionsHTML}</div>
                     </div>
                 `;
 
@@ -3143,6 +3431,11 @@
                 } else if (task.milestone) {
                     barClass += ' milestone-bar';
                     if (task.critical) barClass += ' critical';
+                    // Apply gate sign-off colors
+                    if (isGate && signOff) {
+                        if (gatePassedRework) barClass += ' gate-rework-bar';
+                        else if (gatePassed) barClass += ' gate-passed-bar';
+                    }
                 } else if (task.critical) {
                     barClass += ' critical';
                 } else if (isTaskOverdue) {
@@ -3194,6 +3487,283 @@
             attachDateEditHandlers();
             attachStatusEditHandlers();
         }
+
+        // ─── Gate Sign-Off Functions ───────────────────────────────────────────────
+
+        async function loadGateSignOffs() {
+            try {
+                const response = await fetch(`${API_BASE}/gate-sign-offs`);
+                if (response.ok) {
+                    const data = await response.json();
+                    gateSignOffs = {};
+                    data.forEach(s => { gateSignOffs[s.gate_name] = s; });
+                }
+            } catch (e) {
+                console.error('Error loading gate sign-offs:', e);
+            }
+        }
+
+        function handleSignOffStatusChange() {
+            const selected = document.querySelector('input[name="gateSignOffStatus"]:checked');
+            const reworkGroup = document.getElementById('reworkDueDateGroup');
+            reworkGroup.style.display = (selected && selected.value === 'Passed with Rework') ? 'block' : 'none';
+        }
+
+        async function openGateSignOff(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const gateName = task.phase || task.name;
+            const warningDiv = document.getElementById('gateBlockedWarning');
+
+            // Check blocking: open rework-cause tasks from a previous gate with "Passed with Rework"
+            const gateNumMatch = gateName.match(/\d+/);
+            if (gateNumMatch) {
+                const gateNum = parseInt(gateNumMatch[0]);
+                if (gateNum > 1) {
+                    const prevGateName = gateName.replace(/\d+/, gateNum - 1);
+                    const prevSignOff = gateSignOffs[prevGateName];
+                    if (prevSignOff && prevSignOff.status === 'Passed with Rework') {
+                        const openRework = tasks.filter(t => t.is_rework_cause && t.status !== 'Completed');
+                        if (openRework.length > 0) {
+                            warningDiv.innerHTML = `🔒 <strong>Blocked:</strong> ${prevGateName} was passed with rework.
+                                The following rework tasks must be completed before signing off ${gateName}:<br>
+                                ${openRework.map(t => `• ${t.name} <em>(${t.status})</em>`).join('<br>')}`;
+                            warningDiv.style.display = 'block';
+                            currentGateSignOffTaskId = taskId;
+                            document.getElementById('gateSignOffName').textContent = gateName;
+                            document.getElementById('gateSignOffDate').value = '';
+                            document.querySelectorAll('input[name="gateSignOffStatus"]').forEach(r => r.checked = false);
+                            handleSignOffStatusChange();
+                            document.getElementById('removeSignOffBtn').style.display = 'none';
+                            document.getElementById('openReworkTasksInfo').style.display = 'none';
+                            document.getElementById('gateSignOffModal').style.display = 'flex';
+                            // Disable save button
+                            document.querySelector('#gateSignOffModal .btn').disabled = true;
+                            document.querySelector('#gateSignOffModal .btn').style.opacity = '0.5';
+                            return;
+                        }
+                    }
+                }
+            }
+
+            warningDiv.style.display = 'none';
+            document.querySelector('#gateSignOffModal .btn').disabled = false;
+            document.querySelector('#gateSignOffModal .btn').style.opacity = '1';
+
+            currentGateSignOffTaskId = taskId;
+            document.getElementById('gateSignOffName').textContent = gateName;
+
+            const existing = gateSignOffs[gateName];
+            document.getElementById('gateSignOffDate').value = existing ? (existing.sign_off_date || '') : '';
+            document.querySelectorAll('input[name="gateSignOffStatus"]').forEach(r => r.checked = false);
+            if (existing) {
+                const radio = document.querySelector(`input[name="gateSignOffStatus"][value="${existing.status}"]`);
+                if (radio) radio.checked = true;
+            }
+            document.getElementById('gateReworkDueDate').value = existing ? (existing.rework_due_date || '') : '';
+            handleSignOffStatusChange();
+
+            document.getElementById('removeSignOffBtn').style.display = existing ? 'block' : 'none';
+
+            // Show open rework-cause tasks
+            const openReworkTasks = tasks.filter(t => t.is_rework_cause && t.status !== 'Completed');
+            const reworkInfo = document.getElementById('openReworkTasksInfo');
+            if (openReworkTasks.length > 0) {
+                reworkInfo.style.display = 'block';
+                document.getElementById('openReworkTasksList').innerHTML =
+                    openReworkTasks.map(t => `<div>• ${t.name} <span style="color:#999;">(${t.status})</span></div>`).join('');
+            } else {
+                reworkInfo.style.display = 'none';
+            }
+
+            document.getElementById('gateSignOffModal').style.display = 'flex';
+        }
+
+        function closeGateSignOff() {
+            document.getElementById('gateSignOffModal').style.display = 'none';
+            currentGateSignOffTaskId = null;
+        }
+
+        async function saveGateSignOff() {
+            const task = tasks.find(t => t.id === currentGateSignOffTaskId);
+            if (!task) return;
+
+            const gateName = task.phase || task.name;
+            const signOffDate = document.getElementById('gateSignOffDate').value;
+            const selectedStatus = document.querySelector('input[name="gateSignOffStatus"]:checked');
+            const reworkDueDate = document.getElementById('gateReworkDueDate').value;
+
+            if (!signOffDate) { alert('Please enter a sign-off date'); return; }
+            if (!selectedStatus) { alert('Please select a status (Passed or Passed with Rework)'); return; }
+            if (selectedStatus.value === 'Passed with Rework' && !reworkDueDate) {
+                alert('Please enter a rework due date'); return;
+            }
+
+            // Detect transition: was "Passed with Rework", now becoming final "Passed"
+            const existingSignOff = gateSignOffs[gateName];
+            const isTransitionToFinalPass = existingSignOff
+                && existingSignOff.status === 'Passed with Rework'
+                && selectedStatus.value === 'Passed';
+
+            const body = {
+                gate_name: gateName,
+                gate_id: task.id,
+                sign_off_date: signOffDate,
+                status: selectedStatus.value,
+                // Preserve rework_due_date for history when transitioning to final Passed
+                rework_due_date: selectedStatus.value === 'Passed with Rework'
+                    ? reworkDueDate
+                    : (isTransitionToFinalPass ? existingSignOff.rework_due_date : null),
+                // Store when the "Passed with Rework" was originally signed
+                rework_sign_off_date: isTransitionToFinalPass
+                    ? (existingSignOff.rework_sign_off_date || existingSignOff.sign_off_date)
+                    : null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/gate-sign-offs`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    await loadGateSignOffs();
+                    closeGateSignOff();
+                    applyFilters();
+                    showNotification(isTransitionToFinalPass
+                        ? `✅ ${gateName} final sign-off saved — rework complete!`
+                        : `✅ ${gateName} sign-off saved`);
+                } else {
+                    const err = await response.json();
+                    alert('Failed to save sign-off: ' + (err.error || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Error saving sign-off: ' + e.message);
+            }
+        }
+
+        async function removeGateSignOff() {
+            const task = tasks.find(t => t.id === currentGateSignOffTaskId);
+            if (!task) return;
+            const gateName = task.phase || task.name;
+            if (!confirm(`Remove sign-off for ${gateName}?`)) return;
+            try {
+                const response = await fetch(`${API_BASE}/gate-sign-off/${encodeURIComponent(gateName)}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    await loadGateSignOffs();
+                    closeGateSignOff();
+                    applyFilters();
+                    showNotification(`Sign-off for ${gateName} removed`);
+                }
+            } catch (e) {
+                alert('Error removing sign-off: ' + e.message);
+            }
+        }
+
+        function showReworkPanel(gateId, btnEl) {
+            const existing = document.getElementById('rework-popup');
+            if (existing) {
+                const isSame = existing.dataset.gateId === String(gateId);
+                existing.remove();
+                if (isSame) return; // toggle off
+            }
+            const reworkTasks = tasks.filter(t => t.is_rework_cause);
+            if (!reworkTasks.length) return;
+            const rows = reworkTasks.map(t => `
+                <tr>
+                    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${t.name}">${t.name}</td>
+                    <td style="white-space:nowrap;">
+                        <input type="date" class="rework-orig-date-input" value="${t.rework_original_due || ''}"
+                            data-task-id="${t.id}"
+                            title="Click to edit original due date"
+                            onchange="saveReworkOriginalDate(${t.id}, this.value, this)">
+                    </td>
+                    <td style="white-space:nowrap;font-weight:600;color:#e65100;">${formatDateShort(t.due)}</td>
+                    <td><span class="status-badge status-${(t.status||'').toLowerCase().replace(/ /g,'-')}">${t.status}</span></td>
+                </tr>`).join('');
+            const popup = document.createElement('div');
+            popup.id = 'rework-popup';
+            popup.dataset.gateId = String(gateId);
+            popup.className = 'rework-popup';
+            popup.innerHTML = `
+                <div class="rework-popup-header">
+                    <span>📋 Rework Task Log</span>
+                    <button onclick="document.getElementById('rework-popup').remove()" style="background:none;border:none;color:#fff;font-size:1.1em;cursor:pointer;line-height:1;">✕</button>
+                </div>
+                <table class="rework-log-table">
+                    <thead><tr><th>Task</th><th>Original DD ✏️</th><th>New DD</th><th>Status</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>`;
+            document.body.appendChild(popup);
+            const rect = btnEl.getBoundingClientRect();
+            popup.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+            popup.style.left = Math.max(10, rect.left + window.scrollX - 120) + 'px';
+            // Close on outside click
+            setTimeout(() => {
+                document.addEventListener('click', function dismissReworkPopup(e) {
+                    if (!popup.contains(e.target) && e.target !== btnEl) {
+                        popup.remove();
+                        document.removeEventListener('click', dismissReworkPopup);
+                    }
+                });
+            }, 10);
+        }
+
+        async function saveReworkOriginalDate(taskId, newDate, inputEl) {
+            try {
+                const response = await fetch(`/api/task/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rework_original_due: newDate })
+                });
+                if (response.ok) {
+                    const task = tasks.find(t => t.id === taskId);
+                    if (task) task.rework_original_due = newDate;
+                    // Flash green to confirm save
+                    inputEl.style.background = '#c8e6c9';
+                    setTimeout(() => { inputEl.style.background = ''; }, 1200);
+                } else {
+                    inputEl.style.background = '#ffcdd2';
+                    setTimeout(() => { inputEl.style.background = ''; }, 1200);
+                }
+            } catch (e) {
+                console.error('Error saving original date:', e);
+            }
+        }
+
+        async function toggleReworkCause(taskId, newValue) {
+            try {
+                const task = tasks.find(t => t.id === taskId);
+                const payload = { is_rework_cause: newValue };
+                if (newValue === 1 && task && !task.rework_original_due) {
+                    payload.rework_original_due = task.due;
+                } else if (newValue === 0) {
+                    payload.rework_original_due = null;
+                }
+                const response = await fetch(`/api/task/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    if (task) {
+                        task.is_rework_cause = newValue === 1;
+                        if (newValue === 1 && !task.rework_original_due) task.rework_original_due = task.due;
+                        else if (newValue === 0) task.rework_original_due = null;
+                    }
+                    applyFilters();
+                    showNotification(newValue ? '⚠ Marked as rework cause' : 'Rework cause mark removed');
+                }
+            } catch (e) {
+                console.error('Error toggling rework cause:', e);
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────────────────────
 
         // Mark Gates that have been moved from their baseline
         async function markMovedGates() {
@@ -3433,22 +4003,53 @@
                 // Tasks
                 phaseTasks.forEach(task => {
                     const isTaskOverdue = isOverdue(task.due, task.status);
-                    const rowClass = `task-row ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${task.critical ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''}`;
-                    
+                    const isGate = task.milestone && task.name && task.name.toLowerCase().includes('gate');
+                    const signOff = isGate ? (gateSignOffs[task.phase || task.name] || null) : null;
+                    const gatePassedRework = signOff && signOff.status === 'Passed with Rework';
+                    const gatePassedAfterRework = signOff && signOff.status === 'Passed' && !!signOff.rework_sign_off_date;
+                    const gatePassed = signOff && signOff.status === 'Passed' && !gatePassedAfterRework;
+
+                    const rowClass = `task-row ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${task.critical ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
+
                     const statusClass = task.status.toLowerCase().replace(' ', '-');
                     const statusLabel = task.status === 'In Process' ? 'In Process' : task.status;
-
                     const endDateClass = `end-date ${isTaskOverdue ? 'overdue' : ''}`;
 
+                    const gateBadge = gatePassedAfterRework
+                        ? `<span class="rework-badge-history">⚠ Rework</span><span class="passed-badge">✅ Passed</span>`
+                        : gatePassedRework
+                            ? `<span class="rework-badge">⚠ Rework</span>`
+                            : gatePassed ? `<span class="passed-badge">✅ Passed</span>` : '';
+
+                    const reworkTaskCount = (gatePassedRework || gatePassedAfterRework) ? tasks.filter(t => t.is_rework_cause).length : 0;
+                    const reworkTasksBtnHTML = reworkTaskCount > 0
+                        ? `<button class="rework-tasks-btn" onclick="showReworkPanel(${task.id}, this)" title="View rework task log">📋 ${reworkTaskCount} task${reworkTaskCount !== 1 ? 's' : ''}</button>`
+                        : '';
+                    const clonedFromBadge = task.cloned_from_phase
+                        ? `<span class="cloned-from-badge" title="Carried forward from ${task.cloned_from_phase}">↩ ${task.cloned_from_phase}</span>`
+                        : '';
+
+                    let actionsHTML;
+                    if (isGate) {
+                        const signOffClass = gatePassedAfterRework ? 'signed-passed' : gatePassedRework ? 'signed-rework' : gatePassed ? 'signed-passed' : '';
+                        const signOffLabel = gatePassedAfterRework ? '🔏 Done' : gatePassedRework ? '🔏 Rework' : gatePassed ? '🔏 Passed' : '🔏 Sign';
+                        actionsHTML = `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="gate-signoff-btn ${signOffClass}" onclick="openGateSignOff(${task.id})" title="Gate sign-off">${signOffLabel}</button>`;
+                    } else {
+                        const reworkActive = task.is_rework_cause ? 'active' : '';
+                        const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
+                        actionsHTML = `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button><button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>`;
+                    }
+
+                    const showReworkPill = (gatePassedRework || gatePassedAfterRework) && signOff && signOff.rework_due_date;
                     taskHTML += `
                         <div class="${rowClass}" data-task-id="${task.id}">
                             <div>${task.id}</div>
-                            <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''} ${task.name}</div>
+                            <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
                             <div>${task.owner}</div>
                             <div class="date-cell start-date editable" data-task-id="${task.id}" data-date-type="start" data-date-value="${task.entered}">${formatDateShort(task.entered)}</div>
-                            <div class="date-cell ${endDateClass} editable" data-task-id="${task.id}" data-date-type="end" data-date-value="${task.due}">${formatDateShort(task.due)}</div>
+                            <div class="date-cell ${endDateClass} editable" data-task-id="${task.id}" data-date-type="end" data-date-value="${task.due}">${formatDateShort(task.due)}${showReworkPill ? `<br><span style="display:inline-block;margin-top:2px;background:#e65100;color:#fff;font-size:0.78em;font-weight:600;padding:1px 6px;border-radius:8px;white-space:nowrap;">🔄 Rework by: ${formatDateShort(signOff.rework_due_date)}</span>` : ''}</div>
                             <div><span class="status-badge status-${statusClass} editable" data-task-id="${task.id}" data-current-status="${task.status}">${statusLabel}</span></div>
-                            <div style="display:flex;gap:4px;"><button class="edit-task-btn" onclick="editTask(${task.id})">✏️ Edit</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button></div>
+                            <div style="display:flex;gap:4px;flex-wrap:wrap;">${actionsHTML}</div>
                         </div>
                     `;
 
@@ -3498,6 +4099,10 @@
                     } else if (task.milestone) {
                         barClass += ' milestone-bar';
                         if (task.critical) barClass += ' critical';
+                        if (isGate && signOff) {
+                            if (gatePassedRework) barClass += ' gate-rework-bar';
+                            else if (gatePassed) barClass += ' gate-passed-bar';
+                        }
                     } else if (task.critical) {
                         barClass += ' critical';
                     } else if (isTaskOverdue) {
@@ -3696,6 +4301,19 @@
                 if (task.entered && new Date(newDate) < new Date(task.entered)) {
                     showNotification('⚠️ End date cannot be before start date', 'error');
                     cancelDateEdit();
+                    return;
+                }
+                // For rework-cause tasks: skip cascade, save date directly without impacting schedule
+                if (task.is_rework_cause) {
+                    task.due = newDate;
+                    try {
+                        await saveToAPI(task, false);
+                        showNotification('🔄 Rework date updated — schedule not impacted', 'success');
+                    } catch (error) {
+                        showNotification('⚠️ Failed to update date', 'error');
+                    }
+                    editingCell = null;
+                    applyFilters();
                     return;
                 }
                 // Check cascade preview for end date changes
@@ -4170,6 +4788,7 @@
             currentEditId = null;
             document.getElementById('modalTitle').textContent = 'Add New Task';
             document.getElementById('taskForm').reset();
+            document.getElementById('deleteTaskBtn').style.display = 'none';
             
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('taskEntered').value = today;
@@ -4224,6 +4843,7 @@
             };
 
             document.getElementById('taskModal').classList.add('active');
+            document.getElementById('deleteTaskBtn').style.display = 'inline-block';
             
             // Populate dependency picker
             populateDepPicker(id, task.entered);
@@ -4240,6 +4860,8 @@
             document.getElementById('taskModal').classList.remove('active');
             currentEditId = null;
         }
+
+
 
         async function saveTask(event) {
             event.preventDefault();
@@ -4273,6 +4895,7 @@
             }
 
             let cascadeResult = { confirmed: true, noCascade: true };
+            let wasAlreadyTailedOut = false;
 
             try {
                 if (currentEditId !== null) {
@@ -4282,10 +4905,12 @@
                     // Get original task BEFORE updating
                     const originalTask = tasks.find(t => t.id === currentEditId);
                     const originalDueDate = originalTask ? originalTask.due : null;
+                    wasAlreadyTailedOut = originalTask ? (originalTask.tailed_out || false) : false;
 
-                    // CASCADE CHECK: ONE comprehensive preview (downstream shifts + ALL gate impacts)
-                    // Shows for ANY date change — regardless of whether task has dependencies
-                    if (originalTask && originalDueDate && originalDueDate !== taskData.due) {
+                    // CASCADE CHECK: skip entirely for rework-cause tasks
+                    if (originalTask && originalTask.is_rework_cause) {
+                        // Rework task — save date silently, no schedule impact
+                    } else if (originalTask && originalDueDate && originalDueDate !== taskData.due) {
                         cascadeResult = await checkAndShowCascadePreview(originalTask, taskData.due);
                         if (!cascadeResult.confirmed) return; // User cancelled — nothing saved
                     }
@@ -4447,6 +5072,15 @@
                 populatePhaseFilter();
                 updateTailedOutBtn();
                 applyFilters();
+
+                // If task was NEWLY tailed out → show carry-forward clone dialog
+                if (taskData.tailed_out && !wasAlreadyTailedOut && currentEditId !== null) {
+                    const cloneTask = tasks.find(t => t.id === currentEditId) || { ...taskData, id: currentEditId };
+                    closeTaskModal();
+                    openTailedOutCloneDialog(cloneTask);
+                    return;
+                }
+
                 closeTaskModal();
             } catch (error) {
                 showNotification('⚠️ Failed to save task', 'error');
@@ -4547,6 +5181,98 @@
             if (!btn || !span) return;
             span.textContent = count;
             btn.style.display = count > 0 ? 'inline-flex' : 'none';
+        }
+
+        function openTailedOutCloneDialog(originalTask) {
+            // Populate gate dropdown (all gates except the task's own phase)
+            const gates = tasks
+                .filter(t => t.milestone && t.name && t.name.toLowerCase().includes('gate') && !t.tailed_out)
+                .sort((a, b) => {
+                    const na = parseInt((a.phase || a.name).match(/\d+/)?.[0] || 0);
+                    const nb = parseInt((b.phase || b.name).match(/\d+/)?.[0] || 0);
+                    return na - nb;
+                });
+
+            const select = document.getElementById('cloneTargetGate');
+            select.innerHTML = gates.map(g =>
+                `<option value="${g.id}" data-due="${g.due || ''}">${g.phase || g.name} (${formatDateShort(g.due) || 'no date'})</option>`
+            ).join('');
+
+            document.getElementById('cloneOriginalTaskId').value = originalTask.id;
+            document.getElementById('cloneOriginalTaskName').textContent = originalTask.name;
+            document.getElementById('cloneOriginalPhase').textContent = originalTask.phase || '—';
+            document.getElementById('cloneEndDate').value = '';
+            document.getElementById('cloneEndDate').style.border = '';
+            updateCloneDatePreview();
+            document.getElementById('tailedOutCloneModal').classList.add('active');
+        }
+
+        function updateCloneDatePreview() {
+            const select = document.getElementById('cloneTargetGate');
+            if (!select || !select.options.length) return;
+            const due = select.options[select.selectedIndex]?.dataset?.due || '';
+            document.getElementById('cloneDatePreview').textContent = due ? formatDateShort(due) : '—';
+        }
+
+        async function createTailedOutClone() {
+            const originalTaskId = parseInt(document.getElementById('cloneOriginalTaskId').value);
+            const gateSelect = document.getElementById('cloneTargetGate');
+            if (!gateSelect || !gateSelect.value) return;
+
+            const endDate = document.getElementById('cloneEndDate').value;
+            if (!endDate) {
+                document.getElementById('cloneEndDate').style.border = '2px solid #c62828';
+                document.getElementById('cloneEndDate').focus();
+                return;
+            }
+            document.getElementById('cloneEndDate').style.border = '';
+
+            const selectedGateId = parseInt(gateSelect.value);
+            const selectedGate = tasks.find(t => t.id === selectedGateId);
+            const originalTask = tasks.find(t => t.id === originalTaskId);
+            if (!selectedGate || !originalTask) return;
+
+            const targetPhase = selectedGate.phase || selectedGate.name;
+            const startDate = selectedGate.due || endDate;
+
+            if (new Date(endDate) < new Date(startDate)) {
+                alert('End date cannot be before start date (' + formatDateShort(startDate) + ')');
+                return;
+            }
+
+            const cloneData = {
+                name: originalTask.name,
+                owner: originalTask.owner || '',
+                phase: targetPhase,
+                status: 'Planned',
+                start_date: startDate,
+                end_date: endDate,
+                critical: false,
+                milestone: false,
+                tailed_out: false,
+                is_rework_cause: false,
+                cloned_from_phase: originalTask.phase || null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/task`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cloneData)
+                });
+                if (response.ok) {
+                    document.getElementById('tailedOutCloneModal').classList.remove('active');
+                    await loadFromAPI();
+                    applyFilters();
+                    showNotification(`📋 Clone created in ${targetPhase}`, 'success');
+                } else {
+                    const err = await response.json();
+                    alert('Failed to create clone: ' + (err.error || 'Unknown error'));
+                }
+            } catch (e) {
+                console.error('Error creating tailed-out clone:', e);
+                alert('Error creating clone: ' + e.message);
+            }
         }
 
         function showTailedOutReport() {
@@ -5348,6 +6074,7 @@
         document.addEventListener('DOMContentLoaded', async function() {
             await loadFromAPI();
             await initializeGateBaselines(); // Initialize baselines on first load
+            await loadGateSignOffs();        // Load gate sign-offs
             populateOwnerFilter();
             populatePhaseFilter();
             applyFilters();
@@ -5388,5 +6115,42 @@
             });
         });
     </script>
+
+    <!-- Gate Sign-Off Modal -->
+    <div class="modal" id="gateSignOffModal">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header">🔏 Gate Sign-Off: <span id="gateSignOffName"></span></div>
+            <div id="gateBlockedWarning" style="display:none;background:#ffebee;border:1px solid #ef9a9a;border-radius:6px;padding:12px;margin-bottom:16px;color:#b71c1c;font-size:0.9em;"></div>
+            <div class="form-group">
+                <label>Sign-Off Date *</label>
+                <input type="date" id="gateSignOffDate">
+            </div>
+            <div class="form-group">
+                <label>Status *</label>
+                <div style="display:flex;gap:24px;margin-top:8px;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal;">
+                        <input type="radio" name="gateSignOffStatus" value="Passed" onchange="handleSignOffStatusChange()"> ✅ Passed
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal;">
+                        <input type="radio" name="gateSignOffStatus" value="Passed with Rework" onchange="handleSignOffStatusChange()"> ⚠️ Passed with Rework
+                    </label>
+                </div>
+            </div>
+            <div class="form-group" id="reworkDueDateGroup" style="display:none;">
+                <label>Rework Due Date *</label>
+                <input type="date" id="gateReworkDueDate">
+                <div style="font-size:0.8em;color:#888;margin-top:4px;">⚠ This date does not move the overall schedule</div>
+            </div>
+            <div id="openReworkTasksInfo" style="display:none;margin-top:12px;padding:10px;background:#fff3e0;border-radius:6px;border-left:4px solid #ff9800;">
+                <div style="font-size:0.85em;font-weight:600;color:#e65100;margin-bottom:6px;">⚠ Open Rework Cause Tasks:</div>
+                <div id="openReworkTasksList" style="font-size:0.82em;line-height:1.7;"></div>
+            </div>
+            <div style="display:flex;gap:10px;margin-top:20px;padding-top:15px;border-top:1px solid #eee;align-items:center;">
+                <button class="btn" onclick="saveGateSignOff()">💾 Save Sign-Off</button>
+                <button class="btn btn-secondary" onclick="closeGateSignOff()">Cancel</button>
+                <button id="removeSignOffBtn" style="display:none;margin-left:auto;padding:8px 16px;background:#f44336;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.85em;" onclick="removeGateSignOff()">🗑 Remove</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
