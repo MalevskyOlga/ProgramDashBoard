@@ -15,11 +15,12 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 12px;
         }
         
         .container {
-            max-width: 1200px;
+            width: min(100%, calc(100vw - 24px));
+            max-width: none;
             margin: 0 auto;
         }
         
@@ -182,6 +183,46 @@
             text-align: center;
         }
 
+        .dashboard-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 22px;
+        }
+
+        .dashboard-tab {
+            border: none;
+            border-radius: 999px;
+            padding: 12px 18px;
+            background: rgba(255, 255, 255, 0.18);
+            color: #eef3ff;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            transition: transform 0.18s, background 0.18s, box-shadow 0.18s;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+
+        .dashboard-tab:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.26);
+        }
+
+        .dashboard-tab.active {
+            background: #f8fbff;
+            color: #1a2340;
+            box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
         .timeline-section {
             background: #171c31;
             padding: 28px;
@@ -211,8 +252,9 @@
 
         .schedule-grid {
             display: grid;
-            grid-template-columns: 220px repeat(var(--month-count), minmax(48px, 1fr));
-            min-width: 980px;
+            grid-template-columns: 200px repeat(var(--month-count), minmax(42px, 1fr));
+            width: max(100%, 980px);
+            min-width: 0;
             border-top: 1px solid #2a3258;
             border-left: 1px solid #2a3258;
             background: #1d233c;
@@ -398,11 +440,29 @@
             font-size: 11px;
         }
 
+        .sticky-summary-header {
+            position: sticky;
+            top: 12px;
+            z-index: 30;
+            padding: 10px 0 14px;
+            margin-bottom: 18px;
+            background: #11192d;
+            border-bottom: 1px solid rgba(55, 78, 131, 0.8);
+            box-shadow: 0 14px 26px rgba(8, 14, 26, 0.48);
+        }
+
         .resource-summary {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 16px;
-            margin-bottom: 18px;
+            margin-bottom: 0;
+        }
+
+        .sticky-summary-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+            min-height: 0;
         }
 
         .resource-summary-card {
@@ -627,12 +687,14 @@
             margin-bottom: 18px;
             border: 1px solid #24355f;
             border-radius: 10px;
-            overflow: hidden;
+            overflow: visible;
             background: rgba(18, 28, 50, 0.96);
         }
 
         .resource-table-scroll {
             overflow-x: auto;
+            overflow-y: visible;
+            border-radius: 10px;
         }
 
         .resource-table {
@@ -655,6 +717,136 @@
             text-transform: uppercase;
             letter-spacing: 0.08em;
             font-size: 11px;
+        }
+
+        .resource-filter-cell {
+            position: relative;
+        }
+
+        .resource-header-filter {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 2px;
+        }
+
+        .resource-header-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .resource-filter-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 12px;
+            height: 12px;
+            border: none;
+            border-radius: 2px;
+            background: transparent;
+            color: #9fb1dd;
+            padding: 0;
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
+            line-height: 1;
+            margin-left: -1px;
+        }
+
+        .resource-filter-trigger:hover,
+        .resource-filter-trigger.active {
+            background: rgba(126, 200, 255, 0.16);
+            color: #7ec8ff;
+        }
+
+        .resource-filter-trigger-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 12px;
+            height: 12px;
+            padding: 0 2px;
+            border-radius: 999px;
+            background: #7ec8ff;
+            color: #10203b;
+            font-size: 8px;
+            font-weight: 800;
+        }
+
+        .resource-filter-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            min-width: 280px;
+            max-width: 360px;
+            max-height: 340px;
+            overflow-y: auto;
+            padding: 14px;
+            border: 1px solid #365183;
+            border-radius: 10px;
+            background: #0f1728;
+            box-shadow: 0 16px 28px rgba(0,0,0,0.36);
+            z-index: 1200;
+            overscroll-behavior: contain;
+        }
+
+        .resource-filter-menu.open {
+            display: block;
+        }
+
+        .resource-filter-menu-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .resource-filter-menu-link {
+            border: none;
+            background: transparent;
+            color: #7ec8ff;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .resource-filter-menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .resource-filter-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            color: #d6def7;
+            font-size: 12px;
+            line-height: 1.3;
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .resource-filter-option:hover {
+            background: rgba(38, 57, 97, 0.52);
+        }
+
+        .resource-filter-option input {
+            margin-top: 2px;
+            flex-shrink: 0;
+            transform: scale(1.1);
+        }
+
+        .resource-filter-empty {
+            color: #91a5d6;
+            font-size: 12px;
         }
 
         .resource-table td {
@@ -774,8 +966,9 @@
 
         .critical-board-grid {
             display: grid;
-            grid-template-columns: 280px repeat(var(--month-count), minmax(48px, 1fr));
-            min-width: 1100px;
+            grid-template-columns: 240px repeat(var(--month-count), minmax(42px, 1fr));
+            width: max(100%, 1080px);
+            min-width: 0;
             border-top: 1px solid #24355f;
             border-left: 1px solid #24355f;
             background: #172039;
@@ -977,8 +1170,9 @@
 
         .resource-grid {
             display: grid;
-            grid-template-columns: 220px repeat(var(--month-count), minmax(48px, 1fr));
-            min-width: 980px;
+            grid-template-columns: 200px repeat(var(--month-count), minmax(42px, 1fr));
+            width: max(100%, 980px);
+            min-width: 0;
             border-top: 1px solid #233255;
             border-left: 1px solid #233255;
             background: #172039;
@@ -1242,80 +1436,83 @@
             <h1>📊 Overall Programs Dashboard</h1>
             <p class="subtitle">Web-based project dashboard management system</p>
         </header>
-        
-        <div class="stats" id="stats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalProjects">-</div>
-                <div class="stat-label">Total Projects</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalTasks">-</div>
-                <div class="stat-label">Total Tasks</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalGates">-</div>
-                <div class="stat-label">Gate Timeline Rows</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalOwners">-</div>
-                <div class="stat-label">Resource Owners</div>
-            </div>
 
-        </div>
-        
-        <div class="import-section">
-            <button class="import-btn" id="importBtn" onclick="document.getElementById('fileInput').click()">
-                📁 Import New Project from Excel
-            </button>
-            <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileSelect(event)">
-            <div class="message" id="message"></div>
+        <div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
+            <button class="dashboard-tab active" data-tab="schedule" onclick="setActiveDashboardTab('schedule')">Portfolio Schedule Overview</button>
+            <button class="dashboard-tab" data-tab="resources" onclick="setActiveDashboardTab('resources')">Overall Resource Load</button>
+            <button class="dashboard-tab" data-tab="projects" onclick="setActiveDashboardTab('projects')">Projects</button>
+            <button class="dashboard-tab" data-tab="critical" onclick="setActiveDashboardTab('critical')">Critical Path</button>
         </div>
 
-        <div class="timeline-section">
-            <h2>Portfolio Schedule Overview</h2>
-            <p>Planned milestones & gates</p>
-            <div id="timelineContainer">
-                <div class="loading">Loading overall gate timeline...</div>
-            </div>
-            <div class="timeline-legend">
-                <span><i class="legend-box legend-done"></i> Done gate</span>
-                <span><i class="legend-box legend-planned"></i> Planned gate</span>
-                <span><i class="legend-box legend-rework"></i> Rework sign-off</span>
-                <span><i class="legend-line"></i> Today</span>
-            </div>
-        </div>
-
-        <div class="resource-section">
-            <h2>Overall Resource Load</h2>
-            <p>Owners, active work & cross-project load</p>
-            <div class="resource-summary" id="resourceSummary">
-                <div class="resource-summary-card">
-                    <div class="resource-summary-value">-</div>
-                    <div class="resource-summary-label">Loading resource summary</div>
+        <div class="tab-pane active" data-pane="schedule">
+            <div class="timeline-section">
+                <h2>Portfolio Schedule Overview</h2>
+                <p>Planned milestones & gates</p>
+                <div id="timelineContainer">
+                    <div class="loading">Loading overall gate timeline...</div>
+                </div>
+                <div class="timeline-legend">
+                    <span><i class="legend-box legend-done"></i> Done gate</span>
+                    <span><i class="legend-box legend-planned"></i> Planned gate</span>
+                    <span><i class="legend-box legend-rework"></i> Rework sign-off</span>
+                    <span><i class="legend-line"></i> Today</span>
                 </div>
             </div>
-            <div id="resourceDetailPanel"></div>
-            <div id="resourceSummaryTable">
-                <div class="loading">Loading resource summary table...</div>
+        </div>
+
+        <div class="tab-pane" data-pane="resources">
+            <div class="resource-section">
+                <h2>Overall Resource Load</h2>
+                <p>Owners, active work & cross-project load</p>
+                <div class="sticky-summary-header">
+                    <div class="resource-summary" id="resourceSummary">
+                        <div class="resource-summary-card">
+                            <div class="resource-summary-value">-</div>
+                            <div class="resource-summary-label">Loading resource summary</div>
+                        </div>
+                    </div>
+                    <div class="sticky-summary-actions" id="resourceSummaryActions"></div>
+                </div>
+                <div id="resourceDetailPanel"></div>
+                <div id="resourceSummaryTable">
+                    <div class="loading">Loading resource summary table...</div>
+                </div>
             </div>
         </div>
 
-        <div class="resource-section">
-            <h2>Critical Path Until Gate 5</h2>
-            <p>Simple project view from detailed gantts</p>
-            <div class="resource-summary" id="criticalPathSummary">
-                <div class="resource-summary-card">
-                    <div class="resource-summary-value">-</div>
-                    <div class="resource-summary-label">Loading critical summary</div>
+        <div class="tab-pane" data-pane="projects">
+            <div class="resource-section">
+                <h2>Projects</h2>
+                <p>Project cards & import</p>
+                <div class="import-section">
+                    <button class="import-btn" id="importBtn" onclick="document.getElementById('fileInput').click()">
+                        📁 Import New Project from Excel
+                    </button>
+                    <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileSelect(event)">
+                    <div class="message" id="message"></div>
+                </div>
+                <div id="projectsContainer">
+                    <div class="loading">Loading projects...</div>
                 </div>
             </div>
-            <div id="criticalPathContainer">
-                <div class="loading">Loading critical path overview...</div>
-            </div>
         </div>
-        
-        <div id="projectsContainer">
-            <div class="loading">Loading projects...</div>
+
+        <div class="tab-pane" data-pane="critical">
+            <div class="resource-section">
+                <h2>Critical Path Until Gate 5</h2>
+                <p>Simple project view from detailed gantts</p>
+                <div class="sticky-summary-header">
+                    <div class="resource-summary" id="criticalPathSummary">
+                        <div class="resource-summary-card">
+                            <div class="resource-summary-value">-</div>
+                            <div class="resource-summary-label">Loading critical summary</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="criticalPathContainer">
+                    <div class="loading">Loading critical path overview...</div>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -1331,15 +1528,50 @@
         let currentResourceDrilldown = 'summary';
         let currentCriticalPayload = null;
         let currentCriticalExpanded = false;
+        let currentDashboardTab = 'schedule';
+        const dashboardTabStorageKey = 'overall-dashboard-active-tab';
+
+        function setActiveDashboardTab(tabName) {
+            currentDashboardTab = tabName;
+            document.querySelectorAll('.dashboard-tab').forEach((button) => {
+                button.classList.toggle('active', button.dataset.tab === tabName);
+            });
+            document.querySelectorAll('.tab-pane').forEach((pane) => {
+                pane.classList.toggle('active', pane.dataset.pane === tabName);
+            });
+            try {
+                localStorage.setItem(dashboardTabStorageKey, tabName);
+            } catch (error) {
+                console.warn('Unable to persist active dashboard tab:', error);
+            }
+        }
+
+        function restoreActiveDashboardTab() {
+            try {
+                const savedTab = localStorage.getItem(dashboardTabStorageKey);
+                const hasSavedTab = savedTab && document.querySelector(`.dashboard-tab[data-tab="${savedTab}"]`);
+                setActiveDashboardTab(hasSavedTab ? savedTab : currentDashboardTab);
+            } catch (error) {
+                console.warn('Unable to restore active dashboard tab:', error);
+                setActiveDashboardTab(currentDashboardTab);
+            }
+        }
 
         async function loadStats() {
             try {
+                const totalProjectsEl = document.getElementById('totalProjects');
+                const totalTasksEl = document.getElementById('totalTasks');
+                const totalOwnersEl = document.getElementById('totalOwners');
+                if (!totalProjectsEl && !totalTasksEl && !totalOwnersEl) {
+                    return;
+                }
+
                 const response = await fetch('/api/stats');
                 const stats = await response.json();
-                
-                document.getElementById('totalProjects').textContent = stats.total_projects;
-                document.getElementById('totalTasks').textContent = stats.total_tasks;
-                document.getElementById('totalOwners').textContent = stats.total_owners ?? '-';
+
+                if (totalProjectsEl) totalProjectsEl.textContent = stats.total_projects;
+                if (totalTasksEl) totalTasksEl.textContent = stats.total_tasks;
+                if (totalOwnersEl) totalOwnersEl.textContent = stats.total_owners ?? '-';
             } catch (error) {
                 console.error('Error loading stats:', error);
             }
@@ -1466,7 +1698,7 @@
                 if (today >= rangeStart && today <= endOfMonth(rangeEnd)) {
                     const leftPercent = getTimelinePercent(today, rangeStart, endOfMonth(rangeEnd));
                     boardHtml += `
-                        <div class="today-line" style="left: calc(220px + ((100% - 220px) * ${leftPercent / 100}));">
+                        <div class="today-line" style="left: calc(200px + ((100% - 200px) * ${leftPercent / 100}));">
                             <div class="today-label">TODAY</div>
                         </div>
                     `;
@@ -1475,7 +1707,6 @@
                 boardHtml += `</div></div>`;
 
                 container.innerHTML = boardHtml;
-                document.getElementById('totalGates').textContent = timeline.length;
             } catch (error) {
                 console.error('Error loading gate timeline:', error);
                 document.getElementById('timelineContainer').innerHTML = `
@@ -1673,7 +1904,7 @@
             if (today >= rangeStart && today <= renderedRangeEnd) {
                 const leftPercent = getTimelinePercent(today, rangeStart, renderedRangeEnd);
                 boardHtml += `
-                    <div class="today-line" style="left: calc(280px + ((100% - 280px) * ${leftPercent / 100}));">
+                    <div class="today-line" style="left: calc(240px + ((100% - 240px) * ${leftPercent / 100}));">
                         <div class="today-label">TODAY</div>
                     </div>
                 `;
@@ -1933,6 +2164,12 @@
                 return;
             }
 
+            const isOwnersTableMode = currentResourceDrilldown === 'summary' || currentResourceDrilldown === 'owners';
+            if (!isOwnersTableMode) {
+                tableContainer.innerHTML = '';
+                return;
+            }
+
             const visibleOwners = currentResourceDrilldown === 'owners'
                 ? payload.owners
                 : payload.owners.slice(0, 10);
@@ -1953,7 +2190,7 @@
             const hiddenRows = currentResourceDrilldown === 'owners'
                 ? ''
                 : payload.owners.slice(10).map((owner) => `
-                    <tr class="resource-row-hidden">
+                    <tr class="resource-row-hidden" data-default-hidden="true">
                         <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
                         <td>${owner.project_count}</td>
                         <td>${owner.task_count}</td>
@@ -1967,37 +2204,24 @@
 
             const hiddenCount = Math.max(0, payload.owners.length - 10);
             const actionHtml = hiddenCount > 0 && currentResourceDrilldown !== 'owners'
-                ? `<div class="resource-table-actions"><button class="resource-toggle-btn" id="resourceTableToggle" onclick="toggleResourceTableRows()">${hiddenCount} more owners</button></div>`
+                ? `<div class="resource-table-actions"><button class="resource-toggle-btn" id="resourceTableToggle" data-expanded="false" onclick="toggleResourceTableRows()">${hiddenCount} more owners</button></div>`
                 : '';
 
-            tableContainer.innerHTML = `
-                <div class="resource-table-wrap">
-                    ${actionHtml}
-                    <div class="resource-table-scroll">
-                        <table class="resource-table">
-                            <thead>
-                                <tr>
-                                    <th>Owner</th>
-                                    <th>Projects</th>
-                                    <th>Total Tasks</th>
-                                    <th>Active Now</th>
-                                    <th>Peak Load</th>
-                                    <th>Critical</th>
-                                    <th>Load</th>
-                                    <th>Project List</th>
-                                </tr>
-                            </thead>
-                            <tbody>${visibleRows}${hiddenRows}</tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
+            tableContainer.innerHTML = renderFilterableTable(
+                'resourceSummaryOwnersTable',
+                ['Owner', 'Projects', 'Total Tasks', 'Active Now', 'Peak Load', 'Critical', 'Load', 'Project List'],
+                `${visibleRows}${hiddenRows}`,
+                actionHtml
+            );
+            applyTableFilters('resourceSummaryOwnersTable');
         }
 
         function renderResourceDrilldown() {
             const payload = currentResourcePayload;
             const detailContainer = document.getElementById('resourceDetailPanel');
+            const actionsContainer = document.getElementById('resourceSummaryActions');
             if (!payload || !payload.owners || !payload.owners.length) {
+                if (actionsContainer) actionsContainer.innerHTML = '';
                 detailContainer.innerHTML = '';
                 return;
             }
@@ -2009,63 +2233,38 @@
             `;
 
             if (currentResourceDrilldown === 'summary') {
-                detailContainer.innerHTML = `
-                    <div class="resource-detail-panel">
-                        <h3>Resource quick drilldown</h3>
-                        <p>Click a summary card above to open owners, active tasks, scheduled tasks, parallel workload, or delay exposure details.</p>
-                    </div>
-                `;
+                if (actionsContainer) actionsContainer.innerHTML = '';
+                detailContainer.innerHTML = '';
                 return;
             }
 
             if (currentResourceDrilldown === 'owners') {
-                detailContainer.innerHTML = `
-                    <div class="resource-detail-panel">
-                        ${backButtonHtml}
-                        <h3>All owners in portfolio</h3>
-                        <p>Showing all ${payload.summary.owner_count} owners in the table below.</p>
-                    </div>
-                `;
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                detailContainer.innerHTML = '';
                 return;
             }
 
             if (currentResourceDrilldown === 'active') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
                 const activeTasks = payload.owners
                     .flatMap(owner => owner.tasks
                         .filter(task => task.is_active_today)
                         .map(task => ({ owner: owner.owner, ...task })))
                     .sort((left, right) => left.owner.localeCompare(right.owner) || left.project_name.localeCompare(right.project_name) || left.task_name.localeCompare(right.task_name));
 
-                detailContainer.innerHTML = `
-                    <div class="resource-detail-panel">
-                        ${backButtonHtml}
-                        <h3>Active tasks today</h3>
-                        <p>${activeTasks.length} active task${activeTasks.length === 1 ? '' : 's'} across ${payload.summary.owners_active_today} owner${payload.summary.owners_active_today === 1 ? '' : 's'}.</p>
-                        ${renderResourceTaskTable(activeTasks, 'No active tasks found for today.')}
-                    </div>
-                `;
+                detailContainer.innerHTML = renderResourceTaskTable(activeTasks, 'No active tasks found for today.');
+                applyTableFilters('resourceTaskTable');
                 return;
             }
 
             if (currentResourceDrilldown === 'delayed') {
-                const delayedTasks = payload.owners
-                    .flatMap(owner => owner.tasks
-                        .filter(task => task.is_delayed)
-                        .map(task => ({ owner: owner.owner, ...task })))
-                    .sort((left, right) => left.owner.localeCompare(right.owner) || left.project_name.localeCompare(right.project_name) || left.task_name.localeCompare(right.task_name));
-
-                detailContainer.innerHTML = `
-                    <div class="resource-detail-panel">
-                        ${backButtonHtml}
-                        <h3>Owners with delayed tasks</h3>
-                        <p>${payload.summary.owners_with_delays || 0} owner${(payload.summary.owners_with_delays || 0) === 1 ? '' : 's'} currently have delayed work.</p>
-                        ${renderDelayedTaskTable(delayedTasks, 'No delayed tasks found right now.')}
-                    </div>
-                `;
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                detailContainer.innerHTML = '';
                 return;
             }
 
             if (currentResourceDrilldown === 'clear') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
                 const clearOwners = payload.owners
                     .filter(owner => !owner.has_delayed_tasks)
                     .sort((left, right) => left.owner.localeCompare(right.owner));
@@ -2081,36 +2280,19 @@
                     </tr>
                 `).join('');
 
-                detailContainer.innerHTML = `
-                    <div class="resource-detail-panel">
-                        ${backButtonHtml}
-                        <h3>Owners without delayed tasks</h3>
-                        <p>${clearOwners.length} owner${clearOwners.length === 1 ? '' : 's'} currently have no delayed work.</p>
-                        ${clearOwners.length ? `
-                            <div class="resource-table-wrap">
-                                <div class="resource-table-scroll">
-                                    <table class="resource-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Owner</th>
-                                                <th>Projects</th>
-                                                <th>Total Tasks</th>
-                                                <th>Active Now</th>
-                                                <th>Peak Load</th>
-                                                <th>Project List</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>${rows}</tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        ` : `<div class="resource-detail-empty">No clear owners found.</div>`}
-                    </div>
-                `;
+                detailContainer.innerHTML = clearOwners.length ? `
+                    ${renderFilterableTable(
+                        'resourceClearOwnersTable',
+                        ['Owner', 'Projects', 'Total Tasks', 'Active Now', 'Peak Load', 'Project List'],
+                        rows
+                    )}
+                ` : `<div class="resource-detail-empty">No clear owners found.</div>`;
+                if (clearOwners.length) applyTableFilters('resourceClearOwnersTable');
                 return;
             }
 
             if (currentResourceDrilldown === 'parallel') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
                 const parallelOwners = payload.owners
                     .filter(owner => owner.peak_parallel_tasks > 1)
                     .sort((left, right) => right.peak_parallel_tasks - left.peak_parallel_tasks || right.active_today_count - left.active_today_count || left.owner.localeCompare(right.owner));
@@ -2125,46 +2307,24 @@
                     </tr>
                 `).join('');
 
-                detailContainer.innerHTML = `
-                    <div class="resource-detail-panel">
-                        ${backButtonHtml}
-                        <h3>Parallel workload</h3>
-                        <p>Owners below have overlapping tasks across the portfolio.</p>
-                        ${parallelOwners.length ? `
-                            <div class="resource-table-wrap">
-                                <div class="resource-table-scroll">
-                                    <table class="resource-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Owner</th>
-                                                <th>Peak Parallel</th>
-                                                <th>Active Now</th>
-                                                <th>Total Tasks</th>
-                                                <th>Project List</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>${rows}</tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        ` : `<div class="resource-detail-empty">No parallel work found.</div>`}
-                    </div>
-                `;
+                detailContainer.innerHTML = parallelOwners.length ? `
+                    ${renderFilterableTable(
+                        'resourceParallelOwnersTable',
+                        ['Owner', 'Peak Parallel', 'Active Now', 'Total Tasks', 'Project List'],
+                        rows
+                    )}
+                ` : `<div class="resource-detail-empty">No parallel work found.</div>`;
+                if (parallelOwners.length) applyTableFilters('resourceParallelOwnersTable');
                 return;
             }
 
+            if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
             const allTasks = payload.owners
                 .flatMap(owner => owner.tasks.map(task => ({ owner: owner.owner, ...task })))
                 .sort((left, right) => left.owner.localeCompare(right.owner) || left.start_date.localeCompare(right.start_date) || left.project_name.localeCompare(right.project_name));
 
-            detailContainer.innerHTML = `
-                <div class="resource-detail-panel">
-                    ${backButtonHtml}
-                    <h3>All scheduled owner tasks</h3>
-                    <p>${allTasks.length} scheduled task${allTasks.length === 1 ? '' : 's'} across the portfolio.</p>
-                    ${renderResourceTaskTable(allTasks, 'No scheduled tasks found.')}
-                </div>
-            `;
+            detailContainer.innerHTML = renderResourceTaskTable(allTasks, 'No scheduled tasks found.');
+            applyTableFilters('resourceTaskTable');
         }
 
         function renderResourceTaskTable(tasks, emptyMessage) {
@@ -2183,25 +2343,11 @@
                 </tr>
             `).join('');
 
-            return `
-                <div class="resource-table-wrap">
-                    <div class="resource-table-scroll">
-                        <table class="resource-table">
-                            <thead>
-                                <tr>
-                                    <th>Owner</th>
-                                    <th>Project</th>
-                                    <th>Task</th>
-                                    <th>Start</th>
-                                    <th>End</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rows}</tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
+            return renderFilterableTable(
+                'resourceTaskTable',
+                ['Owner', 'Project', 'Task', 'Start', 'End', 'Status'],
+                rows
+            );
         }
 
         function renderDelayedTaskTable(tasks, emptyMessage) {
@@ -2220,25 +2366,297 @@
                 </tr>
             `).join('');
 
+            return renderFilterableTable(
+                'resourceDelayedTable',
+                ['Owner', 'Project', 'Task', 'Planned End', 'Closed', 'Delay Type'],
+                rows
+            );
+        }
+
+        function isFilterExcludedColumn(header) {
+            const normalizedHeader = (header || '').toLowerCase();
+            return normalizedHeader.includes('start') || normalizedHeader.includes('end');
+        }
+
+        const tableCheckboxFilters = {};
+        let activeTableFilterMenu = null;
+
+        function getTableCheckboxFilters(tableId) {
+            if (!tableCheckboxFilters[tableId]) {
+                tableCheckboxFilters[tableId] = {};
+            }
+            return tableCheckboxFilters[tableId];
+        }
+
+        function getColumnDistinctValues(table, columnIndex) {
+            const values = Array.from(new Set(
+                Array.from(table.querySelectorAll('tbody tr'))
+                    .map((row) => (row.cells[columnIndex]?.textContent || '').trim())
+                    .filter(Boolean)
+            ));
+
+            return values.sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }));
+        }
+
+        function closeAllTableFilterMenus() {
+            document.querySelectorAll('.resource-filter-menu.open').forEach((menu) => {
+                menu.classList.remove('open');
+            });
+            activeTableFilterMenu = null;
+        }
+
+        function ensureFloatingFilterMenu() {
+            let menu = document.getElementById('resourceFloatingFilterMenu');
+            if (!menu) {
+                menu = document.createElement('div');
+                menu.id = 'resourceFloatingFilterMenu';
+                menu.className = 'resource-filter-menu';
+                menu.addEventListener('click', (event) => event.stopPropagation());
+                document.body.appendChild(menu);
+            }
+
+            return menu;
+        }
+
+        function positionOpenFilterMenu(menu, trigger) {
+            menu.style.left = '16px';
+            menu.style.top = '16px';
+
+            const triggerRect = trigger.getBoundingClientRect();
+            const menuRect = menu.getBoundingClientRect();
+            let left = triggerRect.left;
+            let top = triggerRect.bottom + 6;
+
+            if (left + menuRect.width > window.innerWidth - 16) {
+                left = Math.max(16, window.innerWidth - menuRect.width - 16);
+            }
+
+            if (top + menuRect.height > window.innerHeight - 16) {
+                top = Math.max(16, triggerRect.top - menuRect.height - 6);
+            }
+
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+        }
+
+        function updateFilterTriggerState(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const trigger = table.querySelector(`.resource-filter-trigger[data-column-index="${columnIndex}"]`);
+            const filters = getTableCheckboxFilters(tableId);
+            const selectedValues = filters[columnIndex];
+
+            if (!trigger) return;
+
+            const isActive = Array.isArray(selectedValues);
+            trigger.classList.toggle('active', isActive);
+            trigger.innerHTML = isActive
+                ? `&#9662;<span class="resource-filter-trigger-count">${selectedValues.length}</span>`
+                : '&#9662;';
+        }
+
+        function updateAllFilterTriggerStates(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            table.querySelectorAll('.resource-filter-trigger').forEach((trigger) => {
+                updateFilterTriggerState(tableId, Number(trigger.dataset.columnIndex));
+            });
+        }
+
+        function renderColumnFilterMenu(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const menu = ensureFloatingFilterMenu();
+
+            const values = getColumnDistinctValues(table, columnIndex);
+            const filters = getTableCheckboxFilters(tableId);
+            const selectedValues = filters[columnIndex];
+            const activeValues = Array.isArray(selectedValues) ? new Set(selectedValues) : new Set(values);
+
+            const optionsHtml = values.length
+                ? values.map((value) => `
+                    <label class="resource-filter-option">
+                        <input
+                            type="checkbox"
+                            ${activeValues.has(value) ? 'checked' : ''}
+                            onchange="toggleColumnFilterValue('${tableId}', ${columnIndex}, ${JSON.stringify(value).replace(/"/g, '&quot;')}, this.checked)"
+                        >
+                        <span>${escapeHtml(value)}</span>
+                    </label>
+                `).join('')
+                : `<div class="resource-filter-empty">No values available</div>`;
+
+            menu.innerHTML = `
+                <div class="resource-filter-menu-header">
+                    <button type="button" class="resource-filter-menu-link" onclick="setAllColumnFilterValues('${tableId}', ${columnIndex}, true)">Select all</button>
+                    <button type="button" class="resource-filter-menu-link" onclick="setAllColumnFilterValues('${tableId}', ${columnIndex}, false)">Unselect all</button>
+                </div>
+                <div class="resource-filter-menu-list">${optionsHtml}</div>
+            `;
+
+            return menu;
+        }
+
+        function toggleColumnFilterMenu(event, tableId, columnIndex) {
+            event.stopPropagation();
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const trigger = event.currentTarget;
+            const menu = ensureFloatingFilterMenu();
+            const isSameMenuOpen = menu.classList.contains('open')
+                && activeTableFilterMenu?.tableId === tableId
+                && activeTableFilterMenu?.columnIndex === columnIndex;
+            closeAllTableFilterMenus();
+
+            if (isSameMenuOpen) {
+                return;
+            }
+
+            renderColumnFilterMenu(tableId, columnIndex);
+            menu.classList.add('open');
+            activeTableFilterMenu = { tableId, columnIndex, trigger };
+            positionOpenFilterMenu(menu, trigger);
+        }
+
+        function refreshOpenColumnFilterMenu() {
+            if (!activeTableFilterMenu) return;
+
+            const { tableId, columnIndex, trigger } = activeTableFilterMenu;
+            if (!document.body.contains(trigger)) {
+                closeAllTableFilterMenus();
+                return;
+            }
+
+            const menu = renderColumnFilterMenu(tableId, columnIndex);
+            if (!menu) return;
+            menu.classList.add('open');
+            positionOpenFilterMenu(menu, trigger);
+        }
+
+        function setAllColumnFilterValues(tableId, columnIndex, selectAll) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const filters = getTableCheckboxFilters(tableId);
+            if (selectAll) {
+                delete filters[columnIndex];
+            } else {
+                filters[columnIndex] = [];
+            }
+
+            applyTableFilters(tableId);
+            refreshOpenColumnFilterMenu();
+            updateFilterTriggerState(tableId, columnIndex);
+        }
+
+        function toggleColumnFilterValue(tableId, columnIndex, rawValue, checked) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const value = String(rawValue);
+            const filters = getTableCheckboxFilters(tableId);
+            const hasExplicitFilter = Array.isArray(filters[columnIndex]);
+            const allValues = getColumnDistinctValues(table, columnIndex);
+            const selectedSet = Array.isArray(filters[columnIndex])
+                ? new Set(filters[columnIndex])
+                : new Set(allValues);
+
+            if (!hasExplicitFilter && !checked) {
+                filters[columnIndex] = [value];
+                applyTableFilters(tableId);
+                refreshOpenColumnFilterMenu();
+                updateFilterTriggerState(tableId, columnIndex);
+                return;
+            }
+
+            if (checked) {
+                selectedSet.add(value);
+            } else {
+                selectedSet.delete(value);
+            }
+
+            if (selectedSet.size === allValues.length) {
+                delete filters[columnIndex];
+            } else {
+                filters[columnIndex] = allValues.filter((item) => selectedSet.has(item));
+            }
+
+            applyTableFilters(tableId);
+            refreshOpenColumnFilterMenu();
+            updateFilterTriggerState(tableId, columnIndex);
+        }
+
+        function renderFilterableTable(tableId, headers, rowsHtml, actionHtml = '') {
+            const headerRow = headers.map((header, index) => `
+                <th class="${isFilterExcludedColumn(header) ? '' : 'resource-filter-cell'}">
+                    <div class="resource-header-filter">
+                        <span class="resource-header-title">${escapeHtml(header)}</span>
+                        ${isFilterExcludedColumn(header)
+                            ? ''
+                            : `
+                                <button type="button" class="resource-filter-trigger" data-column-index="${index}" onclick="toggleColumnFilterMenu(event, '${tableId}', ${index})" aria-label="Filter ${escapeHtml(header)}">&#9662;</button>
+                            `
+                        }
+                    </div>
+                </th>
+            `).join('');
+
             return `
                 <div class="resource-table-wrap">
+                    ${actionHtml}
                     <div class="resource-table-scroll">
-                        <table class="resource-table">
+                        <table class="resource-table" id="${tableId}">
                             <thead>
-                                <tr>
-                                    <th>Owner</th>
-                                    <th>Project</th>
-                                    <th>Task</th>
-                                    <th>Planned End</th>
-                                    <th>Closed</th>
-                                    <th>Delay Type</th>
-                                </tr>
+                                <tr>${headerRow}</tr>
                             </thead>
-                            <tbody>${rows}</tbody>
+                            <tbody>${rowsHtml}</tbody>
                         </table>
                     </div>
                 </div>
             `;
+        }
+
+        function applyTableFilters(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const filters = getTableCheckboxFilters(tableId);
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            const activeFilterIndexes = Object.keys(filters);
+            const hasActiveFilters = activeFilterIndexes.length > 0;
+            const isSummaryTable = tableId === 'resourceSummaryOwnersTable';
+            const toggleButton = isSummaryTable ? document.getElementById('resourceTableToggle') : null;
+            const isExpanded = toggleButton?.dataset.expanded === 'true';
+
+            rows.forEach((row) => {
+                const matches = activeFilterIndexes.every((columnIndex) => {
+                    const selectedValues = filters[columnIndex];
+                    const cellText = (row.cells[Number(columnIndex)]?.textContent || '').trim();
+                    return Array.isArray(selectedValues) && selectedValues.includes(cellText);
+                });
+
+                if (hasActiveFilters) {
+                    row.style.display = matches ? 'table-row' : 'none';
+                    return;
+                }
+
+                if (row.dataset.defaultHidden === 'true') {
+                    row.style.display = isExpanded ? 'table-row' : 'none';
+                    return;
+                }
+
+                row.style.display = 'table-row';
+            });
+
+            if (toggleButton) {
+                toggleButton.style.display = hasActiveFilters ? 'none' : 'inline-flex';
+            }
+
+            updateAllFilterTriggerStates(tableId);
         }
 
         function setResourceDrilldown(mode) {
@@ -2255,14 +2673,11 @@
             if (!button || !hiddenRows.length) return;
 
             const isExpanded = button.dataset.expanded === 'true';
-            hiddenRows.forEach((row) => {
-                row.style.display = isExpanded ? 'none' : 'table-row';
-            });
-
             button.dataset.expanded = isExpanded ? 'false' : 'true';
             button.textContent = isExpanded
                 ? `${hiddenRows.length} more owners`
                 : 'Show less';
+            applyTableFilters('resourceSummaryOwnersTable');
         }
 
         function getAdjustedTimelinePercent(item, date, rangeStart, rangeEnd) {
@@ -2362,7 +2777,8 @@
             loadProjects();
         }
 
-        // Load data on page load
+        // Restore selected tab and load data on page load
+        restoreActiveDashboardTab();
         refreshDashboardData();
 
         // Refresh more aggressively so gantt edits appear quickly on the dashboard
@@ -2375,7 +2791,11 @@
             }
         });
 
+        document.addEventListener('click', closeAllTableFilterMenus);
+        window.addEventListener('resize', closeAllTableFilterMenus);
+        window.addEventListener('scroll', closeAllTableFilterMenus, true);
         window.addEventListener('focus', refreshDashboardData);
     </script>
 </body>
 </html>
+
