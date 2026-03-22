@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programme Portfolio Aggregation Dashboard</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f3f6fb;
+            --surface: #ffffff;
+            --surface-alt: #f8fafc;
+            --border: #d9e2f1;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --accent: #1d4ed8;
+            --accent-soft: #e8eefc;
+            --good: #166534;
+            --warn: #b45309;
+            --danger: #b91c1c;
+            --shadow: rgba(15, 23, 42, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        header {
+            padding: 24px 32px 16px;
+        }
+
+        h1, h2, h3 {
+            margin: 0 0 8px;
+        }
+
+        p {
+            margin: 0;
+            color: var(--muted);
+        }
+
+        main {
+            display: grid;
+            gap: 16px;
+            padding: 0 32px 32px;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 6px 18px var(--shadow);
+        }
+
+        .wide {
+            grid-column: 1 / -1;
+        }
+
+        .meta, .stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .pill, .stat {
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .stat strong {
+            color: var(--text);
+            margin-left: 4px;
+        }
+
+        .ok { color: var(--good); }
+        .warn { color: var(--warn); }
+        .error-text { color: var(--danger); }
+
+        code {
+            background: #eff3f8;
+            border-radius: 6px;
+            padding: 2px 6px;
+        }
+
+        form {
+            display: grid;
+            gap: 10px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        label {
+            display: grid;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        input, select, button {
+            font: inherit;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: white;
+        }
+
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button.secondary {
+            background: #475569;
+        }
+
+        button:hover {
+            opacity: 0.95;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .message {
+            min-height: 20px;
+            font-size: 13px;
+        }
+
+        .card-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .programme-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            background: var(--surface-alt);
+        }
+
+        .programme-card ul {
+            margin: 10px 0 0;
+            padding-left: 18px;
+        }
+
+        .empty {
+            padding: 12px;
+            border-radius: 10px;
+            background: var(--surface-alt);
+            color: var(--muted);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px 8px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .summary-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            background: var(--surface-alt);
+        }
+
+        .summary-card strong {
+            display: block;
+            font-size: 22px;
+            margin-top: 6px;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .badge-rag-G, .badge-gate-done, .badge-gate-rework_complete {
+            background: #166534;
+        }
+
+        .badge-rag-A, .badge-gate-rework, .badge-gate-planned {
+            background: #b45309;
+        }
+
+        .badge-rag-R, .badge-gate-delayed {
+            background: #991b1b;
+        }
+
+        .timeline-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .timeline-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            background: var(--surface-alt);
+        }
+
+        .timeline-gates {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .gate-chip {
+            display: inline-flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: white;
+            min-width: 128px;
+        }
+
+        .gate-chip strong {
+            font-size: 13px;
+        }
+
+        .gate-chip small {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .portfolio-rows {
+            display: grid;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .portfolio-row {
+            display: grid;
+            grid-template-columns: minmax(180px, 220px) 1fr;
+            gap: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            background: var(--surface-alt);
+        }
+
+        .portfolio-label {
+            border-right: 1px solid var(--border);
+            padding-right: 12px;
+        }
+
+        .portfolio-lane {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-content: flex-start;
+        }
+
+        .portfolio-lane .gate-chip {
+            min-width: 150px;
+        }
+
+        .cell-low {
+            background: #EAF3DE;
+        }
+
+        .cell-mid {
+            background: #FAEEDA;
+        }
+
+        .cell-high {
+            background: #FCEBEB;
+        }
+
+        .workspace-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 12px 0 18px;
+        }
+
+        .workspace-actions a {
+            display: inline-block;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .workspace-actions a.secondary-link {
+            background: #334155;
+        }
+
+        .detail-project-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+        }
+
+        .detail-project-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            background: #fff;
+        }
+
+        .detail-project-card h3 {
+            margin-bottom: 6px;
+            font-size: 16px;
+        }
+
+        .detail-project-card p {
+            margin: 4px 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .detail-project-card a {
+            display: inline-block;
+            margin-top: 8px;
+            color: var(--accent);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .import-panel {
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            background: #F8FAFC;
+            margin-bottom: 14px;
+        }
+
+        .import-panel p {
+            margin: 0 0 10px;
+            color: var(--muted);
+        }
+
+        .import-panel form {
+            margin-top: 12px;
+        }
+
+        .hidden-input {
+            display: none;
+        }
+
+        .project-links {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .project-links a {
+            margin-top: 0;
+            font-size: 13px;
+        }
+
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .overlay.show {
+            display: flex;
+        }
+
+        .overlay-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            min-width: 280px;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            .portfolio-row {
+                grid-template-columns: 1fr;
+            }
+
+            .portfolio-label {
+                border-right: 0;
+                border-bottom: 1px solid var(--border);
+                padding-right: 0;
+                padding-bottom: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Programme Portfolio Aggregation Dashboard</h1>
+        <p>
+            Admin setup console for the new aggregate dashboard. Use this page to create programmes,
+            assign discovered source projects, map resource owners to teams, and maintain milestone baselines.
+        </p>
+    </header>
+    <main>
+        <section class="wide">
+            <div class="toolbar">
+                <div>
+                    <h2>Environment</h2>
+                    <p>Source DB stays read-only. All admin writes go only to <code>portfolio.db</code>.</p>
+                </div>
+                <button class="secondary" id="refreshButton" type="button">Refresh data</button>
+            </div>
+            <div class="meta">
+                <span class="pill">Port 5002</span>
+                <span class="pill">Source DB: read-only</span>
+                <span class="pill">Portfolio DB: writable</span>
+                <span class="pill">Admin UI live</span>
+            </div>
+            <div class="stats" id="topStats"></div>
+            <div id="globalMessage" class="message"></div>
+        </section>
+
+        <section class="wide">
+            <div class="toolbar">
+                <div>
+                    <h2>Detailed project workspace</h2>
+                    <p>Use the same `5002` portal for project-level gantts, task editing, gate management, and Excel import.</p>
+                </div>
+            </div>
+            <div class="import-panel">
+                <p>Import a new project Excel file directly here. The project will be added to the detailed gantt layer and then become available for aggregate mapping.</p>
+                <div class="workspace-actions">
+                    <button type="button" id="importProjectButton">Import new project from Excel</button>
+                    <a href="/projects" class="secondary-link">Open detailed workspace</a>
+                </div>
+                <input type="file" id="projectFileInput" class="hidden-input" accept=".xlsx">
+                <form id="blankProjectForm">
+                    <div class="form-row">
+                        <label>
+                            New project name
+                            <input id="blankProjectName" placeholder="New programme workstream" required>
+                        </label>
+                        <label>
+                            Project manager
+                            <input id="blankProjectManager" placeholder="Owner / PM" required>
+                        </label>
+                    </div>
+                    <button type="submit">Create blank project</button>
+                </form>
+                <form id="quickTaskForm">
+                    <div class="form-row">
+                        <label>
+                            Project
+                            <select id="quickTaskProjectSelect"></select>
+                        </label>
+                        <label>
+                            Task name
+                            <input id="quickTaskName" placeholder="Kickoff / Gate prep / Test plan" required>
+                        </label>
+                        <label>
+                            Phase
+                            <input id="quickTaskPhase" placeholder="Planning" required>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>
+                            Owner
+                            <input id="quickTaskOwner" placeholder="Task owner" required>
+                        </label>
+                        <label>
+                            Start date
+                            <input type="date" id="quickTaskStartDate" required>
+                        </label>
+                        <label>
+                            End date
+                            <input type="date" id="quickTaskEndDate" required>
+                        </label>
+                        <label>
+                            Status
+                            <select id="quickTaskStatus">
+                                <option value="Planned">Planned</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Done">Done</option>
+                            </select>
+                        </label>
+                    </div>
+                    <button type="submit">Create first task</button>
+                </form>
+            </div>
+            <div class="workspace-actions">
+                <a href="/projects">See all detailed projects</a>
+            </div>
+            <div id="detailedProjectsList" class="detail-project-list"></div>
+            <div id="detailedProjectsMessage" class="message"></div>
+        </section>
+
+        <div class="panel-grid">
+            <section>
+                <h2>Create programme</h2>
+                <form id="programmeForm">
+                    <div class="form-row">
+                        <label>
+                            Programme name
+                            <input name="name" placeholder="Industrial Gas" required>
+                        </label>
+                        <label>
+                            Division
+                            <input name="division" placeholder="Industrial" required>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>
+                            Owner
+                            <input name="owner" placeholder="Programme owner" required>
+                        </label>
+                        <label>
+                            Status
+                            <select name="status">
+                                <option value="active">Active</option>
+                                <option value="hold">Hold</option>
+                                <option value="complete">Complete</option>
+                            </select>
+                        </label>
+                    </div>
+                    <button type="submit">Create programme</button>
+                </form>
+                <div id="programmeFormMessage" class="message"></div>
+            </section>
+
+            <section>
+                <div class="toolbar">
+                    <div>
+                        <h2>Programme snapshot</h2>
+                        <p>Summary, combined schedule view, and RAG for one configured programme.</p>
+                    </div>
+                </div>
+                <label>
+                    Select programme
+                    <select id="summaryProgrammeSelect"></select>
+                </label>
+                <div id="summaryContent" class="summary-grid"></div>
+            </section>
+        </div>
+
+        <section class="wide">
+            <div class="toolbar">
+                <div>
+                    <h2>Overall portfolio timeline</h2>
+                    <p>One aggregate row per programme, with gate markers from all assigned projects shown together.</p>
+                </div>
+            </div>
+            <div id="portfolioRows" class="portfolio-rows"></div>
+            <div class="table-wrap" style="margin-top: 12px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Programme</th>
+                            <th>Owner</th>
+                            <th>Status</th>
+                            <th>Projects</th>
+                            <th>RAG mix</th>
+                            <th>Next gate</th>
+                            <th>Combined gate view</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolioOverviewBody"></tbody>
+                </table>
+            </div>
+            <div id="portfolioMessage" class="message"></div>
+        </section>
+
+        <section class="wide">
+            <div class="toolbar">
+                <div>
+                    <h2>Portfolio schedule view</h2>
+                    <p>Combined status table showing both fiscal and calendar quarter context for each gate.</p>
+                </div>
+            </div>
+            <div id="timelineCards" class="timeline-list"></div>
+            <div class="table-wrap" style="margin-top: 12px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Gate</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Fiscal</th>
+                            <th>Calendar</th>
+                            <th>Delay</th>
+                            <th>Risk</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timelineBody"></tbody>
+                </table>
+            </div>
+            <div id="timelineMessage" class="message"></div>
+        </section>
+
+        <section class="wide">
+            <div class="toolbar">
+                <div>
+                    <h2>Programme RAG grid</h2>
+                    <p>Derived from live task and gate data using the aggregate dashboard logic.</p>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>RAG</th>
+                            <th>Schedule variance</th>
+                            <th>Completion %</th>
+                            <th>Tasks</th>
+                            <th>Completed</th>
+                            <th>In process</th>
+                            <th>Planned</th>
+                            <th>Critical</th>
+                            <th>Overdue</th>
+                            <th>Tailed out</th>
+                            <th>Milestones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ragBody"></tbody>
+                </table>
+            </div>
+            <div id="ragMessage" class="message"></div>
+        </section>
+
+        <div class="panel-grid">
+            <section class="wide">
+                <h2>Gate panel</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Gate</th>
+                                <th>Type</th>
+                                <th>Baseline</th>
+                                <th>Sign-off</th>
+                                <th>Rework due</th>
+                                <th>Delayed</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gatesBody"></tbody>
+                    </table>
+                </div>
+                <div id="gatesMessage" class="message"></div>
+            </section>
+
+            <section class="wide">
+                <h2>Milestone tracker</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Milestone</th>
+                                <th>Baseline</th>
+                                <th>Forecast</th>
+                                <th>Drift</th>
+                                <th>RAG</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="milestonesBody"></tbody>
+                    </table>
+                </div>
+                <div id="milestonesMessage" class="message"></div>
+            </section>
+
+            <section class="wide">
+                <h2>Resource utilisation heatmap</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead id="resourcesHead"></thead>
+                        <tbody id="resourcesBody"></tbody>
+                    </table>
+                </div>
+                <div id="resourcesMessage" class="message"></div>
+            </section>
+
+            <section class="wide">
+                <h2>Cross-project dependencies</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Predecessor project</th>
+                                <th>Predecessor task</th>
+                                <th>Successor project</th>
+                                <th>Successor task</th>
+                                <th>Successor status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dependenciesBody"></tbody>
+                    </table>
+                </div>
+                <div id="dependenciesMessage" class="message"></div>
+            </section>
+
+            <section class="wide">
+                <h2>Escalation log</h2>
+                <form id="escalationForm">
+                    <div class="form-row">
+                        <label>
+                            Issue
+                            <input id="escalationIssue" required>
+                        </label>
+                        <label>
+                            Owner
+                            <input id="escalationOwner" required>
+                        </label>
+                        <label>
+                            Severity
+                            <select id="escalationSeverity">
+                                <option value="A">Amber</option>
+                                <option value="R">Red</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="form-row">
+                        <label>
+                            Raised date
+                            <input type="date" id="escalationRaisedDate" required>
+                        </label>
+                        <label>
+                            Target decision date
+                            <input type="date" id="escalationTargetDate" required>
+                        </label>
+                        <label>
+                            Project (optional)
+                            <select id="escalationProjectSelect"></select>
+                        </label>
+                        <label>
+                            Gate (optional)
+                            <select id="escalationGateSelect"></select>
+                        </label>
+                    </div>
+                    <button type="submit">Add escalation</button>
+                </form>
+                <div id="escalationsMessage" class="message"></div>
+                <div class="table-wrap" style="margin-top: 12px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>Issue</th>
+                                <th>Owner</th>
+                                <th>Project</th>
+                                <th>Gate</th>
+                                <th>Raised</th>
+                                <th>Target</th>
+                                <th>Resolve</th>
+                            </tr>
+                        </thead>
+                        <tbody id="escalationsBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="wide">
+                <h2>Tailed-out scope log</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Task</th>
+                                <th>Phase</th>
+                                <th>Owner</th>
+                                <th>Status</th>
+                                <th>Rework cause</th>
+                                <th>Original due</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tailedOutBody"></tbody>
+                    </table>
+                </div>
+                <div id="tailedOutMessage" class="message"></div>
+            </section>
+        </div>
+
+        <section class="wide">
+            <h2>Configured programmes</h2>
+            <div id="programmesList" class="card-list"></div>
+        </section>
+
+        <div class="panel-grid">
+            <section class="wide">
+                <h2>Unassigned projects</h2>
+                <p>Any project discovered in <code>dashboards.db</code> without a programme mapping appears here.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Manager</th>
+                                <th>Tasks</th>
+                                <th>Completed</th>
+                                <th>Assign to programme</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unassignedProjectsBody"></tbody>
+                    </table>
+                </div>
+                <div id="unassignedMessage" class="message"></div>
+            </section>
+
+            <section class="wide">
+                <h2>Unmapped owners → resource teams</h2>
+                <p>Owners are discovered from source tasks and remain unmapped until you assign a team.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Owner</th>
+                                <th>Tasks</th>
+                                <th>Projects</th>
+                                <th>Team name</th>
+                                <th>Capacity hrs/week</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unmappedOwnersBody"></tbody>
+                    </table>
+                </div>
+                <div id="ownersMessage" class="message"></div>
+            </section>
+        </div>
+
+        <div class="panel-grid">
+            <section class="wide">
+                <h2>Milestone baselines</h2>
+                <p>Manage portfolio-owned milestone baselines for milestone tasks from assigned projects.</p>
+                <form id="baselineForm">
+                    <div class="form-row">
+                        <label>
+                            Programme
+                            <select id="baselineProgrammeSelect"></select>
+                        </label>
+                        <label>
+                            Milestone candidate
+                            <select id="baselineCandidateSelect"></select>
+                        </label>
+                        <label>
+                            Baseline date
+                            <input type="date" id="baselineDateInput" required>
+                        </label>
+                    </div>
+                    <button type="submit">Save milestone baseline</button>
+                </form>
+                <div id="baselineMessage" class="message"></div>
+                <div class="table-wrap" style="margin-top: 12px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Task</th>
+                                <th>Baseline date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="baselinesBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+    <div id="uploadOverlay" class="overlay">
+        <div class="overlay-card">
+            <h3>Importing project</h3>
+            <p id="uploadOverlayText">Uploading and processing Excel file...</p>
+        </div>
+    </div>
+    <script>
+        const state = {
+            programmes: [],
+            unassignedProjects: [],
+            unmappedOwners: [],
+            milestoneCandidates: [],
+            milestoneBaselines: [],
+            portfolioOverview: [],
+            timeline: [],
+            ragRows: [],
+            gates: [],
+            milestones: [],
+            resources: [],
+            dependencies: [],
+            escalations: [],
+            tailedOut: [],
+            detailedProjects: [],
+        };
+
+        async function requestJson(url, options) {
+            const response = await fetch(url, {
+                headers: { "Content-Type": "application/json" },
+                ...options,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.error || ("Request failed: " + response.status));
+            }
+            return data;
+        }
+
+        function setMessage(id, text, kind) {
+            const node = document.getElementById(id);
+            node.textContent = text || "";
+            node.className = "message" + (kind === "error" ? " error-text" : kind === "warn" ? " warn" : kind === "ok" ? " ok" : "");
+        }
+
+        function programmeOptionsHtml(selectedId) {
+            if (!state.programmes.length) {
+                return '<option value="">Create a programme first</option>';
+            }
+
+            return state.programmes.map((programme) => {
+                const selected = Number(selectedId) === Number(programme.id) ? "selected" : "";
+                return `<option value="${programme.id}" ${selected}>${programme.name}</option>`;
+            }).join("");
+        }
+
+        function detailedProjectOptionsHtml(selectedName) {
+            if (!state.detailedProjects.length) {
+                return '<option value="">Create or import a project first</option>';
+            }
+
+            return state.detailedProjects.map((project) => {
+                const selected = project.name === selectedName ? "selected" : "";
+                return `<option value="${project.name}" ${selected}>${project.name}</option>`;
+            }).join("");
+        }
+
+        function renderTopStats() {
+            document.getElementById("topStats").innerHTML = [
+                ["Programmes", state.programmes.length],
+                ["Detailed projects", state.detailedProjects.length],
+                ["Unassigned projects", state.unassignedProjects.length],
+                ["Unmapped owners", state.unmappedOwners.length],
+                ["Baseline records", state.milestoneBaselines.length],
+            ].map(([label, value]) => `<span class="stat">${label}<strong>${value}</strong></span>`).join("");
+        }
+
+        function renderDetailedProjects() {
+            const container = document.getElementById("detailedProjectsList");
+            if (!state.detailedProjects.length) {
+                container.innerHTML = '<div class="empty">No detailed projects found yet. Use the detailed workspace to import one from Excel.</div>';
+                return;
+            }
+
+            container.innerHTML = state.detailedProjects.map((project) => `
+                <div class="detail-project-card">
+                    <h3>${project.name}</h3>
+                    <p>Manager: ${project.manager || "—"}</p>
+                    <p>Tasks: ${project.task_count || 0}</p>
+                    <p>Updated: ${project.updated_at ? new Date(project.updated_at).toLocaleString() : "—"}</p>
+                    <div class="project-links">
+                        <a href="/project/${encodeURIComponent(project.name)}">Open gantt workspace</a>
+                        <a href="/api/project/${encodeURIComponent(project.name)}">Project API</a>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        async function loadSummary() {
+            const select = document.getElementById("summaryProgrammeSelect");
+            const summaryContent = document.getElementById("summaryContent");
+            summaryContent.innerHTML = "";
+
+            if (!select.value) {
+                summaryContent.innerHTML = '<div class="empty">Create a programme to see summary data.</div>';
+                return;
+            }
+
+            try {
+                const summary = await requestJson(`/api/v1/programme/${select.value}/summary`);
+                const nextGate = summary.next_gate
+                    ? `${summary.next_gate.project_name} · ${summary.next_gate.gate_name} (${summary.next_gate.display_date})`
+                    : "No future gate found";
+                summaryContent.innerHTML = [
+                    ["Projects", summary.project_count],
+                    ["Health score", summary.health_score + "%"],
+                    ["Open escalations", summary.open_escalations],
+                    ["Resource risks", summary.resource_risk_count],
+                    ["Green/Amber/Red", `${summary.green_count}/${summary.amber_count}/${summary.red_count}`],
+                    ["Next gate", nextGate],
+                ].map(([label, value]) => `<div class="summary-card"><div>${label}</div><strong>${value}</strong></div>`).join("");
+            } catch (error) {
+                summaryContent.innerHTML = `<div class="empty error-text">${error.message}</div>`;
+            }
+        }
+
+        function renderProgrammes() {
+            const container = document.getElementById("programmesList");
+            if (!state.programmes.length) {
+                container.innerHTML = '<div class="empty">No programmes configured yet.</div>';
+                return;
+            }
+
+            container.innerHTML = state.programmes.map((programme) => {
+                const projects = programme.projects || [];
+                const projectList = projects.length
+                    ? `<ul>${projects.map((project) => `<li><a href="/project/${encodeURIComponent(project.project_name)}">${project.project_name}</a> (${project.task_count} tasks)</li>`).join("")}</ul>`
+                    : '<div class="empty">No projects assigned yet.</div>';
+
+                return `
+                    <div class="programme-card">
+                        <div class="toolbar">
+                            <div>
+                                <h3>${programme.name}</h3>
+                                <p>${programme.division} · Owner: ${programme.owner} · Status: ${programme.status}</p>
+                            </div>
+                            <span class="pill">${programme.project_count || 0} projects</span>
+                        </div>
+                        ${projectList}
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function renderPortfolioOverview() {
+            const rowsContainer = document.getElementById("portfolioRows");
+            const body = document.getElementById("portfolioOverviewBody");
+
+            if (!state.portfolioOverview.length) {
+                rowsContainer.innerHTML = '<div class="empty">No programmes configured yet. Create and assign programmes to see the overall portfolio timeline.</div>';
+                body.innerHTML = '<tr><td colspan="7" class="empty">No portfolio overview data available.</td></tr>';
+                return;
+            }
+
+            rowsContainer.innerHTML = state.portfolioOverview.map((entry) => {
+                const programme = entry.programme;
+                const summary = entry.summary;
+                const timeline = entry.timeline;
+                const nextGate = summary.next_gate
+                    ? `${summary.next_gate.project_name} · ${summary.next_gate.gate_name} (${summary.next_gate.display_date})`
+                    : "No future gate";
+
+                return `
+                    <div class="portfolio-row">
+                        <div class="portfolio-label">
+                            <h3>${programme.name}</h3>
+                            <p>${programme.division} · Owner: ${programme.owner}</p>
+                            <div class="stats" style="margin-top: 10px;">
+                                <span class="stat">Projects<strong>${summary.project_count}</strong></span>
+                                <span class="stat">RAG<strong>${summary.green_count}/${summary.amber_count}/${summary.red_count}</strong></span>
+                            </div>
+                            <p style="margin-top: 8px;">Next gate: ${nextGate}</p>
+                        </div>
+                        <div class="portfolio-lane">
+                            ${timeline.length ? timeline.map((gate) => `
+                                <div class="gate-chip">
+                                    ${badgeHtml("gate", gate.gate_type)}
+                                    <strong>${gate.project_name} · ${gate.gate_name}</strong>
+                                    <small>${gate.display_date}</small>
+                                    <small>FY${gate.fiscal_year} Q${gate.fiscal_quarter} · CY${gate.calendar_year} Q${gate.calendar_quarter}</small>
+                                </div>
+                            `).join("") : '<div class="empty">No gate data for assigned projects yet.</div>'}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            body.innerHTML = state.portfolioOverview.map((entry) => {
+                const programme = entry.programme;
+                const summary = entry.summary;
+                const nextGate = summary.next_gate
+                    ? `${summary.next_gate.project_name} · ${summary.next_gate.gate_name} (${summary.next_gate.display_date})`
+                    : "No future gate";
+                const combinedGateView = entry.timeline.length
+                    ? entry.timeline.map((gate) => `${gate.project_name}: ${gate.gate_name} [FY${gate.fiscal_year}Q${gate.fiscal_quarter} / CY${gate.calendar_year}Q${gate.calendar_quarter}]`).join("<br>")
+                    : "No gates";
+
+                return `
+                    <tr>
+                        <td>${programme.name}</td>
+                        <td>${programme.owner}</td>
+                        <td>${programme.status}</td>
+                        <td>${summary.project_count}</td>
+                        <td>${summary.green_count}/${summary.amber_count}/${summary.red_count}</td>
+                        <td>${nextGate}</td>
+                        <td>${combinedGateView}</td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        function badgeHtml(kind, value) {
+            return `<span class="badge badge-${kind}-${value}">${value}</span>`;
+        }
+
+        function renderTimeline() {
+            const body = document.getElementById("timelineBody");
+            const cards = document.getElementById("timelineCards");
+
+            if (!state.timeline.length) {
+                cards.innerHTML = '<div class="empty">No gate timeline data for this programme yet. Assign projects with gate baselines first.</div>';
+                body.innerHTML = '<tr><td colspan="8" class="empty">No gate timeline data available.</td></tr>';
+                return;
+            }
+
+            const grouped = state.timeline.reduce((acc, row) => {
+                acc[row.project_name] = acc[row.project_name] || [];
+                acc[row.project_name].push(row);
+                return acc;
+            }, {});
+
+            cards.innerHTML = Object.entries(grouped).map(([projectName, gates]) => `
+                <div class="timeline-card">
+                    <h3>${projectName}</h3>
+                    <div class="timeline-gates">
+                        ${gates.map((gate) => `
+                            <div class="gate-chip">
+                                ${badgeHtml("gate", gate.gate_type)}
+                                <strong>${gate.gate_name}</strong>
+                                <small>${gate.display_date}</small>
+                                <small>FY${gate.fiscal_year} Q${gate.fiscal_quarter} · CY${gate.calendar_year} Q${gate.calendar_quarter}</small>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+            `).join("");
+
+            body.innerHTML = state.timeline.map((row) => `
+                <tr>
+                    <td>${row.project_name}</td>
+                    <td>${row.gate_name}</td>
+                    <td>${badgeHtml("gate", row.gate_type)}</td>
+                    <td>${row.display_date}</td>
+                    <td>FY${row.fiscal_year} Q${row.fiscal_quarter}</td>
+                    <td>${row.calendar_year} Q${row.calendar_quarter}</td>
+                    <td>${row.days_delayed || 0}d</td>
+                    <td>${row.has_risk_window ? "Risk window" : "-"}</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderRag() {
+            const body = document.getElementById("ragBody");
+            if (!state.ragRows.length) {
+                body.innerHTML = '<tr><td colspan="12" class="empty">No RAG data available for this programme yet.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = state.ragRows.map((row) => `
+                <tr>
+                    <td>${row.project_name}</td>
+                    <td>${badgeHtml("rag", row.rag)}</td>
+                    <td>${row.schedule_variance}</td>
+                    <td>${row.completion_pct}%</td>
+                    <td>${row.total_tasks}</td>
+                    <td>${row.completed}</td>
+                    <td>${row.in_process}</td>
+                    <td>${row.planned}</td>
+                    <td>${row.critical_count}</td>
+                    <td>${row.overdue_count}</td>
+                    <td>${row.tailed_out_count}</td>
+                    <td>${row.milestone_count}</td>
+                </tr>
+            `).join("");
+        }
+
+        function selectedProgramme() {
+            const selectedId = Number(document.getElementById("summaryProgrammeSelect").value);
+            return state.programmes.find((programme) => Number(programme.id) === selectedId) || null;
+        }
+
+        function renderGates() {
+            const body = document.getElementById("gatesBody");
+            if (!state.gates.length) {
+                body.innerHTML = '<tr><td colspan="7" class="empty">No gate rows available for this programme.</td></tr>';
+                return;
+            }
+            body.innerHTML = state.gates.map((row) => `
+                <tr>
+                    <td>${row.project_name}</td>
+                    <td>${row.gate_name}</td>
+                    <td>${badgeHtml("gate", row.gate_type)}</td>
+                    <td>${row.baseline_date || ""}</td>
+                    <td>${row.sign_off_date || ""}</td>
+                    <td>${row.rework_due_date || ""}</td>
+                    <td>${row.days_delayed || 0}d</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderMilestones() {
+            const body = document.getElementById("milestonesBody");
+            if (!state.milestones.length) {
+                body.innerHTML = '<tr><td colspan="7" class="empty">No milestones available for this programme.</td></tr>';
+                return;
+            }
+            body.innerHTML = state.milestones.map((row) => `
+                <tr>
+                    <td>${row.project_name}</td>
+                    <td>${row.task_name}</td>
+                    <td>${row.baseline_date || ""}</td>
+                    <td>${row.forecast_date || ""}</td>
+                    <td>${row.drift_days === null || row.drift_days === undefined ? "" : row.drift_days + "d"}</td>
+                    <td>${badgeHtml("rag", row.rag)}</td>
+                    <td>${row.status || ""}</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderResources() {
+            const head = document.getElementById("resourcesHead");
+            const body = document.getElementById("resourcesBody");
+            if (!state.resources.length) {
+                head.innerHTML = "";
+                body.innerHTML = '<tr><td class="empty">No resource teams mapped for this programme yet.</td></tr>';
+                return;
+            }
+
+            const weekHeaders = state.resources[0].weeks.map((week) => `<th>${week.week_start}</th>`).join("");
+            head.innerHTML = `<tr><th>Team</th>${weekHeaders}</tr>`;
+            body.innerHTML = state.resources.map((team) => `
+                <tr>
+                    <td>${team.team_name}</td>
+                    ${team.weeks.map((week) => `<td class="cell-${week.level}">${week.util_pct}%<br><small>${week.active_task_count} tasks</small></td>`).join("")}
+                </tr>
+            `).join("");
+        }
+
+        function renderDependencies() {
+            const body = document.getElementById("dependenciesBody");
+            if (!state.dependencies.length) {
+                body.innerHTML = '<tr><td colspan="5" class="empty">No cross-project dependencies found for this programme.</td></tr>';
+                return;
+            }
+            body.innerHTML = state.dependencies.map((row) => `
+                <tr>
+                    <td>${row.predecessor_project_name}</td>
+                    <td>${row.predecessor_task_name}</td>
+                    <td>${row.successor_project_name}</td>
+                    <td>${row.successor_task_name}</td>
+                    <td>${row.successor_status || ""}</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderEscalationSelectors() {
+            const projectSelect = document.getElementById("escalationProjectSelect");
+            const gateSelect = document.getElementById("escalationGateSelect");
+            const projectOptions = ['<option value="">None</option>'].concat(
+                [...new Set(state.timeline.map((row) => row.project_name))].map((name) => `<option value="${name}">${name}</option>`)
+            );
+            const gateOptions = ['<option value="">None</option>'].concat(
+                state.timeline.map((row) => `<option value="${row.gate_name}">${row.project_name} · ${row.gate_name}</option>`)
+            );
+            projectSelect.innerHTML = projectOptions.join("");
+            gateSelect.innerHTML = gateOptions.join("");
+        }
+
+        function renderEscalations() {
+            const body = document.getElementById("escalationsBody");
+            if (!state.escalations.length) {
+                body.innerHTML = '<tr><td colspan="8" class="empty">No open escalations for this programme.</td></tr>';
+                return;
+            }
+            body.innerHTML = state.escalations.map((row) => `
+                <tr>
+                    <td>${badgeHtml("rag", row.severity)}</td>
+                    <td>${row.issue}</td>
+                    <td>${row.owner}</td>
+                    <td>${row.project_name || ""}</td>
+                    <td>${row.gate_name || ""}</td>
+                    <td>${row.raised_date}</td>
+                    <td>${row.target_decision_date}</td>
+                    <td><button type="button" onclick="resolveEscalation(${row.id})">Resolve</button></td>
+                </tr>
+            `).join("");
+        }
+
+        function renderTailedOut() {
+            const body = document.getElementById("tailedOutBody");
+            if (!state.tailedOut.length) {
+                body.innerHTML = '<tr><td colspan="7" class="empty">No tailed-out tasks for this programme.</td></tr>';
+                return;
+            }
+            body.innerHTML = state.tailedOut.map((row) => `
+                <tr>
+                    <td>${row.project_name}</td>
+                    <td>${row.task_name}</td>
+                    <td>${row.phase || ""}</td>
+                    <td>${row.owner || ""}</td>
+                    <td>${row.status || ""}</td>
+                    <td>${row.is_rework_cause ? "Yes" : "No"}</td>
+                    <td>${row.rework_original_due || row.end_date || ""}</td>
+                </tr>
+            `).join("");
+        }
+
+        async function loadPortfolioView() {
+            const programmeId = document.getElementById("summaryProgrammeSelect").value;
+            state.timeline = [];
+            state.ragRows = [];
+
+            if (!programmeId) {
+                renderTimeline();
+                renderRag();
+                return;
+            }
+
+            try {
+                const [timeline, ragRows] = await Promise.all([
+                    requestJson(`/api/v1/programme/${programmeId}/timeline`),
+                    requestJson(`/api/v1/programme/${programmeId}/rag`),
+                ]);
+                state.timeline = timeline;
+                state.ragRows = ragRows;
+                renderTimeline();
+                renderRag();
+                setMessage("timelineMessage", `Loaded ${timeline.length} gates.`, "ok");
+                setMessage("ragMessage", `Loaded ${ragRows.length} project RAG rows.`, "ok");
+            } catch (error) {
+                state.timeline = [];
+                state.ragRows = [];
+                renderTimeline();
+                renderRag();
+                setMessage("timelineMessage", error.message, "error");
+                setMessage("ragMessage", error.message, "error");
+            }
+        }
+
+        async function loadProgrammeDetailSlices() {
+            const programmeId = document.getElementById("summaryProgrammeSelect").value;
+            state.gates = [];
+            state.milestones = [];
+            state.resources = [];
+            state.dependencies = [];
+            state.escalations = [];
+            state.tailedOut = [];
+            renderGates();
+            renderMilestones();
+            renderResources();
+            renderDependencies();
+            renderEscalations();
+            renderTailedOut();
+
+            if (!programmeId) {
+                renderEscalationSelectors();
+                return;
+            }
+
+            try {
+                const [gates, milestones, resources, dependencies, escalations, tailedOut] = await Promise.all([
+                    requestJson(`/api/v1/programme/${programmeId}/gates`),
+                    requestJson(`/api/v1/programme/${programmeId}/milestones`),
+                    requestJson(`/api/v1/programme/${programmeId}/resources`),
+                    requestJson(`/api/v1/programme/${programmeId}/dependencies`),
+                    requestJson(`/api/v1/programme/${programmeId}/escalations`),
+                    requestJson(`/api/v1/programme/${programmeId}/tailed-out`),
+                ]);
+                state.gates = gates;
+                state.milestones = milestones;
+                state.resources = resources;
+                state.dependencies = dependencies;
+                state.escalations = escalations;
+                state.tailedOut = tailedOut;
+                renderGates();
+                renderMilestones();
+                renderResources();
+                renderDependencies();
+                renderEscalations();
+                renderTailedOut();
+                renderEscalationSelectors();
+                setMessage("gatesMessage", `Loaded ${gates.length} gate rows.`, "ok");
+                setMessage("milestonesMessage", `Loaded ${milestones.length} milestones.`, "ok");
+                setMessage("resourcesMessage", `Loaded ${resources.length} resource teams.`, "ok");
+                setMessage("dependenciesMessage", `Loaded ${dependencies.length} cross-project dependencies.`, "ok");
+                setMessage("escalationsMessage", `Loaded ${escalations.length} open escalations.`, "ok");
+                setMessage("tailedOutMessage", `Loaded ${tailedOut.length} tailed-out tasks.`, "ok");
+            } catch (error) {
+                setMessage("gatesMessage", error.message, "error");
+                setMessage("milestonesMessage", error.message, "error");
+                setMessage("resourcesMessage", error.message, "error");
+                setMessage("dependenciesMessage", error.message, "error");
+                setMessage("escalationsMessage", error.message, "error");
+                setMessage("tailedOutMessage", error.message, "error");
+            }
+        }
+
+        async function loadPortfolioOverview() {
+            try {
+                state.portfolioOverview = await requestJson("/api/v1/portfolio/overview");
+                renderPortfolioOverview();
+                setMessage("portfolioMessage", `Loaded ${state.portfolioOverview.length} programme rows.`, "ok");
+            } catch (error) {
+                state.portfolioOverview = [];
+                renderPortfolioOverview();
+                setMessage("portfolioMessage", error.message, "error");
+            }
+        }
+
+        function renderUnassignedProjects() {
+            const body = document.getElementById("unassignedProjectsBody");
+            if (!state.unassignedProjects.length) {
+                body.innerHTML = '<tr><td colspan="5" class="empty">No unassigned projects found.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = state.unassignedProjects.map((project) => `
+                <tr>
+                    <td>${project.name}</td>
+                    <td>${project.manager || ""}</td>
+                    <td>${project.task_count}</td>
+                    <td>${project.completed_count || 0}</td>
+                    <td>
+                        <div class="form-row" style="grid-template-columns: minmax(180px, 1fr) auto;">
+                            <select data-project-name="${project.name}" class="project-programme-select">
+                                ${programmeOptionsHtml("")}
+                            </select>
+                            <button type="button" onclick="assignProject(${JSON.stringify(project.name)})">Assign</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join("");
+        }
+
+        function renderUnmappedOwners() {
+            const body = document.getElementById("unmappedOwnersBody");
+            if (!state.unmappedOwners.length) {
+                body.innerHTML = '<tr><td colspan="6" class="empty">No unmapped owners found.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = state.unmappedOwners.map((owner) => `
+                <tr>
+                    <td>${owner.owner_name}</td>
+                    <td>${owner.task_count}</td>
+                    <td>${owner.project_count}</td>
+                    <td><input type="text" data-owner-name="${owner.owner_name}" class="owner-team-input" placeholder="Team name"></td>
+                    <td><input type="number" min="1" step="0.5" data-owner-capacity="${owner.owner_name}" class="owner-capacity-input" value="37.5"></td>
+                    <td><button type="button" onclick="assignOwner(${JSON.stringify(owner.owner_name)})">Map team</button></td>
+                </tr>
+            `).join("");
+        }
+
+        async function loadMilestoneData() {
+            const programmeId = document.getElementById("baselineProgrammeSelect").value;
+            const candidates = programmeId
+                ? await requestJson(`/api/v1/admin/milestone-candidates?programme_id=${programmeId}`)
+                : [];
+            const baselines = programmeId
+                ? await requestJson(`/api/v1/admin/milestone-baselines?programme_id=${programmeId}`)
+                : await requestJson("/api/v1/admin/milestone-baselines");
+
+            state.milestoneCandidates = candidates;
+            state.milestoneBaselines = baselines;
+            renderMilestoneCandidates();
+            renderBaselines();
+        }
+
+        function renderMilestoneCandidates() {
+            const select = document.getElementById("baselineCandidateSelect");
+            if (!state.milestoneCandidates.length) {
+                select.innerHTML = '<option value="">No milestone candidates for this programme</option>';
+                return;
+            }
+
+            select.innerHTML = state.milestoneCandidates.map((candidate) => {
+                const value = `${candidate.project_name}|||${candidate.task_name}`;
+                return `<option value="${value}">${candidate.project_name} · ${candidate.task_name}</option>`;
+            }).join("");
+        }
+
+        function renderBaselines() {
+            const body = document.getElementById("baselinesBody");
+            if (!state.milestoneBaselines.length) {
+                body.innerHTML = '<tr><td colspan="3" class="empty">No milestone baselines saved yet.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = state.milestoneBaselines.map((baseline) => `
+                <tr>
+                    <td>${baseline.project_name}</td>
+                    <td>${baseline.task_name}</td>
+                    <td>${baseline.baseline_date}</td>
+                </tr>
+            `).join("");
+        }
+
+        async function loadProgrammesWithProjects() {
+            const programmes = await requestJson("/api/v1/programmes");
+            const withProjects = await Promise.all(programmes.map(async (programme) => {
+                const projects = await requestJson(`/api/v1/admin/programme/${programme.id}/projects`);
+                return { ...programme, projects };
+            }));
+            state.programmes = withProjects;
+        }
+
+        async function loadDetailedProjects() {
+            state.detailedProjects = await requestJson("/api/projects");
+            document.getElementById("quickTaskProjectSelect").innerHTML = detailedProjectOptionsHtml(document.getElementById("quickTaskProjectSelect").value);
+            renderDetailedProjects();
+            setMessage("detailedProjectsMessage", `Loaded ${state.detailedProjects.length} detailed projects.`, "ok");
+        }
+
+        function showUploadOverlay(text) {
+            document.getElementById("uploadOverlayText").textContent = text;
+            document.getElementById("uploadOverlay").classList.add("show");
+        }
+
+        function hideUploadOverlay() {
+            document.getElementById("uploadOverlay").classList.remove("show");
+        }
+
+        async function importProjectFile(file) {
+            if (!file) {
+                return;
+            }
+
+            if (!file.name.toLowerCase().endsWith(".xlsx")) {
+                setMessage("detailedProjectsMessage", "Please choose a valid .xlsx file.", "error");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            showUploadOverlay("Uploading and processing Excel file...");
+
+            try {
+                const response = await fetch("/api/upload-excel", {
+                    method: "POST",
+                    body: formData,
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(result.error || `Request failed: ${response.status}`);
+                }
+
+                showUploadOverlay(`Imported ${result.project_name}. Refreshing portal...`);
+                setMessage("detailedProjectsMessage", `Imported project ${result.project_name} with ${result.tasks_imported} tasks.`, "ok");
+                await refreshAll();
+            } catch (error) {
+                setMessage("detailedProjectsMessage", error.message, "error");
+            } finally {
+                hideUploadOverlay();
+            }
+        }
+
+        async function refreshAll() {
+            setMessage("globalMessage", "Refreshing data...", "warn");
+            try {
+                await loadDetailedProjects();
+                await loadProgrammesWithProjects();
+                state.unassignedProjects = await requestJson("/api/v1/admin/unassigned-projects");
+                state.unmappedOwners = await requestJson("/api/v1/admin/unmapped-owners");
+
+                document.getElementById("summaryProgrammeSelect").innerHTML = programmeOptionsHtml(document.getElementById("summaryProgrammeSelect").value);
+                document.getElementById("baselineProgrammeSelect").innerHTML = programmeOptionsHtml(document.getElementById("baselineProgrammeSelect").value);
+
+                renderTopStats();
+                renderProgrammes();
+                renderPortfolioOverview();
+                renderUnassignedProjects();
+                renderUnmappedOwners();
+                await loadPortfolioOverview();
+                await loadSummary();
+                await loadPortfolioView();
+                await loadProgrammeDetailSlices();
+                await loadMilestoneData();
+                setMessage("globalMessage", "Data refreshed.", "ok");
+            } catch (error) {
+                setMessage("globalMessage", error.message, "error");
+            }
+        }
+
+        async function assignProject(projectName) {
+            const select = document.querySelector(`.project-programme-select[data-project-name="${CSS.escape(projectName)}"]`);
+            if (!select || !select.value) {
+                setMessage("unassignedMessage", "Choose a programme before assigning a project.", "error");
+                return;
+            }
+
+            try {
+                await requestJson(`/api/v1/admin/programme/${select.value}/projects`, {
+                    method: "POST",
+                    body: JSON.stringify({ project_name: projectName, display_order: 0 }),
+                });
+                setMessage("unassignedMessage", `Assigned ${projectName}.`, "ok");
+                await refreshAll();
+            } catch (error) {
+                setMessage("unassignedMessage", error.message, "error");
+            }
+        }
+
+        async function assignOwner(ownerName) {
+            const teamInput = document.querySelector(`.owner-team-input[data-owner-name="${CSS.escape(ownerName)}"]`);
+            const capacityInput = document.querySelector(`.owner-capacity-input[data-owner-capacity="${CSS.escape(ownerName)}"]`);
+            if (!teamInput || !teamInput.value.trim()) {
+                setMessage("ownersMessage", "Enter a team name before mapping an owner.", "error");
+                return;
+            }
+
+            try {
+                await requestJson("/api/v1/admin/resource-teams", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        team_name: teamInput.value.trim(),
+                        owner_name: ownerName,
+                        capacity_hrs_per_week: Number(capacityInput.value || 37.5),
+                    }),
+                });
+                setMessage("ownersMessage", `Mapped ${ownerName} to ${teamInput.value.trim()}.`, "ok");
+                await refreshAll();
+            } catch (error) {
+                setMessage("ownersMessage", error.message, "error");
+            }
+        }
+
+        async function resolveEscalation(escalationId) {
+            try {
+                await requestJson(`/api/v1/escalation/${escalationId}`, {
+                    method: "PUT",
+                    body: JSON.stringify({ resolved: true }),
+                });
+                setMessage("escalationsMessage", `Resolved escalation ${escalationId}.`, "ok");
+                await loadProgrammeDetailSlices();
+                await loadSummary();
+            } catch (error) {
+                setMessage("escalationsMessage", error.message, "error");
+            }
+        }
+
+        document.getElementById("programmeForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const formData = new FormData(form);
+            try {
+                await requestJson("/api/v1/admin/programmes", {
+                    method: "POST",
+                    body: JSON.stringify(Object.fromEntries(formData.entries())),
+                });
+                form.reset();
+                setMessage("programmeFormMessage", "Programme created.", "ok");
+                await refreshAll();
+            } catch (error) {
+                setMessage("programmeFormMessage", error.message, "error");
+            }
+        });
+
+        document.getElementById("baselineForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const candidateValue = document.getElementById("baselineCandidateSelect").value;
+            const baselineDate = document.getElementById("baselineDateInput").value;
+            if (!candidateValue || !baselineDate) {
+                setMessage("baselineMessage", "Choose a milestone and baseline date.", "error");
+                return;
+            }
+
+            const [project_name, task_name] = candidateValue.split("|||");
+            try {
+                await requestJson("/api/v1/admin/milestone-baselines", {
+                    method: "POST",
+                    body: JSON.stringify({ project_name, task_name, baseline_date: baselineDate }),
+                });
+                setMessage("baselineMessage", `Saved baseline for ${project_name} / ${task_name}.`, "ok");
+                await loadMilestoneData();
+                renderTopStats();
+            } catch (error) {
+                setMessage("baselineMessage", error.message, "error");
+            }
+        });
+
+        document.getElementById("escalationForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const programme = selectedProgramme();
+            if (!programme) {
+                setMessage("escalationsMessage", "Select a programme before adding an escalation.", "error");
+                return;
+            }
+
+            try {
+                await requestJson(`/api/v1/programme/${programme.id}/escalations`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        issue: document.getElementById("escalationIssue").value,
+                        owner: document.getElementById("escalationOwner").value,
+                        severity: document.getElementById("escalationSeverity").value,
+                        raised_date: document.getElementById("escalationRaisedDate").value,
+                        target_decision_date: document.getElementById("escalationTargetDate").value,
+                        project_name: document.getElementById("escalationProjectSelect").value || null,
+                        gate_name: document.getElementById("escalationGateSelect").value || null,
+                    }),
+                });
+                event.currentTarget.reset();
+                setMessage("escalationsMessage", "Escalation added.", "ok");
+                await loadProgrammeDetailSlices();
+                await loadSummary();
+            } catch (error) {
+                setMessage("escalationsMessage", error.message, "error");
+            }
+        });
+
+        document.getElementById("refreshButton").addEventListener("click", refreshAll);
+        document.getElementById("importProjectButton").addEventListener("click", () => {
+            document.getElementById("projectFileInput").click();
+        });
+        document.getElementById("projectFileInput").addEventListener("change", async (event) => {
+            const [file] = event.target.files || [];
+            await importProjectFile(file);
+            event.target.value = "";
+        });
+        document.getElementById("blankProjectForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const name = document.getElementById("blankProjectName").value.trim();
+            const manager = document.getElementById("blankProjectManager").value.trim();
+            if (!name || !manager) {
+                setMessage("detailedProjectsMessage", "Project name and manager are required.", "error");
+                return;
+            }
+
+            try {
+                await requestJson("/api/projects", {
+                    method: "POST",
+                    body: JSON.stringify({ name, manager }),
+                });
+                event.currentTarget.reset();
+                setMessage("detailedProjectsMessage", `Created project ${name}.`, "ok");
+                await refreshAll();
+            } catch (error) {
+                setMessage("detailedProjectsMessage", error.message, "error");
+            }
+        });
+        document.getElementById("quickTaskForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const projectName = document.getElementById("quickTaskProjectSelect").value;
+            const payload = {
+                name: document.getElementById("quickTaskName").value.trim(),
+                phase: document.getElementById("quickTaskPhase").value.trim(),
+                owner: document.getElementById("quickTaskOwner").value.trim(),
+                start_date: document.getElementById("quickTaskStartDate").value,
+                end_date: document.getElementById("quickTaskEndDate").value,
+                status: document.getElementById("quickTaskStatus").value,
+            };
+
+            if (!projectName) {
+                setMessage("detailedProjectsMessage", "Choose a project before creating a task.", "error");
+                return;
+            }
+
+            try {
+                await requestJson(`/api/project/${encodeURIComponent(projectName)}/task`, {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                });
+                event.currentTarget.reset();
+                setMessage("detailedProjectsMessage", `Created task in ${projectName}.`, "ok");
+                await refreshAll();
+            } catch (error) {
+                setMessage("detailedProjectsMessage", error.message, "error");
+            }
+        });
+        document.getElementById("summaryProgrammeSelect").addEventListener("change", async () => {
+            await loadSummary();
+            await loadPortfolioView();
+            await loadProgrammeDetailSlices();
+        });
+        document.getElementById("baselineProgrammeSelect").addEventListener("change", loadMilestoneData);
+
+        window.assignProject = assignProject;
+        window.assignOwner = assignOwner;
+        window.resolveEscalation = resolveEscalation;
+
+        refreshAll();
+    </script>
+</body>
+</html>

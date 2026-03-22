@@ -20,8 +20,8 @@ This is a web-based dashboard application for managing multiple project programs
 The server will:
 - Install dependencies automatically
 - Start on **http://localhost:5001**
-- Open in persistent mode (no crashes)
-- Keep running until you press Ctrl+C
+- Start as a **background process**
+- Stay available after the launcher window closes
 
 ### 2. Access the Dashboard
 
@@ -104,7 +104,7 @@ EXCEL_OUTPUT_FOLDER = 'exports'
 
 ## 🛑 Stopping the Server
 
-Press **Ctrl+C** in the server window
+Run `STOP_SERVER.bat`
 
 ## 🔧 Troubleshooting
 
@@ -120,7 +120,7 @@ Stop-Process -Id <PID>
 ### Server Won't Start
 1. Check Python is installed: `python --version`
 2. Check port 5001 is available
-3. Try restarting your computer
+3. Review `logs\server.stderr.log`
 
 ### Excel Import Fails
 1. Ensure file is .xlsx format (not .xls)

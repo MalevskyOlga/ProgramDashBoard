@@ -181,7 +181,961 @@
             margin-bottom: 30px;
             text-align: center;
         }
-        
+
+        .timeline-section {
+            background: #171c31;
+            padding: 28px;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+            margin-bottom: 30px;
+            color: #eef3ff;
+        }
+
+        .timeline-section h2 {
+            color: #f8fbff;
+            margin-bottom: 6px;
+            font-size: 32px;
+        }
+
+        .timeline-section p {
+            color: #96a6cf;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.35em;
+            font-size: 11px;
+        }
+
+        .schedule-shell {
+            overflow-x: auto;
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: 220px repeat(var(--month-count), minmax(48px, 1fr));
+            min-width: 980px;
+            border-top: 1px solid #2a3258;
+            border-left: 1px solid #2a3258;
+            background: #1d233c;
+            position: relative;
+        }
+
+        .schedule-cell {
+            border-right: 1px solid #2a3258;
+            border-bottom: 1px solid #2a3258;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12px;
+            color: #d6def7;
+        }
+
+        .schedule-label {
+            justify-content: flex-start;
+            padding: 0 16px;
+            background: #1d2440;
+            color: #f4f7ff;
+            font-weight: 700;
+        }
+
+        .schedule-label.sub {
+            color: #9fb1dd;
+            font-weight: 600;
+        }
+
+        .year-header,
+        .quarter-header,
+        .fiscal-header {
+            background: #1456aa;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .quarter-header,
+        .fiscal-header {
+            background: #1d73d2;
+            font-size: 11px;
+        }
+
+        .project-name-cell {
+            justify-content: flex-start;
+            padding: 14px 16px;
+            line-height: 1.35;
+            font-size: 14px;
+            color: #f8fbff;
+            background: #1b2138;
+        }
+
+        .lane-cell {
+            grid-column: 2 / -1;
+            position: relative;
+            min-height: 54px;
+            background-color: #1b2138;
+            background-image: linear-gradient(to right, rgba(63, 80, 123, 0.65) 1px, transparent 1px);
+            background-size: calc(100% / var(--month-count)) 100%;
+        }
+
+        .gate-chip {
+            position: absolute;
+            top: 10px;
+            min-width: 44px;
+            min-height: 22px;
+            padding: 4px 8px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            transform: translateX(-50%);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        .gate-chip::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -8px;
+            width: 2px;
+            height: 8px;
+            background: currentColor;
+        }
+
+        .gate-chip.done {
+            background: #57c253;
+            color: #f4fff3;
+        }
+
+        .gate-chip.planned {
+            background: #ff9f1a;
+            color: #fff9f0;
+        }
+
+        .gate-chip.rework {
+            background: #d94b57;
+            color: #fff2f3;
+        }
+
+        .gate-date {
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 1.1;
+            margin-top: 2px;
+            opacity: 0.95;
+        }
+
+        .today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: repeating-linear-gradient(to bottom, #ff616d 0, #ff616d 6px, transparent 6px, transparent 12px);
+            pointer-events: none;
+        }
+
+        .today-label {
+            position: absolute;
+            top: -18px;
+            transform: translateX(-50%);
+            color: #ff616d;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+        }
+
+        .timeline-legend {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+            color: #a9b6dc;
+            font-size: 12px;
+        }
+
+        .timeline-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-box {
+            width: 16px;
+            height: 12px;
+            display: inline-block;
+        }
+
+        .legend-done { background: #57c253; }
+        .legend-planned { background: #ff9f1a; }
+        .legend-rework { background: #d94b57; }
+        .legend-line {
+            width: 14px;
+            height: 12px;
+            border-left: 2px dashed #ff616d;
+        }
+
+        .resource-section {
+            background: #11192d;
+            padding: 28px;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+            margin-bottom: 30px;
+            color: #eef3ff;
+        }
+
+        .resource-section h2 {
+            color: #f8fbff;
+            margin-bottom: 6px;
+            font-size: 32px;
+        }
+
+        .resource-section p {
+            color: #96a6cf;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.35em;
+            font-size: 11px;
+        }
+
+        .resource-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .resource-summary-card {
+            background: rgba(22, 34, 62, 0.95);
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: left;
+        }
+
+        .resource-summary-card.clickable {
+            width: 100%;
+            cursor: pointer;
+            color: inherit;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .resource-summary-card.clickable:hover {
+            transform: translateY(-2px);
+            border-color: #4e73b8;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+        }
+
+        .resource-summary-card.active {
+            border-color: #7ec8ff;
+            box-shadow: 0 0 0 1px rgba(126, 200, 255, 0.35);
+        }
+
+        .resource-summary-value {
+            font-size: 30px;
+            font-weight: 700;
+            color: #7ec8ff;
+            margin-bottom: 4px;
+        }
+
+        .resource-summary-label {
+            font-size: 12px;
+            color: #a8b8df;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .resource-summary-hint {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #9fb1dd;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .resource-detail-panel {
+            margin-bottom: 18px;
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            background: rgba(18, 28, 50, 0.96);
+            padding: 18px;
+        }
+
+        .resource-detail-panel h3 {
+            color: #f8fbff;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        .resource-detail-panel p {
+            color: #9fb1dd;
+            margin-bottom: 14px;
+            letter-spacing: normal;
+            text-transform: none;
+            font-size: 13px;
+        }
+
+        .resource-detail-empty {
+            color: #9fb1dd;
+            font-size: 13px;
+        }
+
+        .delay-chart-panel {
+            margin-bottom: 18px;
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            background: rgba(18, 28, 50, 0.96);
+            padding: 18px;
+        }
+
+        .delay-chart-panel h3 {
+            color: #f8fbff;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        .delay-chart-panel p {
+            color: #9fb1dd;
+            margin-bottom: 14px;
+            letter-spacing: normal;
+            text-transform: none;
+            font-size: 13px;
+        }
+
+        .delay-chart-layout {
+            display: grid;
+            grid-template-columns: minmax(180px, 220px) 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .delay-donut-button {
+            background: transparent;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            justify-self: center;
+        }
+
+        .delay-donut {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+        }
+
+        .delay-donut-center {
+            width: 108px;
+            height: 108px;
+            border-radius: 50%;
+            background: #15203a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #eef3ff;
+            text-align: center;
+            padding: 12px;
+        }
+
+        .delay-donut-center strong {
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        .delay-donut-center span {
+            font-size: 11px;
+            color: #9fb1dd;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .delay-chart-legend {
+            display: grid;
+            gap: 12px;
+        }
+
+        .delay-legend-btn {
+            width: 100%;
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            background: #17223d;
+            color: #eef3ff;
+            padding: 12px 14px;
+            text-align: left;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .delay-legend-btn:hover {
+            border-color: #4e73b8;
+            background: #1d2c4f;
+        }
+
+        .delay-legend-btn.active {
+            border-color: #7ec8ff;
+            box-shadow: 0 0 0 1px rgba(126, 200, 255, 0.35);
+        }
+
+        .delay-legend-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .delay-legend-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .delay-legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .delay-legend-dot.delayed {
+            background: #d94b57;
+        }
+
+        .delay-legend-dot.clear {
+            background: #57c253;
+        }
+
+        .delay-legend-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #f8fbff;
+        }
+
+        .delay-legend-meta {
+            color: #9fb1dd;
+            font-size: 12px;
+        }
+
+        .resource-table-wrap {
+            margin-bottom: 18px;
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(18, 28, 50, 0.96);
+        }
+
+        .resource-table-scroll {
+            overflow-x: auto;
+        }
+
+        .resource-table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+        }
+
+        .resource-table th,
+        .resource-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #24355f;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .resource-table th {
+            background: #17223d;
+            color: #f3f7ff;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+        }
+
+        .resource-table td {
+            color: #d6def7;
+        }
+
+        .resource-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .resource-table tr:hover td {
+            background: rgba(38, 57, 97, 0.42);
+        }
+
+        .resource-table-owner {
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .resource-table-projects {
+            color: #9fb1dd;
+        }
+
+        .resource-table-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding: 12px 14px 0;
+        }
+
+        .resource-toggle-btn {
+            background: #223256;
+            color: #eef3ff;
+            border: 1px solid #365183;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .resource-toggle-btn:hover {
+            background: #2b4170;
+            border-color: #4e73b8;
+        }
+
+        .resource-detail-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 12px;
+        }
+
+        .overview-link {
+            color: #7ec8ff;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .overview-link:hover {
+            text-decoration: underline;
+        }
+
+        .overview-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .overview-pill.delayed {
+            background: rgba(217, 75, 87, 0.2);
+            color: #ffb4bb;
+        }
+
+        .overview-pill.active {
+            background: rgba(78, 141, 245, 0.2);
+            color: #b8d5ff;
+        }
+
+        .overview-pill.clear {
+            background: rgba(87, 194, 83, 0.18);
+            color: #9cf79a;
+        }
+
+        .critical-path-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 320px;
+        }
+
+        .critical-path-item {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            line-height: 1.35;
+        }
+
+        .critical-path-item strong {
+            color: #f8fbff;
+            font-size: 12px;
+        }
+
+        .critical-path-item span {
+            color: #b7c6ea;
+            font-size: 12px;
+        }
+
+        .critical-board-shell {
+            overflow-x: auto;
+        }
+
+        .critical-board-grid {
+            display: grid;
+            grid-template-columns: 280px repeat(var(--month-count), minmax(48px, 1fr));
+            min-width: 1100px;
+            border-top: 1px solid #24355f;
+            border-left: 1px solid #24355f;
+            background: #172039;
+            position: relative;
+        }
+
+        .critical-board-cell {
+            border-right: 1px solid #24355f;
+            border-bottom: 1px solid #24355f;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12px;
+            color: #d6def7;
+        }
+
+        .critical-board-label {
+            justify-content: flex-start;
+            padding: 0 16px;
+            background: #17223d;
+            color: #f4f7ff;
+            font-weight: 700;
+        }
+
+        .critical-board-label.sub {
+            color: #9fb1dd;
+            font-weight: 600;
+        }
+
+        .critical-year-header,
+        .critical-quarter-header,
+        .critical-fiscal-header {
+            background: #0f5db8;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .critical-quarter-header,
+        .critical-fiscal-header {
+            background: #2184e5;
+            font-size: 11px;
+        }
+
+        .critical-task-label {
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding: 12px 16px;
+            background: #151d33;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .critical-task-project {
+            font-size: 11px;
+            color: #9fb1dd;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .critical-task-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #f8fbff;
+            line-height: 1.35;
+        }
+
+        .critical-task-meta {
+            font-size: 11px;
+            color: #c4d1f3;
+            line-height: 1.35;
+        }
+
+        .critical-lane-cell {
+            grid-column: 2 / -1;
+            position: relative;
+            min-height: 60px;
+            background-color: #151d33;
+            background-image: linear-gradient(to right, rgba(63, 80, 123, 0.65) 1px, transparent 1px);
+            background-size: calc(100% / var(--month-count)) 100%;
+        }
+
+        .critical-bar {
+            position: absolute;
+            top: 12px;
+            min-height: 32px;
+            border-radius: 8px;
+            padding: 6px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.24);
+            border: 1px solid rgba(255,255,255,0.14);
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        .critical-bar.path {
+            background: linear-gradient(135deg, #b32939 0%, #ef6670 100%);
+            border-color: rgba(255, 132, 144, 0.42);
+            box-shadow: 0 10px 20px rgba(179, 41, 57, 0.28);
+        }
+
+        .critical-bar.delayed {
+            background: linear-gradient(135deg, #c83d4a 0%, #ef6670 100%);
+        }
+
+        .critical-bar.active {
+            background: linear-gradient(135deg, #2766d8 0%, #59a7ff 100%);
+        }
+
+        .critical-bar.clear {
+            background: linear-gradient(135deg, #238c59 0%, #57c253 100%);
+        }
+
+        .critical-bar-title {
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .critical-bar-meta {
+            font-size: 9px;
+            opacity: 0.92;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .critical-bar.compact {
+            overflow: visible;
+            min-width: 10px;
+            padding: 0;
+            justify-content: flex-start;
+        }
+
+        .critical-bar.compact .critical-bar-title {
+            position: absolute;
+            left: calc(100% + 6px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(12, 18, 31, 0.96);
+            border: 1px solid rgba(255, 132, 144, 0.36);
+            border-radius: 6px;
+            padding: 4px 8px;
+            max-width: 210px;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            line-height: 1.2;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+            z-index: 4;
+        }
+
+        .critical-bar.compact .critical-bar-meta {
+            display: none;
+        }
+
+        .resource-row-hidden {
+            display: none;
+        }
+
+        .resource-load-good,
+        .resource-load-medium,
+        .resource-load-high {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .resource-load-good {
+            background: rgba(87, 194, 83, 0.18);
+            color: #9cf79a;
+        }
+
+        .resource-load-medium {
+            background: rgba(255, 159, 26, 0.18);
+            color: #ffd18d;
+        }
+
+        .resource-load-high {
+            background: rgba(217, 75, 87, 0.2);
+            color: #ffb4bb;
+        }
+
+        .resource-shell {
+            overflow-x: auto;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: 220px repeat(var(--month-count), minmax(48px, 1fr));
+            min-width: 980px;
+            border-top: 1px solid #233255;
+            border-left: 1px solid #233255;
+            background: #172039;
+            position: relative;
+        }
+
+        .resource-cell {
+            border-right: 1px solid #233255;
+            border-bottom: 1px solid #233255;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12px;
+            color: #d6def7;
+        }
+
+        .resource-label {
+            justify-content: flex-start;
+            padding: 0 16px;
+            background: #17223d;
+            color: #f4f7ff;
+            font-weight: 700;
+        }
+
+        .resource-label.sub {
+            color: #9fb1dd;
+            font-weight: 600;
+        }
+
+        .resource-year-header,
+        .resource-quarter-header,
+        .resource-fiscal-header {
+            background: #0f5db8;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .resource-quarter-header,
+        .resource-fiscal-header {
+            background: #2184e5;
+            font-size: 11px;
+        }
+
+        .owner-name-cell {
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding: 12px 16px;
+            line-height: 1.35;
+            font-size: 14px;
+            color: #f8fbff;
+            background: #151d33;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .owner-title {
+            font-weight: 700;
+        }
+
+        .owner-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .owner-pill {
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #223256;
+            color: #bfd0f5;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .resource-lane-cell {
+            grid-column: 2 / -1;
+            position: relative;
+            min-height: 72px;
+            background-color: #151d33;
+            background-image: linear-gradient(to right, rgba(63, 80, 123, 0.65) 1px, transparent 1px);
+            background-size: calc(100% / var(--month-count)) 100%;
+        }
+
+        .task-chip {
+            position: absolute;
+            min-height: 22px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #f8fbff;
+            font-size: 10px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.24);
+            border: 1px solid rgba(255,255,255,0.18);
+            overflow: hidden;
+        }
+
+        .task-chip.active {
+            box-shadow: 0 0 0 1px rgba(126, 200, 255, 0.55), 0 10px 20px rgba(0,0,0,0.28);
+        }
+
+        .task-chip.critical {
+            border-color: rgba(255, 214, 10, 0.85);
+        }
+
+        .task-chip-label {
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-chip-meta {
+            font-size: 9px;
+            opacity: 0.92;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .resource-legend {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+            color: #a9b6dc;
+            font-size: 12px;
+        }
+
+        .resource-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-chip {
+            width: 16px;
+            height: 12px;
+            border-radius: 4px;
+            background: #4e8df5;
+            display: inline-block;
+        }
+
+        .legend-chip-active {
+            box-shadow: 0 0 0 2px rgba(126, 200, 255, 0.55);
+        }
+
+        .legend-chip-critical {
+            border: 2px solid rgba(255, 214, 10, 0.85);
+            background: #4e8df5;
+        }
+
         .import-btn {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
@@ -274,6 +1228,12 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+
+        @media (max-width: 900px) {
+            .timeline-section h2 {
+                font-size: 24px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -292,6 +1252,14 @@
                 <div class="stat-value" id="totalTasks">-</div>
                 <div class="stat-label">Total Tasks</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalGates">-</div>
+                <div class="stat-label">Gate Timeline Rows</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalOwners">-</div>
+                <div class="stat-label">Resource Owners</div>
+            </div>
 
         </div>
         
@@ -301,6 +1269,49 @@
             </button>
             <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileSelect(event)">
             <div class="message" id="message"></div>
+        </div>
+
+        <div class="timeline-section">
+            <h2>Portfolio Schedule Overview</h2>
+            <p>Planned milestones & gates</p>
+            <div id="timelineContainer">
+                <div class="loading">Loading overall gate timeline...</div>
+            </div>
+            <div class="timeline-legend">
+                <span><i class="legend-box legend-done"></i> Done gate</span>
+                <span><i class="legend-box legend-planned"></i> Planned gate</span>
+                <span><i class="legend-box legend-rework"></i> Rework sign-off</span>
+                <span><i class="legend-line"></i> Today</span>
+            </div>
+        </div>
+
+        <div class="resource-section">
+            <h2>Overall Resource Load</h2>
+            <p>Owners, active work & cross-project load</p>
+            <div class="resource-summary" id="resourceSummary">
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">-</div>
+                    <div class="resource-summary-label">Loading resource summary</div>
+                </div>
+            </div>
+            <div id="resourceDetailPanel"></div>
+            <div id="resourceSummaryTable">
+                <div class="loading">Loading resource summary table...</div>
+            </div>
+        </div>
+
+        <div class="resource-section">
+            <h2>Critical Path Until Gate 5</h2>
+            <p>Simple project view from detailed gantts</p>
+            <div class="resource-summary" id="criticalPathSummary">
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">-</div>
+                    <div class="resource-summary-label">Loading critical summary</div>
+                </div>
+            </div>
+            <div id="criticalPathContainer">
+                <div class="loading">Loading critical path overview...</div>
+            </div>
         </div>
         
         <div id="projectsContainer">
@@ -316,6 +1327,11 @@
     </div>
     
     <script>
+        let currentResourcePayload = null;
+        let currentResourceDrilldown = 'summary';
+        let currentCriticalPayload = null;
+        let currentCriticalExpanded = false;
+
         async function loadStats() {
             try {
                 const response = await fetch('/api/stats');
@@ -323,6 +1339,7 @@
                 
                 document.getElementById('totalProjects').textContent = stats.total_projects;
                 document.getElementById('totalTasks').textContent = stats.total_tasks;
+                document.getElementById('totalOwners').textContent = stats.total_owners ?? '-';
             } catch (error) {
                 console.error('Error loading stats:', error);
             }
@@ -374,6 +1391,297 @@
                 `;
             }
         }
+
+        async function loadOverallGateTimeline() {
+            try {
+                const response = await fetch('/api/overall-gate-timeline');
+                const timeline = await response.json();
+                const container = document.getElementById('timelineContainer');
+
+                if (!timeline.length) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <h2>No Gate Dates Found</h2>
+                            <p>Import projects with gate milestones to populate the overall timeline.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const parsedDates = timeline.map(item => parseIsoDate(item.display_date));
+                const minDate = parsedDates.reduce((min, date) => date < min ? date : min, parsedDates[0]);
+                const maxDate = parsedDates.reduce((max, date) => date > max ? date : max, parsedDates[0]);
+                const rangeStart = new Date(minDate.getFullYear(), 0, 1);
+                const rangeEnd = new Date(maxDate.getFullYear(), 11, 1);
+                const months = buildMonthRange(rangeStart, rangeEnd);
+                const monthCount = months.length;
+                const projects = [...new Set(timeline.map(item => item.project_name))];
+
+                let boardHtml = `<div class="schedule-shell"><div class="schedule-grid" style="--month-count:${monthCount};">`;
+
+                boardHtml += `<div class="schedule-cell schedule-label"></div>`;
+                const years = [...new Set(months.map(month => month.getFullYear()))];
+                years.forEach((year) => {
+                    const span = months.filter(month => month.getFullYear() === year).length;
+                    boardHtml += `<div class="schedule-cell year-header" style="grid-column: span ${span};">${year}</div>`;
+                });
+
+                boardHtml += `<div class="schedule-cell schedule-label sub">Calendar</div>`;
+                for (let i = 0; i < monthCount; i += 3) {
+                    const month = months[i];
+                    boardHtml += `<div class="schedule-cell quarter-header" style="grid-column: span 3;">Q${Math.floor(month.getMonth() / 3) + 1}</div>`;
+                }
+
+                boardHtml += `<div class="schedule-cell schedule-label sub">Fiscal</div>`;
+                for (let i = 0; i < monthCount; i += 3) {
+                    const month = months[i];
+                    boardHtml += `<div class="schedule-cell fiscal-header" style="grid-column: span 3;">FQ${getFiscalQuarter(month)} FY${getFiscalYear(month)}</div>`;
+                }
+
+                projects.forEach((projectName) => {
+                    boardHtml += `<div class="schedule-cell project-name-cell">${escapeHtml(projectName)}</div>`;
+                    boardHtml += `<div class="schedule-cell lane-cell">`;
+
+                    timeline
+                        .filter(item => item.project_name === projectName)
+                        .forEach((item) => {
+                            const itemDate = parseIsoDate(item.display_date);
+                            const leftPercent = getAdjustedTimelinePercent(item, itemDate, rangeStart, endOfMonth(rangeEnd));
+                            boardHtml += `
+                                <div
+                                    class="gate-chip ${getMarkerClass(item)}"
+                                    style="left:${leftPercent}%;"
+                                    title="${escapeHtml(getMarkerTitle(item))}"
+                                >
+                                    <span>${escapeHtml(getMarkerLabel(item))}</span>
+                                    <span class="gate-date">${escapeHtml(formatIsoDate(item.display_date))}</span>
+                                </div>
+                            `;
+                        });
+
+                    boardHtml += `</div>`;
+                });
+
+                const today = new Date();
+                if (today >= rangeStart && today <= endOfMonth(rangeEnd)) {
+                    const leftPercent = getTimelinePercent(today, rangeStart, endOfMonth(rangeEnd));
+                    boardHtml += `
+                        <div class="today-line" style="left: calc(220px + ((100% - 220px) * ${leftPercent / 100}));">
+                            <div class="today-label">TODAY</div>
+                        </div>
+                    `;
+                }
+
+                boardHtml += `</div></div>`;
+
+                container.innerHTML = boardHtml;
+                document.getElementById('totalGates').textContent = timeline.length;
+            } catch (error) {
+                console.error('Error loading gate timeline:', error);
+                document.getElementById('timelineContainer').innerHTML = `
+                    <div class="empty-state">
+                        <h2>Error Loading Timeline</h2>
+                        <p>Failed to load the unified gate timeline.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadOverallResourceLoad() {
+            try {
+                const response = await fetch('/api/overall-resource-load');
+                const payload = await response.json();
+                currentResourcePayload = payload;
+                const summaryContainer = document.getElementById('resourceSummary');
+                const detailContainer = document.getElementById('resourceDetailPanel');
+                const tableContainer = document.getElementById('resourceSummaryTable');
+
+                if (!payload.owners || !payload.owners.length || !payload.summary.range_start || !payload.summary.range_end) {
+                    summaryContainer.innerHTML = `
+                        <div class="resource-summary-card">
+                            <div class="resource-summary-value">0</div>
+                            <div class="resource-summary-label">Resource owners found</div>
+                        </div>
+                    `;
+                    detailContainer.innerHTML = '';
+                    tableContainer.innerHTML = `<div class="empty-state"><h2>No Resource Tasks Found</h2><p>Import project tasks with owners and dates to see overall loading.</p></div>`;
+                    return;
+                }
+
+                renderResourceSummaryCards();
+                renderResourceDrilldown();
+                renderResourceSummaryTable();
+            } catch (error) {
+                console.error('Error loading resource load:', error);
+                document.getElementById('resourceDetailPanel').innerHTML = '';
+                document.getElementById('resourceSummaryTable').innerHTML = `
+                    <div class="empty-state">
+                        <h2>Error Loading Resource View</h2>
+                        <p>Failed to load the overall owner workload dashboard.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadOverallCriticalPathOverview() {
+            try {
+                const response = await fetch('/api/overall-critical-path-overview');
+                const payload = await response.json();
+                currentCriticalPayload = payload;
+                renderOverallCriticalPathOverview();
+            } catch (error) {
+                console.error('Error loading critical path overview:', error);
+                document.getElementById('criticalPathContainer').innerHTML = `
+                    <div class="empty-state">
+                        <h2>Error Loading Critical Path Overview</h2>
+                        <p>Failed to load the portfolio critical path table.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderOverallCriticalPathOverview() {
+            const payload = currentCriticalPayload;
+            const summaryContainer = document.getElementById('criticalPathSummary');
+            const tableContainer = document.getElementById('criticalPathContainer');
+            if (!payload) return;
+
+            summaryContainer.innerHTML = `
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.critical_task_count ?? 0}</div>
+                    <div class="resource-summary-label">Critical tasks until Gate 5</div>
+                </div>
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.project_count ?? 0}</div>
+                    <div class="resource-summary-label">Projects in overview</div>
+                </div>
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.delayed_critical_count ?? 0}</div>
+                    <div class="resource-summary-label">Delayed critical tasks</div>
+                </div>
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.active_critical_count ?? 0}</div>
+                    <div class="resource-summary-label">Active critical tasks</div>
+                </div>
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.milestone_critical_count ?? 0}</div>
+                    <div class="resource-summary-label">Critical milestones</div>
+                </div>
+            `;
+
+            if (!payload.projects || !payload.projects.length) {
+                tableContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No Critical Path Found</h2>
+                        <p>Import project gantts with gate milestones to populate the overall Gate 5 path board.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const visibleProjects = currentCriticalExpanded ? payload.projects : payload.projects.slice(0, 5);
+            const hiddenCount = Math.max(0, payload.projects.length - visibleProjects.length);
+            const actionHtml = payload.projects.length > 5
+                ? `<div class="resource-table-actions"><button class="resource-toggle-btn" onclick="toggleCriticalProjects()">${currentCriticalExpanded ? 'Show less projects' : `${hiddenCount} more projects`}</button></div>`
+                : '';
+
+            const allDatedTasks = visibleProjects
+                .flatMap((project) => project.critical_path_tasks || [])
+                .filter((task) => task.start_date && task.end_date);
+
+            if (!allDatedTasks.length) {
+                tableContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No Dated Path Tasks Found</h2>
+                        <p>The projected Gate 5 chains exist, but they need dates to render on the gantt board.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const parsedStarts = allDatedTasks.map((task) => parseIsoDate(task.start_date));
+            const parsedEnds = allDatedTasks.map((task) => parseIsoDate(task.end_date));
+            const minDate = parsedStarts.reduce((min, date) => date < min ? date : min, parsedStarts[0]);
+            const maxDate = parsedEnds.reduce((max, date) => date > max ? date : max, parsedEnds[0]);
+            const rangeStart = new Date(minDate.getFullYear(), 0, 1);
+            const rangeEnd = new Date(maxDate.getFullYear(), 11, 1);
+            const renderedRangeEnd = endOfMonth(rangeEnd);
+            const months = buildMonthRange(rangeStart, rangeEnd);
+            const monthCount = months.length;
+
+            let boardHtml = `${actionHtml}<div class="critical-board-shell"><div class="critical-board-grid" style="--month-count:${monthCount};">`;
+
+            boardHtml += `<div class="critical-board-cell critical-board-label"></div>`;
+            const years = [...new Set(months.map((month) => month.getFullYear()))];
+            years.forEach((year) => {
+                const span = months.filter((month) => month.getFullYear() === year).length;
+                boardHtml += `<div class="critical-board-cell critical-year-header" style="grid-column: span ${span};">${year}</div>`;
+            });
+
+            boardHtml += `<div class="critical-board-cell critical-board-label sub">Calendar</div>`;
+            for (let i = 0; i < monthCount; i += 3) {
+                const month = months[i];
+                boardHtml += `<div class="critical-board-cell critical-quarter-header" style="grid-column: span 3;">Q${Math.floor(month.getMonth() / 3) + 1}</div>`;
+            }
+
+            boardHtml += `<div class="critical-board-cell critical-board-label sub">Fiscal</div>`;
+            for (let i = 0; i < monthCount; i += 3) {
+                const month = months[i];
+                boardHtml += `<div class="critical-board-cell critical-fiscal-header" style="grid-column: span 3;">FQ${getFiscalQuarter(month)} FY${getFiscalYear(month)}</div>`;
+            }
+
+            visibleProjects.forEach((project) => {
+                const chainTasks = assignTaskLanes((project.critical_path_tasks || []).filter((task) => task.start_date && task.end_date));
+                const laneCount = Math.max(1, ...chainTasks.map((task) => task.lane_index + 1));
+                const laneHeight = Math.max(72, 20 + (laneCount * 40));
+                const nextGateText = project.gate_5_date
+                    ? `Gate 5 · ${formatIsoDate(project.gate_5_date)}`
+                    : `${project.next_gate_name || 'Nearest Gate'} · ${formatIsoDate(project.next_gate_date) || '-'}`;
+
+                boardHtml += `
+                    <div class="critical-board-cell critical-task-label">
+                        <div class="critical-task-project"><a class="overview-link" href="/project/${encodeURIComponent(project.project_name)}">${escapeHtml(project.project_name)}</a></div>
+                        <div class="critical-task-name">${escapeHtml(nextGateText)}</div>
+                        <div class="critical-task-meta">${escapeHtml(project.project_manager || 'No manager')} · ${project.critical_task_count} path tasks · ${project.delayed_critical_count} delayed</div>
+                    </div>
+                `;
+
+                boardHtml += `<div class="critical-board-cell critical-lane-cell" style="min-height:${laneHeight}px;">`;
+                chainTasks.forEach((task) => {
+                    const startDate = parseIsoDate(task.start_date);
+                    const endDate = parseIsoDate(task.end_date);
+                    const leftPercent = getTimelinePercent(startDate, rangeStart, renderedRangeEnd);
+                    const widthPercent = getTimelineSpanPercent(startDate, endDate, rangeStart, renderedRangeEnd);
+                    const topOffset = 12 + (task.lane_index * 40);
+                    const compactClass = widthPercent < 8 ? ' compact' : '';
+
+                    boardHtml += `
+                        <div
+                            class="critical-bar path${compactClass}"
+                            style="left:${leftPercent}%; width:${widthPercent}%; top:${topOffset}px;"
+                            title="${escapeHtml(getCriticalBarTitle(task))}"
+                        >
+                            <span class="critical-bar-title">${escapeHtml(task.task_name)}</span>
+                            <span class="critical-bar-meta">${escapeHtml(task.owner || 'Unassigned')} · ${escapeHtml(formatIsoDate(task.end_date) || '-')}</span>
+                        </div>
+                    `;
+                });
+                boardHtml += `</div>`;
+            });
+
+            const today = new Date();
+            if (today >= rangeStart && today <= renderedRangeEnd) {
+                const leftPercent = getTimelinePercent(today, rangeStart, renderedRangeEnd);
+                boardHtml += `
+                    <div class="today-line" style="left: calc(280px + ((100% - 280px) * ${leftPercent / 100}));">
+                        <div class="today-label">TODAY</div>
+                    </div>
+                `;
+            }
+
+            boardHtml += `</div></div>`;
+            tableContainer.innerHTML = boardHtml;
+        }
         
         async function getWatchedFolder() {
             try {
@@ -411,6 +1719,572 @@
             if (!dateStr) return 'Never';
             const date = new Date(dateStr);
             return date.toLocaleString();
+        }
+
+        function parseIsoDate(value) {
+            const [year, month, day] = (value || '').split('-').map(Number);
+            return new Date(year || 2000, (month || 1) - 1, day || 1);
+        }
+
+        function startOfMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth(), 1);
+        }
+
+        function endOfMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        }
+
+        function daysBetween(start, end) {
+            const millisPerDay = 24 * 60 * 60 * 1000;
+            return Math.round((end - start) / millisPerDay);
+        }
+
+        function getTimelinePercent(date, rangeStart, rangeEnd) {
+            const totalDays = Math.max(1, daysBetween(rangeStart, rangeEnd));
+            const offsetDays = Math.max(0, Math.min(totalDays, daysBetween(rangeStart, date)));
+            return (offsetDays / totalDays) * 100;
+        }
+
+        function getTimelineSpanPercent(startDate, endDate, rangeStart, rangeEnd) {
+            const totalDays = Math.max(1, daysBetween(rangeStart, rangeEnd) + 1);
+            const taskDuration = Math.max(1, daysBetween(startDate, endDate) + 1);
+            return Math.max((taskDuration / totalDays) * 100, 1.2);
+        }
+
+        function buildMonthRange(start, end) {
+            const months = [];
+            const cursor = new Date(start);
+            while (cursor <= end) {
+                months.push(new Date(cursor));
+                cursor.setMonth(cursor.getMonth() + 1);
+            }
+            return months;
+        }
+
+        function getFiscalYear(date) {
+            return date.getMonth() >= 9 ? date.getFullYear() + 1 : date.getFullYear();
+        }
+
+        function getFiscalQuarter(date) {
+            const shiftedMonth = (date.getMonth() + 3) % 12;
+            return Math.floor(shiftedMonth / 3) + 1;
+        }
+
+        function getMarkerClass(item) {
+            if (item.date_source === 'Rework Due') return 'rework';
+            if (item.date_source === 'Signed Off') return 'done';
+            return 'planned';
+        }
+
+        function getMarkerLabel(item) {
+            if (item.date_source === 'Rework Due') return `${item.gate_name} RW`;
+            if ((item.sign_off_status || '') === 'Passed with Rework' && item.date_source === 'Signed Off') {
+                return `${item.gate_name} PWR`;
+            }
+            return item.gate_name;
+        }
+
+        function getMarkerTitle(item) {
+            const parts = [item.project_name, item.gate_name, item.date_source, item.display_date];
+            if (item.sign_off_status) {
+                parts.push(item.sign_off_status);
+            }
+            return parts.filter(Boolean).join(' · ');
+        }
+
+        function assignTaskLanes(tasks) {
+            const sortedTasks = [...tasks].sort((left, right) => {
+                return parseIsoDate(left.start_date) - parseIsoDate(right.start_date)
+                    || parseIsoDate(left.end_date) - parseIsoDate(right.end_date)
+                    || left.project_name.localeCompare(right.project_name)
+                    || left.task_name.localeCompare(right.task_name);
+            });
+
+            const laneEndDates = [];
+            return sortedTasks.map((task) => {
+                const startDate = parseIsoDate(task.start_date);
+                const endDate = parseIsoDate(task.end_date);
+                let laneIndex = laneEndDates.findIndex((laneEndDate) => startDate > laneEndDate);
+
+                if (laneIndex === -1) {
+                    laneIndex = laneEndDates.length;
+                    laneEndDates.push(endDate);
+                } else {
+                    laneEndDates[laneIndex] = endDate;
+                }
+
+                return { ...task, lane_index: laneIndex };
+            });
+        }
+
+        function getProjectColor(projectName) {
+            let hash = 0;
+            for (let i = 0; i < projectName.length; i += 1) {
+                hash = projectName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = Math.abs(hash) % 360;
+            return `hsl(${hue}, 62%, 46%)`;
+        }
+
+        function getTaskTitle(ownerName, task) {
+            const parts = [
+                ownerName,
+                task.project_name,
+                task.task_name,
+                task.phase,
+                `${task.start_date} → ${task.end_date}`,
+                task.status
+            ];
+
+            if (task.critical) {
+                parts.push('Critical');
+            }
+
+            if (task.is_active_today) {
+                parts.push('Active today');
+            }
+
+            return parts.filter(Boolean).join(' · ');
+        }
+
+        function getResourceLoadLabel(owner) {
+            if (owner.peak_parallel_tasks >= 5 || owner.active_today_count >= 4) return 'High';
+            if (owner.peak_parallel_tasks >= 3 || owner.active_today_count >= 2) return 'Medium';
+            return 'Good';
+        }
+
+        function getResourceLoadClass(owner) {
+            const label = getResourceLoadLabel(owner);
+            if (label === 'High') return 'resource-load-high';
+            if (label === 'Medium') return 'resource-load-medium';
+            return 'resource-load-good';
+        }
+
+        function getCriticalStateLabel(task) {
+            if (task.is_delayed) return task.delay_reason || 'Delayed';
+            if (task.is_active_today) return 'Active';
+            return 'On track';
+        }
+
+        function getCriticalBarClass(task) {
+            if (task.is_delayed) return 'delayed';
+            if (task.is_active_today) return 'active';
+            return 'clear';
+        }
+
+        function getCriticalBarTitle(task) {
+            return [
+                task.project_name,
+                task.task_name,
+                task.owner || 'Unassigned',
+                task.phase || 'No phase',
+                `${task.start_date || '-'} → ${task.end_date || '-'}`,
+                task.status || 'No status',
+                getCriticalStateLabel(task),
+                `Pred ${task.predecessor_count}`,
+                `Succ ${task.successor_count}`
+            ].join(' · ');
+        }
+
+        function toggleCriticalProjects() {
+            currentCriticalExpanded = !currentCriticalExpanded;
+            renderOverallCriticalPathOverview();
+        }
+
+        function renderResourceSummaryCards() {
+            const payload = currentResourcePayload;
+            const summaryContainer = document.getElementById('resourceSummary');
+            if (!payload || !payload.summary) return;
+
+            summaryContainer.innerHTML = `
+                <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'owners' ? 'active' : ''}" onclick="setResourceDrilldown('owners')">
+                    <div class="resource-summary-value">${payload.summary.owner_count}</div>
+                    <div class="resource-summary-label">Owners in portfolio</div>
+                    <div class="resource-summary-hint">Click to show all owners</div>
+                </button>
+                <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'active' ? 'active' : ''}" onclick="setResourceDrilldown('active')">
+                    <div class="resource-summary-value">${payload.summary.owners_active_today}</div>
+                    <div class="resource-summary-label">Owners active today</div>
+                    <div class="resource-summary-hint">Click to show active tasks</div>
+                </button>
+                <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'tasks' ? 'active' : ''}" onclick="setResourceDrilldown('tasks')">
+                    <div class="resource-summary-value">${payload.summary.task_count}</div>
+                    <div class="resource-summary-label">Scheduled owner tasks</div>
+                    <div class="resource-summary-hint">Click to show all tasks</div>
+                </button>
+                <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'parallel' ? 'active' : ''}" onclick="setResourceDrilldown('parallel')">
+                    <div class="resource-summary-value">${payload.summary.max_parallel_tasks}</div>
+                    <div class="resource-summary-label">Peak parallel tasks</div>
+                    <div class="resource-summary-hint">Click to show parallel load</div>
+                </button>
+                <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'delayed' ? 'active' : ''}" onclick="setResourceDrilldown('delayed')">
+                    <div class="resource-summary-value">${payload.summary.owners_with_delays || 0}</div>
+                    <div class="resource-summary-label">Owners with delays</div>
+                    <div class="resource-summary-hint">Click to show delayed tasks</div>
+                </button>
+            `;
+        }
+
+        function renderResourceSummaryTable() {
+            const payload = currentResourcePayload;
+            const tableContainer = document.getElementById('resourceSummaryTable');
+            if (!payload || !payload.owners || !payload.owners.length) {
+                tableContainer.innerHTML = '';
+                return;
+            }
+
+            const visibleOwners = currentResourceDrilldown === 'owners'
+                ? payload.owners
+                : payload.owners.slice(0, 10);
+
+            const visibleRows = visibleOwners.map((owner) => `
+                <tr>
+                    <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
+                    <td>${owner.project_count}</td>
+                    <td>${owner.task_count}</td>
+                    <td>${owner.active_today_count}</td>
+                    <td>${owner.peak_parallel_tasks}</td>
+                    <td>${owner.critical_task_count}</td>
+                    <td><span class="${getResourceLoadClass(owner)}">${escapeHtml(getResourceLoadLabel(owner))}</span></td>
+                    <td class="resource-table-projects">${escapeHtml(owner.project_names.join(', '))}</td>
+                </tr>
+            `).join('');
+
+            const hiddenRows = currentResourceDrilldown === 'owners'
+                ? ''
+                : payload.owners.slice(10).map((owner) => `
+                    <tr class="resource-row-hidden">
+                        <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
+                        <td>${owner.project_count}</td>
+                        <td>${owner.task_count}</td>
+                        <td>${owner.active_today_count}</td>
+                        <td>${owner.peak_parallel_tasks}</td>
+                        <td>${owner.critical_task_count}</td>
+                        <td><span class="${getResourceLoadClass(owner)}">${escapeHtml(getResourceLoadLabel(owner))}</span></td>
+                        <td class="resource-table-projects">${escapeHtml(owner.project_names.join(', '))}</td>
+                    </tr>
+                `).join('');
+
+            const hiddenCount = Math.max(0, payload.owners.length - 10);
+            const actionHtml = hiddenCount > 0 && currentResourceDrilldown !== 'owners'
+                ? `<div class="resource-table-actions"><button class="resource-toggle-btn" id="resourceTableToggle" onclick="toggleResourceTableRows()">${hiddenCount} more owners</button></div>`
+                : '';
+
+            tableContainer.innerHTML = `
+                <div class="resource-table-wrap">
+                    ${actionHtml}
+                    <div class="resource-table-scroll">
+                        <table class="resource-table">
+                            <thead>
+                                <tr>
+                                    <th>Owner</th>
+                                    <th>Projects</th>
+                                    <th>Total Tasks</th>
+                                    <th>Active Now</th>
+                                    <th>Peak Load</th>
+                                    <th>Critical</th>
+                                    <th>Load</th>
+                                    <th>Project List</th>
+                                </tr>
+                            </thead>
+                            <tbody>${visibleRows}${hiddenRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderResourceDrilldown() {
+            const payload = currentResourcePayload;
+            const detailContainer = document.getElementById('resourceDetailPanel');
+            if (!payload || !payload.owners || !payload.owners.length) {
+                detailContainer.innerHTML = '';
+                return;
+            }
+
+            const backButtonHtml = `
+                <div class="resource-detail-actions">
+                    <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('summary')">Back to default</button>
+                </div>
+            `;
+
+            if (currentResourceDrilldown === 'summary') {
+                detailContainer.innerHTML = `
+                    <div class="resource-detail-panel">
+                        <h3>Resource quick drilldown</h3>
+                        <p>Click a summary card above to open owners, active tasks, scheduled tasks, parallel workload, or delay exposure details.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'owners') {
+                detailContainer.innerHTML = `
+                    <div class="resource-detail-panel">
+                        ${backButtonHtml}
+                        <h3>All owners in portfolio</h3>
+                        <p>Showing all ${payload.summary.owner_count} owners in the table below.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'active') {
+                const activeTasks = payload.owners
+                    .flatMap(owner => owner.tasks
+                        .filter(task => task.is_active_today)
+                        .map(task => ({ owner: owner.owner, ...task })))
+                    .sort((left, right) => left.owner.localeCompare(right.owner) || left.project_name.localeCompare(right.project_name) || left.task_name.localeCompare(right.task_name));
+
+                detailContainer.innerHTML = `
+                    <div class="resource-detail-panel">
+                        ${backButtonHtml}
+                        <h3>Active tasks today</h3>
+                        <p>${activeTasks.length} active task${activeTasks.length === 1 ? '' : 's'} across ${payload.summary.owners_active_today} owner${payload.summary.owners_active_today === 1 ? '' : 's'}.</p>
+                        ${renderResourceTaskTable(activeTasks, 'No active tasks found for today.')}
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'delayed') {
+                const delayedTasks = payload.owners
+                    .flatMap(owner => owner.tasks
+                        .filter(task => task.is_delayed)
+                        .map(task => ({ owner: owner.owner, ...task })))
+                    .sort((left, right) => left.owner.localeCompare(right.owner) || left.project_name.localeCompare(right.project_name) || left.task_name.localeCompare(right.task_name));
+
+                detailContainer.innerHTML = `
+                    <div class="resource-detail-panel">
+                        ${backButtonHtml}
+                        <h3>Owners with delayed tasks</h3>
+                        <p>${payload.summary.owners_with_delays || 0} owner${(payload.summary.owners_with_delays || 0) === 1 ? '' : 's'} currently have delayed work.</p>
+                        ${renderDelayedTaskTable(delayedTasks, 'No delayed tasks found right now.')}
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'clear') {
+                const clearOwners = payload.owners
+                    .filter(owner => !owner.has_delayed_tasks)
+                    .sort((left, right) => left.owner.localeCompare(right.owner));
+
+                const rows = clearOwners.map((owner) => `
+                    <tr>
+                        <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
+                        <td>${owner.project_count}</td>
+                        <td>${owner.task_count}</td>
+                        <td>${owner.active_today_count}</td>
+                        <td>${owner.peak_parallel_tasks}</td>
+                        <td class="resource-table-projects">${escapeHtml(owner.project_names.join(', '))}</td>
+                    </tr>
+                `).join('');
+
+                detailContainer.innerHTML = `
+                    <div class="resource-detail-panel">
+                        ${backButtonHtml}
+                        <h3>Owners without delayed tasks</h3>
+                        <p>${clearOwners.length} owner${clearOwners.length === 1 ? '' : 's'} currently have no delayed work.</p>
+                        ${clearOwners.length ? `
+                            <div class="resource-table-wrap">
+                                <div class="resource-table-scroll">
+                                    <table class="resource-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Owner</th>
+                                                <th>Projects</th>
+                                                <th>Total Tasks</th>
+                                                <th>Active Now</th>
+                                                <th>Peak Load</th>
+                                                <th>Project List</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${rows}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ` : `<div class="resource-detail-empty">No clear owners found.</div>`}
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'parallel') {
+                const parallelOwners = payload.owners
+                    .filter(owner => owner.peak_parallel_tasks > 1)
+                    .sort((left, right) => right.peak_parallel_tasks - left.peak_parallel_tasks || right.active_today_count - left.active_today_count || left.owner.localeCompare(right.owner));
+
+                const rows = parallelOwners.map((owner) => `
+                    <tr>
+                        <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
+                        <td>${owner.peak_parallel_tasks}</td>
+                        <td>${owner.active_today_count}</td>
+                        <td>${owner.task_count}</td>
+                        <td class="resource-table-projects">${escapeHtml(owner.project_names.join(', '))}</td>
+                    </tr>
+                `).join('');
+
+                detailContainer.innerHTML = `
+                    <div class="resource-detail-panel">
+                        ${backButtonHtml}
+                        <h3>Parallel workload</h3>
+                        <p>Owners below have overlapping tasks across the portfolio.</p>
+                        ${parallelOwners.length ? `
+                            <div class="resource-table-wrap">
+                                <div class="resource-table-scroll">
+                                    <table class="resource-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Owner</th>
+                                                <th>Peak Parallel</th>
+                                                <th>Active Now</th>
+                                                <th>Total Tasks</th>
+                                                <th>Project List</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${rows}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ` : `<div class="resource-detail-empty">No parallel work found.</div>`}
+                    </div>
+                `;
+                return;
+            }
+
+            const allTasks = payload.owners
+                .flatMap(owner => owner.tasks.map(task => ({ owner: owner.owner, ...task })))
+                .sort((left, right) => left.owner.localeCompare(right.owner) || left.start_date.localeCompare(right.start_date) || left.project_name.localeCompare(right.project_name));
+
+            detailContainer.innerHTML = `
+                <div class="resource-detail-panel">
+                    ${backButtonHtml}
+                    <h3>All scheduled owner tasks</h3>
+                    <p>${allTasks.length} scheduled task${allTasks.length === 1 ? '' : 's'} across the portfolio.</p>
+                    ${renderResourceTaskTable(allTasks, 'No scheduled tasks found.')}
+                </div>
+            `;
+        }
+
+        function renderResourceTaskTable(tasks, emptyMessage) {
+            if (!tasks.length) {
+                return `<div class="resource-detail-empty">${escapeHtml(emptyMessage)}</div>`;
+            }
+
+            const rows = tasks.map((task) => `
+                <tr>
+                    <td class="resource-table-owner">${escapeHtml(task.owner)}</td>
+                    <td>${escapeHtml(task.project_name)}</td>
+                    <td>${escapeHtml(task.task_name)}</td>
+                    <td>${escapeHtml(task.start_date)}</td>
+                    <td>${escapeHtml(task.end_date)}</td>
+                    <td>${escapeHtml(task.status || '')}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <div class="resource-table-wrap">
+                    <div class="resource-table-scroll">
+                        <table class="resource-table">
+                            <thead>
+                                <tr>
+                                    <th>Owner</th>
+                                    <th>Project</th>
+                                    <th>Task</th>
+                                    <th>Start</th>
+                                    <th>End</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDelayedTaskTable(tasks, emptyMessage) {
+            if (!tasks.length) {
+                return `<div class="resource-detail-empty">${escapeHtml(emptyMessage)}</div>`;
+            }
+
+            const rows = tasks.map((task) => `
+                <tr>
+                    <td class="resource-table-owner">${escapeHtml(task.owner)}</td>
+                    <td>${escapeHtml(task.project_name)}</td>
+                    <td>${escapeHtml(task.task_name)}</td>
+                    <td>${escapeHtml(task.end_date)}</td>
+                    <td>${escapeHtml(task.date_closed || '-')}</td>
+                    <td>${escapeHtml(task.delay_reason || 'Delayed')}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <div class="resource-table-wrap">
+                    <div class="resource-table-scroll">
+                        <table class="resource-table">
+                            <thead>
+                                <tr>
+                                    <th>Owner</th>
+                                    <th>Project</th>
+                                    <th>Task</th>
+                                    <th>Planned End</th>
+                                    <th>Closed</th>
+                                    <th>Delay Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setResourceDrilldown(mode) {
+            currentResourceDrilldown = mode;
+            renderResourceSummaryCards();
+            renderResourceDrilldown();
+            renderResourceSummaryTable();
+            document.getElementById('resourceDetailPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function toggleResourceTableRows() {
+            const hiddenRows = document.querySelectorAll('#resourceSummaryTable .resource-row-hidden');
+            const button = document.getElementById('resourceTableToggle');
+            if (!button || !hiddenRows.length) return;
+
+            const isExpanded = button.dataset.expanded === 'true';
+            hiddenRows.forEach((row) => {
+                row.style.display = isExpanded ? 'none' : 'table-row';
+            });
+
+            button.dataset.expanded = isExpanded ? 'false' : 'true';
+            button.textContent = isExpanded
+                ? `${hiddenRows.length} more owners`
+                : 'Show less';
+        }
+
+        function getAdjustedTimelinePercent(item, date, rangeStart, rangeEnd) {
+            let percent = getTimelinePercent(date, rangeStart, rangeEnd);
+            const today = new Date();
+            const todayPercent = getTimelinePercent(today, rangeStart, rangeEnd);
+
+            if ((item.sign_off_status || '') === 'Passed with Rework' && item.date_source === 'Signed Off') {
+                percent -= 1.8;
+            }
+
+            if (item.date_source === 'Signed Off' && date < today && (todayPercent - percent) < 2.5) {
+                percent = todayPercent - 2.5;
+            }
+
+            return Math.max(0, Math.min(100, percent));
+        }
+
+        function formatIsoDate(value) {
+            if (!value) return '';
+            const date = parseIsoDate(value);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         }
         
         async function handleFileSelect(event) {
@@ -480,15 +2354,28 @@
             }, 5000);
         }
         
-        // Load data on page load
-        loadStats();
-        loadProjects();
-        
-        // Refresh every 30 seconds
-        setInterval(() => {
+        function refreshDashboardData() {
             loadStats();
+            loadOverallGateTimeline();
+            loadOverallResourceLoad();
+            loadOverallCriticalPathOverview();
             loadProjects();
-        }, 30000);
+        }
+
+        // Load data on page load
+        refreshDashboardData();
+
+        // Refresh more aggressively so gantt edits appear quickly on the dashboard
+        setInterval(refreshDashboardData, 10000);
+
+        // Refresh immediately when user returns to the dashboard tab/window
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                refreshDashboardData();
+            }
+        });
+
+        window.addEventListener('focus', refreshDashboardData);
     </script>
 </body>
 </html>

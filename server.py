@@ -63,6 +63,27 @@ def api_get_projects():
     return jsonify(projects)
 
 
+@app.route('/api/overall-gate-timeline')
+def api_get_overall_gate_timeline():
+    """API endpoint to get unified gate timeline across all projects"""
+    timeline = db_manager.get_overall_gate_timeline()
+    return jsonify(timeline)
+
+
+@app.route('/api/overall-resource-load')
+def api_get_overall_resource_load():
+    """API endpoint to get unified owner workload across all projects"""
+    resource_load = db_manager.get_overall_resource_load()
+    return jsonify(resource_load)
+
+
+@app.route('/api/overall-critical-path-overview')
+def api_get_overall_critical_path_overview():
+    """API endpoint to get unified critical path overview across all projects"""
+    critical_overview = db_manager.get_overall_critical_path_overview()
+    return jsonify(critical_overview)
+
+
 @app.route('/api/project/<project_name>')
 def api_get_project(project_name):
     """API endpoint to get project details"""
@@ -290,9 +311,11 @@ def api_export_to_excel(project_name):
 @app.route('/api/stats')
 def api_get_stats():
     """API endpoint to get server statistics"""
+    resource_load = db_manager.get_overall_resource_load()
     stats = {
         'total_projects': len(db_manager.get_all_projects()),
         'total_tasks': db_manager.get_total_task_count(),
+        'total_owners': resource_load['summary']['owner_count'],
         'last_scan': 'N/A'
     }
     return jsonify(stats)

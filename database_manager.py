@@ -5,6 +5,7 @@ Handles all SQLite database operations
 
 import sqlite3
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 import config
@@ -431,6 +432,513 @@ class DatabaseManager:
         conn.close()
         
         return dict(baseline) if baseline else None
+
+    def get_overall_gate_timeline(self):
+        """Get a unified gate timeline across all projects"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            WITH gate_tasks AS (
+                SELECT
+                    p.name AS project_name,
+                    t.name AS gate_name,
+                    CAST(REPLACE(t.name, 'Gate ', '') AS INTEGER) AS gate_id,
+                    t.start_date,
+                    t.end_date AS projected_date,
+                    gb.baseline_date,
+                    gso.sign_off_date,
+                    gso.status AS sign_off_status,
+                    gso.rework_due_date
+                FROM tasks t
+                JOIN projects p
+                    ON p.id = t.project_id
+                LEFT JOIN gate_baselines gb
+                    ON gb.project_name = p.name
+                   AND gb.gate_name = t.name
+                LEFT JOIN gate_sign_offs gso
+                    ON gso.project_name = p.name
+                   AND gso.gate_name = t.name
+                WHERE t.milestone = 1
+                  AND t.name LIKE 'Gate %'
+            )
+            SELECT
+                project_name,
+                gate_name,
+                gate_id,
+                start_date,
+                projected_date,
+                baseline_date,
+                sign_off_date,
+                sign_off_status,
+                rework_due_date,
+                COALESCE(sign_off_date, projected_date, baseline_date) AS display_date,
+                CASE
+                    WHEN sign_off_date IS NOT NULL THEN 'Signed Off'
+                    WHEN projected_date IS NOT NULL THEN 'Projected'
+                    ELSE 'Baseline'
+                END AS date_source
+            FROM gate_tasks
+
+            UNION ALL
+
+            SELECT
+                project_name,
+                gate_name,
+                gate_id,
+                start_date,
+                projected_date,
+                baseline_date,
+                sign_off_date,
+                sign_off_status,
+                rework_due_date,
+                rework_due_date AS display_date,
+                'Rework Due' AS date_source
+            FROM gate_tasks
+            WHERE sign_off_status = 'Passed with Rework'
+              AND rework_due_date IS NOT NULL
+
+            ORDER BY display_date, project_name, gate_name, date_source
+        ''')
+
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    def get_overall_resource_load(self):
+        """Get a unified owner workload view across all projects"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT
+                p.name AS project_name,
+                t.id AS task_id,
+                t.name AS task_name,
+                t.phase,
+                t.owner,
+                t.start_date,
+                t.end_date,
+                t.status,
+                t.date_closed,
+                t.critical,
+                t.tailed_out
+            FROM tasks t
+            JOIN projects p
+                ON p.id = t.project_id
+            WHERE COALESCE(TRIM(t.owner), '') <> ''
+              AND COALESCE(t.milestone, 0) = 0
+              AND t.start_date IS NOT NULL
+              AND t.end_date IS NOT NULL
+            ORDER BY t.owner, t.start_date, p.name, t.name
+        ''')
+
+        task_rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
+        owners = {}
+        all_dates = []
+        today = datetime.now().date()
+
+        for row in task_rows:
+            owner_name = (row['owner'] or '').strip()
+            if not owner_name:
+                continue
+
+            start_date = datetime.strptime(row['start_date'], '%Y-%m-%d').date()
+            end_date = datetime.strptime(row['end_date'], '%Y-%m-%d').date()
+            if end_date < start_date:
+                start_date, end_date = end_date, start_date
+
+            duration_days = max(1, (end_date - start_date).days + 1)
+            is_active_today = start_date <= today <= end_date
+            status_value = (row['status'] or '').strip()
+            is_completed = status_value.lower() == 'completed'
+            closed_date_value = (row['date_closed'] or '').strip()
+            closed_date = datetime.strptime(closed_date_value[:10], '%Y-%m-%d').date() if closed_date_value else None
+            is_open_delayed = (not is_completed) and end_date < today
+            is_closed_delayed = is_completed and closed_date is not None and closed_date > end_date
+            is_delayed = is_open_delayed or is_closed_delayed
+            delay_reason = 'Open overdue' if is_open_delayed else ('Closed late' if is_closed_delayed else None)
+
+            task_item = {
+                'task_id': row['task_id'],
+                'project_name': row['project_name'],
+                'task_name': row['task_name'],
+                'phase': row['phase'],
+                'owner': owner_name,
+                'start_date': start_date.isoformat(),
+                'end_date': end_date.isoformat(),
+                'status': status_value,
+                'date_closed': closed_date.isoformat() if closed_date else None,
+                'critical': bool(row['critical']),
+                'tailed_out': bool(row['tailed_out']),
+                'duration_days': duration_days,
+                'is_active_today': is_active_today,
+                'is_delayed': is_delayed,
+                'delay_reason': delay_reason
+            }
+
+            owner_entry = owners.setdefault(owner_name, {
+                'owner': owner_name,
+                'task_count': 0,
+                'active_today_count': 0,
+                'critical_task_count': 0,
+                'delayed_task_count': 0,
+                'tailed_out_count': 0,
+                'project_names': set(),
+                'date_points': [],
+                'tasks': []
+            })
+
+            owner_entry['task_count'] += 1
+            owner_entry['active_today_count'] += 1 if is_active_today else 0
+            owner_entry['critical_task_count'] += 1 if task_item['critical'] else 0
+            owner_entry['delayed_task_count'] += 1 if task_item['is_delayed'] else 0
+            owner_entry['tailed_out_count'] += 1 if task_item['tailed_out'] else 0
+            owner_entry['project_names'].add(row['project_name'])
+            owner_entry['date_points'].append((start_date, 1))
+            owner_entry['date_points'].append((end_date, -1))
+            owner_entry['tasks'].append(task_item)
+            all_dates.extend([start_date, end_date])
+
+        owner_rows = []
+        for owner_name, owner_entry in owners.items():
+            peak_load = 0
+            current_load = 0
+
+            for date_point, delta in sorted(owner_entry['date_points'], key=lambda item: (item[0], -item[1])):
+                current_load += delta
+                if current_load > peak_load:
+                    peak_load = current_load
+
+            owner_entry['tasks'].sort(key=lambda item: (item['start_date'], item['end_date'], item['project_name'], item['task_name']))
+            owner_rows.append({
+                'owner': owner_name,
+                'task_count': owner_entry['task_count'],
+                'active_today_count': owner_entry['active_today_count'],
+                'critical_task_count': owner_entry['critical_task_count'],
+                'delayed_task_count': owner_entry['delayed_task_count'],
+                'tailed_out_count': owner_entry['tailed_out_count'],
+                'project_count': len(owner_entry['project_names']),
+                'project_names': sorted(owner_entry['project_names']),
+                'peak_parallel_tasks': peak_load,
+                'has_delayed_tasks': owner_entry['delayed_task_count'] > 0,
+                'tasks': owner_entry['tasks']
+            })
+
+        owner_rows.sort(key=lambda item: (-item['active_today_count'], -item['peak_parallel_tasks'], item['owner'].lower()))
+
+        summary = {
+            'owner_count': len(owner_rows),
+            'task_count': len(task_rows),
+            'owners_active_today': sum(1 for owner in owner_rows if owner['active_today_count'] > 0),
+            'owners_with_delays': sum(1 for owner in owner_rows if owner['has_delayed_tasks']),
+            'owners_without_delays': sum(1 for owner in owner_rows if not owner['has_delayed_tasks']),
+            'delayed_task_count': sum(owner['delayed_task_count'] for owner in owner_rows),
+            'max_parallel_tasks': max((owner['peak_parallel_tasks'] for owner in owner_rows), default=0),
+            'range_start': min(all_dates).isoformat() if all_dates else None,
+            'range_end': max(all_dates).isoformat() if all_dates else None
+        }
+
+        return {
+            'summary': summary,
+            'owners': owner_rows
+        }
+
+    def get_overall_critical_path_overview(self):
+        """Get a Gate-5-focused management chain projected from detailed gantts"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            WITH predecessor_counts AS (
+                SELECT successor_id AS task_id, COUNT(*) AS predecessor_count
+                FROM task_dependencies
+                GROUP BY successor_id
+            ),
+            successor_counts AS (
+                SELECT predecessor_id AS task_id, COUNT(*) AS successor_count
+                FROM task_dependencies
+                GROUP BY predecessor_id
+            )
+            SELECT
+                p.name AS project_name,
+                p.manager AS project_manager,
+                t.id AS task_id,
+                t.name AS task_name,
+                t.phase,
+                t.owner,
+                t.start_date,
+                t.end_date,
+                t.status,
+                t.date_closed,
+                t.milestone,
+                COALESCE(t.tailed_out, 0) AS tailed_out,
+                COALESCE(pc.predecessor_count, 0) AS predecessor_count,
+                COALESCE(sc.successor_count, 0) AS successor_count
+            FROM tasks t
+            JOIN projects p
+                ON p.id = t.project_id
+            LEFT JOIN predecessor_counts pc
+                ON pc.task_id = t.id
+            LEFT JOIN successor_counts sc
+                ON sc.task_id = t.id
+            WHERE t.end_date IS NOT NULL
+            ORDER BY p.name, t.end_date, t.row_order, t.id
+        ''')
+        rows = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute('''
+            SELECT
+                project_name,
+                predecessor_id,
+                successor_id
+            FROM task_dependencies
+            ORDER BY project_name, predecessor_id, successor_id
+        ''')
+        dependency_rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
+        today = datetime.now().date()
+        gate_pattern = re.compile(r'gate\s*(\d+)', re.IGNORECASE)
+        review_keywords = ('fdr', 'pdr', 'cdr', 'trr', 'mrr', 'review')
+
+        def parse_date(value):
+            if not value:
+                return None
+            return datetime.strptime(value[:10], '%Y-%m-%d').date()
+
+        def phase_gate_number(task):
+            for text_value in (task.get('phase'), task.get('task_name')):
+                if not text_value:
+                    continue
+                match = gate_pattern.search(text_value)
+                if match:
+                    return int(match.group(1))
+            return None
+
+        def is_gate_task(task):
+            return bool(task.get('milestone')) and bool(gate_pattern.search(task.get('task_name') or ''))
+
+        def looks_like_review(task):
+            task_name = (task.get('task_name') or '').strip()
+            lowered = task_name.lower()
+            return any(keyword in lowered for keyword in review_keywords)
+
+        def get_driver_priority(task):
+            lowered = (task.get('task_name') or '').strip().lower()
+            if 'certification process' in lowered or 'certifications' in lowered or 'certif' in lowered:
+                return 3
+            if 'csa application' in lowered:
+                return 2
+            if looks_like_review(task):
+                return 1
+            return 0
+
+        normalized_rows = []
+        tasks_by_project = {}
+        for row in rows:
+            end_date = parse_date((row['end_date'] or '').strip())
+            start_date = parse_date((row['start_date'] or '').strip())
+            closed_date = parse_date((row['date_closed'] or '').strip())
+            status_value = (row['status'] or '').strip()
+            is_completed = status_value.lower() == 'completed'
+            is_open_delayed = bool(end_date and (not is_completed) and end_date < today)
+            is_closed_delayed = bool(end_date and is_completed and closed_date and closed_date > end_date)
+            duration_days = 0
+            if start_date and end_date:
+                duration_days = max(0, (end_date - start_date).days)
+
+            task = {
+                'project_name': row['project_name'],
+                'project_manager': row['project_manager'],
+                'task_id': row['task_id'],
+                'task_name': row['task_name'],
+                'phase': row['phase'],
+                'owner': row['owner'],
+                'start_date': start_date.isoformat() if start_date else None,
+                'end_date': end_date.isoformat() if end_date else None,
+                'status': status_value,
+                'date_closed': closed_date.isoformat() if closed_date else None,
+                'milestone': bool(row['milestone']),
+                'tailed_out': bool(row['tailed_out']),
+                'predecessor_count': int(row['predecessor_count'] or 0),
+                'successor_count': int(row['successor_count'] or 0),
+                'gate_number': None,
+                'is_delayed': is_open_delayed or is_closed_delayed,
+                'delay_reason': 'Open overdue' if is_open_delayed else ('Closed late' if is_closed_delayed else None),
+                'is_active_today': bool(start_date and end_date and start_date <= today <= end_date),
+                'duration_days': duration_days
+            }
+            task['gate_number'] = phase_gate_number(task)
+            normalized_rows.append(task)
+            tasks_by_project.setdefault(task['project_name'], []).append(task)
+
+        dependencies_by_project = {}
+        for dependency in dependency_rows:
+            dependencies_by_project.setdefault(dependency['project_name'], []).append(dependency)
+
+        def pick_best_candidate(candidates, task_lookup, successor_map):
+            if not candidates:
+                return None
+
+            def rank(candidate):
+                candidate_gate = candidate.get('gate_number') or -1
+                successor_ids = successor_map.get(candidate['task_id'], [])
+                successors = [
+                    task_lookup[successor_id]
+                    for successor_id in successor_ids
+                    if successor_id in task_lookup
+                ]
+                has_later_phase_successor = any(
+                    (successor.get('gate_number') or -1) > candidate_gate
+                    for successor in successors
+                )
+                end_date = parse_date(candidate.get('end_date')) or datetime(1900, 1, 1).date()
+                start_date = parse_date(candidate.get('start_date')) or datetime(1900, 1, 1).date()
+                return (
+                    1 if has_later_phase_successor else 0,
+                    get_driver_priority(candidate),
+                    end_date.toordinal(),
+                    int(candidate.get('duration_days') or 0),
+                    -start_date.toordinal(),
+                    int(candidate.get('successor_count') or 0),
+                    candidate.get('task_name', '').lower()
+                )
+
+            return max(candidates, key=rank)
+
+        def previous_gate_for_task(task, gate_tasks):
+            task_date = parse_date(task.get('end_date'))
+            candidates = [
+                gate for gate in gate_tasks
+                if gate['task_id'] != task['task_id']
+                and parse_date(gate.get('end_date'))
+                and parse_date(gate.get('end_date')) < task_date
+            ]
+            if not candidates:
+                return None
+
+            current_gate_number = task.get('gate_number')
+            if current_gate_number:
+                exact_candidates = [
+                    gate for gate in candidates
+                    if gate.get('gate_number') == current_gate_number - 1
+                ]
+                if exact_candidates:
+                    return max(exact_candidates, key=lambda gate: gate['end_date'])
+
+            return max(candidates, key=lambda gate: gate['end_date'])
+
+        project_rows = []
+        all_project_chain_tasks = []
+
+        for project_name, project_tasks in tasks_by_project.items():
+            project_tasks = [
+                task for task in project_tasks
+                if not task['tailed_out'] and task['end_date']
+            ]
+            if not project_tasks:
+                continue
+
+            task_lookup = {task['task_id']: task for task in project_tasks}
+            predecessor_map = {}
+            successor_map = {}
+            for dependency in dependencies_by_project.get(project_name, []):
+                predecessor_id = dependency['predecessor_id']
+                successor_id = dependency['successor_id']
+                predecessor_map.setdefault(successor_id, []).append(predecessor_id)
+                successor_map.setdefault(predecessor_id, []).append(successor_id)
+
+            gate_tasks = sorted(
+                [task for task in project_tasks if is_gate_task(task)],
+                key=lambda task: (task['end_date'], task['task_name'].lower())
+            )
+            if not gate_tasks:
+                continue
+
+            target_gate = next((gate for gate in gate_tasks if gate.get('gate_number') == 5), gate_tasks[-1])
+
+            def phase_driver_for_gate(gate_task):
+                explicit_predecessors = [
+                    task_lookup[task_id]
+                    for task_id in predecessor_map.get(gate_task['task_id'], [])
+                    if task_id in task_lookup and not task_lookup[task_id]['tailed_out']
+                ]
+                if explicit_predecessors:
+                    return pick_best_candidate(explicit_predecessors, task_lookup, successor_map)
+
+                gate_date = parse_date(gate_task['end_date'])
+                same_phase_candidates = [
+                    task for task in project_tasks
+                    if task['task_id'] != gate_task['task_id']
+                    and not is_gate_task(task)
+                    and task.get('gate_number') == gate_task.get('gate_number')
+                    and parse_date(task['end_date'])
+                    and parse_date(task['end_date']) <= gate_date
+                ]
+                return pick_best_candidate(same_phase_candidates, task_lookup, successor_map)
+
+            target_driver = phase_driver_for_gate(target_gate)
+            previous_gate = previous_gate_for_task(target_driver or target_gate, gate_tasks)
+            previous_driver = phase_driver_for_gate(previous_gate) if previous_gate else None
+
+            chain = []
+            seen_ids = set()
+            for item in (previous_driver, previous_gate, target_driver, target_gate):
+                if not item or item['task_id'] in seen_ids:
+                    continue
+                seen_ids.add(item['task_id'])
+                chain.append(item)
+
+            if not chain:
+                chain = [target_gate]
+
+            project_gates = [{
+                'gate_name': gate['task_name'],
+                'gate_date': gate['end_date'],
+                'is_upcoming': bool(parse_date(gate['end_date']) and parse_date(gate['end_date']) >= today)
+            } for gate in gate_tasks]
+            upcoming_gates = [gate for gate in project_gates if gate['is_upcoming']]
+            selected_gate = min(upcoming_gates, key=lambda gate: gate['gate_date']) if upcoming_gates else project_gates[-1]
+
+            project_entry = {
+                'project_name': project_name,
+                'project_manager': project_tasks[0]['project_manager'],
+                'critical_task_count': len(chain),
+                'delayed_critical_count': sum(1 for task in chain if task['is_delayed']),
+                'active_critical_count': sum(1 for task in chain if task['is_active_today']),
+                'milestone_critical_count': sum(1 for task in chain if task['milestone']),
+                'gate_5_date': target_gate['end_date'] if target_gate.get('gate_number') == 5 else None,
+                'next_gate_name': selected_gate['gate_name'],
+                'next_gate_date': selected_gate['gate_date'],
+                'next_gate_is_upcoming': selected_gate['is_upcoming'],
+                'tasks': chain,
+                'critical_path_tasks': chain
+            }
+
+            project_rows.append(project_entry)
+            all_project_chain_tasks.extend(chain)
+
+        project_rows.sort(key=lambda item: (
+            item['gate_5_date'] or item['next_gate_date'] or '9999-12-31',
+            item['project_name'].lower()
+        ))
+
+        summary = {
+            'critical_task_count': sum(project['critical_task_count'] for project in project_rows),
+            'project_count': len(project_rows),
+            'delayed_critical_count': sum(project['delayed_critical_count'] for project in project_rows),
+            'active_critical_count': sum(project['active_critical_count'] for project in project_rows),
+            'milestone_critical_count': sum(project['milestone_critical_count'] for project in project_rows)
+        }
+
+        return {
+            'summary': summary,
+            'projects': project_rows,
+            'tasks': all_project_chain_tasks
+        }
     
     # Gate Change Log Management
     

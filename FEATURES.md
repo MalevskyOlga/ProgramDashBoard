@@ -63,7 +63,7 @@ python server.py
 2. ✅ Database initialized (if first time)
 3. ✅ Server starts on http://localhost:5001
 4. ✅ **NO auto-import** - Server loads existing data from database
-5. ✅ Console window shows: "Server starts clean - upload Excel files via web interface"
+5. ✅ Server detaches into the background and writes logs to `logs\`
 
 ### Expected Console Output
 
@@ -80,30 +80,21 @@ python server.py
   Server Configuration:
   - URL: http://localhost:5001
   - Port: 5001
-  - Mode: PERSISTENT (No Auto-Reload)
+  - Mode: PERSISTENT BACKGROUND
   - Debug: OFF (Stable)
 ========================================
 
-[INFO] Starting server...
-[INFO] Keep this window OPEN while using
-[INFO] Press Ctrl+C to stop the server
+[INFO] Starting server in background...
+[INFO] Background server PID 12345
 
 ========================================
 
-✓ Database initialized: C:\...\database\dashboards.db
-================================================================================
-Dashboard Generator Web Server
-================================================================================
-Server URL: http://localhost:5001
-Database: C:\...\database\dashboards.db
-Upload endpoint: /api/upload-excel
-================================================================================
-Server starts clean - upload Excel files via web interface
-Press Ctrl+C to stop the server
- * Serving Flask app 'server'
- * Debug mode: off
- * Running on http://127.0.0.1:5001
-Press CTRL+C to quit
+[INFO] Server is running in background
+[INFO] URL: http://localhost:5001
+[INFO] Logs:
+  C:\...\logs\server.stdout.log
+  C:\...\logs\server.stderr.log
+[INFO] Use STOP_SERVER.bat to stop it
 ```
 
 ### Accessing the Application
@@ -115,18 +106,17 @@ Once server is running:
 
 ### Stopping the Server
 
-**Method 1: Ctrl+C**
-- Focus on server window
-- Press **Ctrl+C**
-- Server stops gracefully
+**Method 1: STOP_SERVER.bat**
+- Run `STOP_SERVER.bat`
+- The script stops the process listening on port 5001
+- Recommended because the server now runs in background
 
-**Method 2: Close Window**
-- Click X on server window
-- Server terminates
-
-**Method 3: Task Manager**
+**Method 2: Task Manager**
 - Find python.exe process (PID shown in netstat)
 - End process
+
+**Method 3: PowerShell**
+- Run `.\STOP_SERVER.bat`
 
 ### Verifying Server is Running
 
@@ -145,7 +135,7 @@ Should return: **Status 200 OK**
 **IMPORTANT:** The server runs in persistent mode (DEBUG_MODE = False), so it **will NOT auto-reload** when you change code files.
 
 **To see code changes:**
-1. Stop server (Ctrl+C)
+1. Stop server (`STOP_SERVER.bat`)
 2. Make your code changes
 3. Start server again (`START_SERVER_PERSISTENT.bat`)
 
@@ -173,8 +163,7 @@ python -m pip install -r requirements.txt
 ```
 
 **Problem:** Server window closes immediately
-- Right-click `START_SERVER_PERSISTENT.bat`
-- Select "Edit" to see error messages
+- Check `logs\server.stderr.log`
 - Check Python installation
 - Verify file paths in config.py
 
