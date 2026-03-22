@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project_name }} - Schematic Schedule</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #ffffff;
+            color: #1f3254;
+            min-height: 100vh;
+            padding: 16px 18px 18px;
+        }
+
+        .page {
+            width: 100%;
+            max-width: none;
+            min-height: calc(100vh - 34px);
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 14px;
+        }
+
+        .title-block h1 {
+            font-size: 2rem;
+            line-height: 1.1;
+            color: #20365d;
+            margin-bottom: 6px;
+        }
+
+        .title-block p {
+            color: #6b7280;
+            font-size: 0.95rem;
+        }
+
+        .status-pill {
+            min-width: 220px;
+            padding: 14px 18px;
+            border-radius: 6px;
+            background: #2faa60;
+            color: #ffffff;
+            text-align: center;
+            font-size: 0.92rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            box-shadow: 0 8px 18px rgba(47, 170, 96, 0.18);
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+        }
+
+        .action-btn.primary {
+            background: #edf4ff;
+            color: #1f4b8f;
+            border: 1px solid #cfddfb;
+        }
+
+        .action-btn.secondary {
+            background: #20365d;
+            color: #ffffff;
+        }
+
+        .note-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .note-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 11px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            border: 1px solid #d7e2f3;
+            background: #f8fbff;
+            color: #49617f;
+        }
+
+        .note-chip.warning {
+            background: #fff6e7;
+            border-color: #ffd691;
+            color: #9a6300;
+        }
+
+        .chart-card {
+            position: relative;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
+            border: 1px solid #edf2f8;
+            padding: 24px 18px 18px 0;
+            overflow: hidden;
+            min-height: calc(100vh - 170px);
+        }
+
+        .timeline-years {
+            position: relative;
+            display: flex;
+            margin-left: 250px;
+            margin-right: 22px;
+            height: 34px;
+            color: #20365d;
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+
+        .timeline-year {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #edf2f8;
+        }
+
+        .schematic-grid {
+            position: relative;
+            margin-top: 8px;
+        }
+
+        .today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            border-left: 2px dashed #ff5b45;
+            z-index: 4;
+        }
+
+        .today-label {
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ff5b45;
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .lane-row {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            align-items: center;
+            min-height: 104px;
+            position: relative;
+        }
+
+        .lane-label {
+            padding: 0 22px 0 0;
+            color: #1f3254;
+            font-size: 0.98rem;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+
+        .lane-track {
+            position: relative;
+            margin-right: 22px;
+            height: 92px;
+        }
+
+        .lane-track::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 55px;
+            height: 1px;
+            background: #e8eef6;
+            z-index: 1;
+        }
+
+        .lane-segment {
+            position: absolute;
+            top: 43px;
+            height: 24px;
+            border-radius: 4px;
+            z-index: 2;
+        }
+
+        .lane-segment.discovery {
+            background: #48a86d;
+        }
+
+        .lane-segment.preliminary {
+            background: #6d8fbd;
+        }
+
+        .lane-segment.development {
+            background: #e0a12f;
+        }
+
+        .lane-segment.certifications {
+            background: #4aaeb7;
+        }
+
+        .lane-segment.launch {
+            background: #405579;
+        }
+
+        .lane-segment.completed {
+            background: #41ad66;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.84rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .lane-callout {
+            position: absolute;
+            top: 2px;
+            transform: translateX(-50%);
+            min-width: 112px;
+            max-width: 180px;
+            padding: 8px 10px 7px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid #dbe5ef;
+            border-top-width: 3px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+            text-align: center;
+            z-index: 6;
+        }
+
+        .lane-callout.discovery {
+            border-top-color: #48a86d;
+        }
+
+        .lane-callout.preliminary {
+            border-top-color: #6d8fbd;
+        }
+
+        .lane-callout.development {
+            border-top-color: #e0a12f;
+        }
+
+        .lane-callout.certifications {
+            border-top-color: #4aaeb7;
+        }
+
+        .lane-callout.launch {
+            border-top-color: #405579;
+        }
+
+        .lane-callout-title {
+            font-size: 0.83rem;
+            font-weight: 800;
+            line-height: 1.2;
+            color: #1f3254;
+        }
+
+        .lane-callout-date {
+            margin-top: 3px;
+            color: #73839a;
+            font-size: 0.72rem;
+            font-style: italic;
+            font-weight: 600;
+        }
+
+        .lane-callout-diamond {
+            position: absolute;
+            top: 50px;
+            width: 12px;
+            height: 12px;
+            transform: translateX(-50%) rotate(45deg);
+            background: #ffd458;
+            z-index: 5;
+            box-shadow: 0 3px 6px rgba(15, 23, 42, 0.12);
+        }
+
+        .gate-row {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            align-items: start;
+            margin-top: 6px;
+            padding-bottom: 6px;
+        }
+
+        .gate-spacer {
+            min-height: 1px;
+        }
+
+        .gate-track {
+            position: relative;
+            margin-right: 22px;
+            min-height: 120px;
+        }
+
+        .gate-flag-block {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #29b862;
+        }
+
+        .gate-label {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #29b862;
+            margin-bottom: 6px;
+        }
+
+        .flag-icon {
+            position: relative;
+            width: 30px;
+            height: 34px;
+            margin: 0 auto 8px;
+        }
+
+        .flag-icon::before {
+            content: '';
+            position: absolute;
+            left: 3px;
+            top: 0;
+            width: 3px;
+            height: 34px;
+            background: #29b862;
+            border-radius: 2px;
+        }
+
+        .flag-icon::after {
+            content: '';
+            position: absolute;
+            left: 6px;
+            top: 2px;
+            width: 22px;
+            height: 17px;
+            background: #29b862;
+            border-radius: 2px 8px 8px 2px;
+            clip-path: polygon(0 0, 100% 15%, 100% 85%, 72% 100%, 0 86%);
+        }
+
+        .gate-date {
+            color: #666666;
+            font-style: italic;
+            font-size: 0.94rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .empty-state {
+            padding: 38px 24px 42px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 1rem;
+        }
+
+        @media (max-width: 980px) {
+            body {
+                padding: 12px 10px 14px;
+            }
+
+            .topbar {
+                flex-direction: column;
+            }
+
+            .status-pill {
+                min-width: 0;
+                width: 100%;
+            }
+
+            .timeline-years {
+                margin-left: 190px;
+            }
+
+            .lane-row,
+            .gate-row {
+                grid-template-columns: 190px 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="topbar">
+            <div class="title-block">
+                <h1 id="pageTitle">{{ project_name }} Timeline</h1>
+                <p>{{ project_manager or 'No manager' }} · Schematic Schedule · Generated {{ GENERATED_DATE }}</p>
+            </div>
+            <div class="status-pill" id="statusPill">Loading status...</div>
+        </div>
+
+        <div class="actions">
+            <a href="/" class="action-btn primary">Back to Projects</a>
+            <a href="/project/{{ project_name|urlencode }}" class="action-btn secondary">Open Detailed Gantt</a>
+            <button class="action-btn primary" type="button" onclick="exportToPpt()">Output to PPT</button>
+        </div>
+
+        <div class="note-row" id="noteRow"></div>
+
+        <div class="chart-card">
+            <div class="timeline-years" id="timelineYears"></div>
+            <div class="schematic-grid" id="schematicGrid">
+                <div class="empty-state">Loading schematic schedule...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PROJECT_NAME = {{ PROJECT_NAME|tojson }};
+        const API_BASE = '/api/project/' + encodeURIComponent(PROJECT_NAME);
+        const LANE_ORDER = [
+            { key: 'discovery', label: 'Discovery & Scope', colorClass: 'discovery' },
+            { key: 'preliminary', label: 'Architecture & Design', colorClass: 'preliminary' },
+            { key: 'development', label: 'Development & Verification', colorClass: 'development' },
+            { key: 'certifications', label: 'Compliance & Approvals', colorClass: 'certifications' },
+            { key: 'launch', label: 'Manufacturing Readiness & Launch', colorClass: 'launch' }
+        ];
+
+        const DISCOVERY_KEYWORDS = ['discovery', 'planning', 'voice of the customer', 'requirements', 'scope', 'strategy', 'roadmap'];
+        const CERTIFICATION_KEYWORDS = ['certif', 'compliance', 'approval', 'approvals', 'csa', 'regulatory', 'trade compliance', 'sil'];
+        const LAUNCH_KEYWORDS = ['manufact', 'mfr', 'build', 'testing', 'test', 'launch', 'supplier', 'sourcing', 'supply', 'inventory', 'production', 'fct', 'dvt', 'dv ', ' dv', 'ev ', ' ev', 'mvt', 'svt', 'pilot'];
+        const LAUNCH_CALLOUT_KEYWORDS = ['manufacturing preparation', 'manufacturing prep', 'manufacturing', 'mfr readiness', 'readiness', 'industrialization', 'production'];
+        const REVIEW_KEYWORDS = ['pdr', 'cdr', 'fdr', 'trr', 'mrr', 'review', 'architecture', 'srd', 'requirements'];
+        const SCHEMATIC_REFRESH_MS = 60000;
+
+        let tasks = [];
+        let gateSignOffs = {};
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function parseDate(value) {
+            if (!value) {
+                return null;
+            }
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+
+        function formatDateShort(value) {
+            const date = parseDate(value);
+            if (!date) {
+                return value || '';
+            }
+            const day = date.getDate();
+            const month = date.toLocaleString('default', { month: 'short' });
+            const year = date.getFullYear();
+            return `${day} ${month} ${year}`;
+        }
+
+        function formatDateCompact(value) {
+            const date = parseDate(value);
+            if (!date) {
+                return value || '';
+            }
+            const month = date.toLocaleString('default', { month: 'short' });
+            return `${month} ${date.getFullYear()}`;
+        }
+
+        function getToday() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return today;
+        }
+
+        function fetchFresh(url, options = {}) {
+            const separator = url.includes('?') ? '&' : '?';
+            return fetch(`${url}${separator}_ts=${Date.now()}`, {
+                ...options,
+                cache: 'no-store'
+            });
+        }
+
+        function getTaskGateNumber(task) {
+            for (const value of [task?.name, task?.phase]) {
+                const match = String(value || '').match(/gate\s*(\d+)/i);
+                if (match) {
+                    return parseInt(match[1], 10);
+                }
+            }
+            return null;
+        }
+
+        function getGateTimelineDate(task) {
+            const gateKey = task.phase || task.name;
+            const signOff = gateSignOffs[gateKey] || gateSignOffs[task.name] || null;
+            return signOff?.sign_off_date || task.due || task.entered || null;
+        }
+
+        function includesKeyword(text, keywords) {
+            const lowered = String(text || '').toLowerCase();
+            return keywords.some((keyword) => lowered.includes(keyword));
+        }
+
+        function isMandatoryGate(task) {
+            const gateNumber = getTaskGateNumber(task);
+            return !!task.milestone && [2, 3, 4, 5].includes(gateNumber) && /gate/i.test(task.name || '');
+        }
+
+        function classifyLane(task) {
+            const gateNumber = getTaskGateNumber(task);
+            const searchText = `${task.name || ''} ${task.phase || ''}`;
+
+            if (includesKeyword(searchText, CERTIFICATION_KEYWORDS)) {
+                return 'certifications';
+            }
+
+            if (includesKeyword(searchText, LAUNCH_KEYWORDS)) {
+                return 'launch';
+            }
+
+            if ((gateNumber && gateNumber <= 2) || includesKeyword(searchText, DISCOVERY_KEYWORDS)) {
+                return 'discovery';
+            }
+
+            if ((gateNumber && gateNumber <= 3) || (task.phase || '').toLowerCase().includes('gate 3')) {
+                return 'preliminary';
+            }
+
+            if ((gateNumber && gateNumber >= 4) || (task.phase || '').toLowerCase().includes('gate 4') || (task.phase || '').toLowerCase().includes('gate 5')) {
+                return 'development';
+            }
+
+            return 'preliminary';
+        }
+
+        function getSegmentBounds(taskList) {
+            const datedTasks = taskList.filter((task) => parseDate(task.entered) || parseDate(task.due));
+            if (!datedTasks.length) {
+                return null;
+            }
+
+            const starts = datedTasks.map((task) => parseDate(task.entered) || parseDate(task.due)).filter(Boolean);
+            const ends = datedTasks.map((task) => parseDate(task.due) || parseDate(task.entered)).filter(Boolean);
+            const start = new Date(Math.min(...starts.map((date) => date.getTime())));
+            const end = new Date(Math.max(...ends.map((date) => date.getTime())));
+
+            return { start, end };
+        }
+
+        function getMandatoryGate(mandatoryGates, gateNumber) {
+            return mandatoryGates.find((gate) => gate.gateNumber === gateNumber) || null;
+        }
+
+        function getHighlightDate(task, laneKey, mandatoryGates) {
+            if (!task) {
+                return null;
+            }
+
+            const start = parseDate(task.entered);
+            const end = parseDate(task.due) || start;
+            const fallbackDate = end || start;
+            const text = `${task.name || ''} ${task.phase || ''}`;
+
+            if (laneKey === 'launch' && includesKeyword(text, LAUNCH_CALLOUT_KEYWORDS)) {
+                const gate4 = getMandatoryGate(mandatoryGates, 4);
+                const gate4Date = gate4 ? parseDate(gate4.dateValue) : null;
+
+                if (gate4Date && start && end && gate4Date >= start && gate4Date <= end) {
+                    return gate4Date;
+                }
+
+                if (start) {
+                    return start;
+                }
+            }
+
+            return fallbackDate;
+        }
+
+        function shouldConsiderHighlight(task, laneKey) {
+            if (!task || task.tailed_out || isMandatoryGate(task)) {
+                return false;
+            }
+
+            const text = `${task.name || ''} ${task.phase || ''}`;
+            if (task.critical || task.milestone) {
+                return true;
+            }
+
+            if (laneKey === 'certifications') {
+                return includesKeyword(text, CERTIFICATION_KEYWORDS);
+            }
+            if (laneKey === 'launch') {
+                return includesKeyword(text, LAUNCH_KEYWORDS);
+            }
+            if (laneKey === 'development') {
+                return includesKeyword(text, REVIEW_KEYWORDS);
+            }
+            if (laneKey === 'preliminary') {
+                return includesKeyword(text, ['architecture', 'srd', 'requirements', 'design']);
+            }
+            if (laneKey === 'discovery') {
+                return includesKeyword(text, DISCOVERY_KEYWORDS);
+            }
+
+            return false;
+        }
+
+        function getHighlightPriority(task, laneKey) {
+            const text = `${task.name || ''} ${task.phase || ''}`;
+            let score = 0;
+            if (task.critical) {
+                score += 60;
+            }
+            if (task.milestone) {
+                score += 35;
+            }
+            if (laneKey === 'certifications' && includesKeyword(text, CERTIFICATION_KEYWORDS)) {
+                score += 20;
+            }
+            if (laneKey === 'launch' && includesKeyword(text, LAUNCH_KEYWORDS)) {
+                score += 18;
+            }
+            if (laneKey === 'launch' && includesKeyword(text, LAUNCH_CALLOUT_KEYWORDS)) {
+                score += 38;
+            }
+            if (laneKey === 'development' && includesKeyword(text, REVIEW_KEYWORDS)) {
+                score += 16;
+            }
+            if (laneKey === 'preliminary' && includesKeyword(text, ['architecture', 'srd', 'requirements', 'design'])) {
+                score += 14;
+            }
+            if (laneKey === 'discovery' && includesKeyword(text, DISCOVERY_KEYWORDS)) {
+                score += 12;
+            }
+
+            const date = getHighlightDate(task);
+            score += date ? (date.getTime() / 1000000000000) : 0;
+            return score;
+        }
+
+        function shortenLabel(text, maxLength = 28) {
+            const cleaned = String(text || '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+            if (cleaned.length <= maxLength) {
+                return cleaned;
+            }
+            return `${cleaned.slice(0, maxLength - 1).trimEnd()}…`;
+        }
+
+        function selectLaneHighlight(lane, mandatoryGates) {
+            const ranked = lane.highlightCandidates
+                .filter((task) => getHighlightDate(task, lane.key, mandatoryGates))
+                .sort((left, right) => {
+                    const scoreDelta = getHighlightPriority(right, lane.key) - getHighlightPriority(left, lane.key);
+                    if (scoreDelta !== 0) {
+                        return scoreDelta;
+                    }
+                    return getHighlightDate(right, lane.key, mandatoryGates) - getHighlightDate(left, lane.key, mandatoryGates);
+                });
+
+            return ranked[0] || null;
+        }
+
+        function buildLaneModel() {
+            const mandatoryGates = tasks
+                .filter((task) => isMandatoryGate(task))
+                .map((task) => ({
+                    gateNumber: getTaskGateNumber(task),
+                    gateName: task.phase || task.name,
+                    dateValue: getGateTimelineDate(task)
+                }))
+                .filter((gate) => gate.gateNumber && parseDate(gate.dateValue))
+                .sort((left, right) => parseDate(left.dateValue) - parseDate(right.dateValue));
+
+            const laneMap = Object.fromEntries(LANE_ORDER.map((lane) => [lane.key, { ...lane, tasks: [], highlightCandidates: [], highlight: null, segment: null }]));
+
+            tasks.forEach((task) => {
+                if (task.tailed_out || isMandatoryGate(task)) {
+                    return;
+                }
+
+                const laneKey = classifyLane(task);
+                laneMap[laneKey].tasks.push(task);
+
+                if (shouldConsiderHighlight(task, laneKey)) {
+                    laneMap[laneKey].highlightCandidates.push(task);
+                }
+            });
+
+            Object.values(laneMap).forEach((lane) => {
+                lane.segment = getSegmentBounds(lane.tasks);
+                lane.highlight = selectLaneHighlight(lane, mandatoryGates);
+            });
+
+            return {
+                lanes: LANE_ORDER.map((lane) => laneMap[lane.key]),
+                mandatoryGates,
+                missingGates: [2, 3, 4, 5].filter((gateNumber) => !mandatoryGates.some((gate) => gate.gateNumber === gateNumber))
+            };
+        }
+
+        function getStatusText(mandatoryGates) {
+            const today = getToday();
+            const nextGate = mandatoryGates.find((gate) => parseDate(gate.dateValue) >= today);
+            if (nextGate) {
+                return `GATE ${nextGate.gateNumber} IN PROGRESS`;
+            }
+
+            const lastGate = mandatoryGates[mandatoryGates.length - 1];
+            return lastGate ? `GATE ${lastGate.gateNumber} COMPLETE` : 'SCHEMATIC SCHEDULE';
+        }
+
+        function getRange(lanes, mandatoryGates) {
+            const dates = [];
+            lanes.forEach((lane) => {
+                if (lane.segment) {
+                    dates.push(lane.segment.start, lane.segment.end);
+                }
+                const highlightDate = lane.highlight ? getHighlightDate(lane.highlight, lane.key, mandatoryGates) : null;
+                if (highlightDate) {
+                    dates.push(highlightDate);
+                }
+            });
+            mandatoryGates.forEach((gate) => {
+                const date = parseDate(gate.dateValue);
+                if (date) {
+                    dates.push(date);
+                }
+            });
+
+            if (!dates.length) {
+                return null;
+            }
+
+            dates.sort((left, right) => left - right);
+            const start = new Date(dates[0].getFullYear(), 0, 1);
+            const end = new Date(dates[dates.length - 1].getFullYear(), 11, 31);
+            return { start, end };
+        }
+
+        function getPercent(date, range) {
+            const total = range.end.getTime() - range.start.getTime();
+            if (total <= 0) {
+                return 0;
+            }
+            return ((date.getTime() - range.start.getTime()) / total) * 100;
+        }
+
+        function renderYearHeader(range) {
+            const yearsContainer = document.getElementById('timelineYears');
+            const years = [];
+            for (let year = range.start.getFullYear(); year <= range.end.getFullYear(); year += 1) {
+                years.push(year);
+            }
+
+            yearsContainer.innerHTML = years.map((year) => {
+                const yearStart = new Date(year, 0, 1);
+                const yearEnd = new Date(year, 11, 31);
+                const startPercent = getPercent(yearStart, range);
+                const endPercent = getPercent(yearEnd, range);
+                const widthPercent = Math.max(0.5, endPercent - startPercent);
+                return `<div class="timeline-year" style="width:${widthPercent}%;">${year}</div>`;
+            }).join('');
+        }
+
+        function getLaneCompletionLabel(lane, today) {
+            if (!lane.segment || !lane.tasks.length) {
+                return null;
+            }
+
+            const allCompleted = lane.tasks.every((task) => String(task.status || '').toLowerCase() === 'completed');
+            const endedBeforeToday = lane.segment.end < today;
+            if (allCompleted || (lane.key === 'discovery' && endedBeforeToday)) {
+                return 'Completed';
+            }
+            return null;
+        }
+
+        function renderNotes(missingGates, lanes) {
+            const noteRow = document.getElementById('noteRow');
+            const activeLanes = lanes.filter((lane) => lane.segment).length;
+            const chips = [
+                '<span class="note-chip neutral">Timeline uses live gantt task dates and gate sign-offs</span>'
+            ];
+
+            if (activeLanes) {
+                chips.push(`<span class="note-chip">${activeLanes} active workstreams</span>`);
+            }
+
+            if (missingGates.length) {
+                missingGates.forEach((gateNumber) => {
+                    chips.push(`<span class="note-chip warning">Missing Gate ${gateNumber}</span>`);
+                });
+            }
+
+            noteRow.innerHTML = chips.join('');
+        }
+
+        function renderSchematic() {
+            const grid = document.getElementById('schematicGrid');
+            const statusPill = document.getElementById('statusPill');
+            const model = buildLaneModel();
+            const range = getRange(model.lanes, model.mandatoryGates);
+            const today = getToday();
+
+            statusPill.textContent = getStatusText(model.mandatoryGates);
+            renderNotes(model.missingGates, model.lanes);
+
+            if (!range) {
+                document.getElementById('timelineYears').innerHTML = '';
+                grid.innerHTML = '<div class="empty-state">No dated critical tasks or gate milestones are available for this project yet.</div>';
+                return;
+            }
+
+            renderYearHeader(range);
+
+            const todayPercent = Math.max(0, Math.min(100, getPercent(today, range)));
+            const todayFactor = (todayPercent / 100).toFixed(6);
+            let html = `<div class="today-line" style="left:calc(250px + ((100% - 272px) * ${todayFactor}));"><div class="today-label">Today</div></div>`;
+
+            model.lanes.forEach((lane) => {
+                const completionLabel = getLaneCompletionLabel(lane, today);
+                let laneContent = '';
+
+                if (lane.segment) {
+                    const segmentStart = getPercent(lane.segment.start, range);
+                    const segmentEnd = getPercent(lane.segment.end, range);
+                    const segmentWidth = Math.max(1.5, segmentEnd - segmentStart);
+
+                    if (completionLabel) {
+                        laneContent += `<div class="lane-segment completed" style="left:${segmentStart}%; width:${segmentWidth}%;">✓ ${completionLabel}</div>`;
+                    } else {
+                        laneContent += `<div class="lane-segment ${lane.colorClass}" style="left:${segmentStart}%; width:${segmentWidth}%;"></div>`;
+                    }
+                }
+
+                if (lane.highlight) {
+                    const date = getHighlightDate(lane.highlight, lane.key, model.mandatoryGates);
+                    const left = Math.max(9, Math.min(91, getPercent(date, range)));
+                    laneContent += `
+                        <div class="lane-callout ${lane.colorClass}" style="left:${left}%;">
+                            <div class="lane-callout-title">${escapeHtml(shortenLabel(lane.highlight.name, 30))}</div>
+                            <div class="lane-callout-date">${formatDateCompact(date)}</div>
+                        </div>
+                        <div class="lane-callout-diamond" style="left:${left}%;"></div>
+                    `;
+                }
+
+                html += `
+                    <div class="lane-row">
+                        <div class="lane-label">${escapeHtml(lane.label)}</div>
+                        <div class="lane-track">${laneContent}</div>
+                    </div>
+                `;
+            });
+
+            let gateContent = '';
+            model.mandatoryGates.forEach((gate) => {
+                const date = parseDate(gate.dateValue);
+                if (!date) {
+                    return;
+                }
+                const left = getPercent(date, range);
+                gateContent += `
+                    <div class="gate-flag-block" style="left:${left}%;">
+                        <div class="gate-label">Gate ${gate.gateNumber}</div>
+                        <div class="flag-icon"></div>
+                        <div class="gate-date">${formatDateShort(date)}</div>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="gate-row">
+                    <div class="gate-spacer"></div>
+                    <div class="gate-track">${gateContent}</div>
+                </div>
+            `;
+
+            grid.innerHTML = html;
+        }
+
+        async function exportToPpt() {
+            try {
+                const response = await fetchFresh(`${API_BASE}/export-ppt`);
+                if (!response.ok) {
+                    throw new Error('PPT export failed');
+                }
+
+                const blob = await response.blob();
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `Schematic Schedule_${PROJECT_NAME}_${new Date().toISOString().slice(0, 10)}.pptx`;
+
+                if (contentDisposition) {
+                    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+                    if (matches && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('PPT export error:', error);
+                window.alert('Failed to export PPT. Please try again.');
+            }
+        }
+
+        async function loadData() {
+            const grid = document.getElementById('schematicGrid');
+            try {
+                const [tasksResponse, signOffsResponse] = await Promise.all([
+                    fetchFresh(`${API_BASE}/tasks`),
+                    fetchFresh(`${API_BASE}/gate-sign-offs`)
+                ]);
+
+                if (!tasksResponse.ok || !signOffsResponse.ok) {
+                    throw new Error('Failed to load project data');
+                }
+
+                const loadedTasks = await tasksResponse.json();
+                const signOffRows = await signOffsResponse.json();
+
+                tasks = loadedTasks.map((task) => ({
+                    id: task.id,
+                    name: task.name,
+                    owner: task.owner,
+                    entered: task.start_date,
+                    due: task.end_date,
+                    phase: task.phase,
+                    status: task.status,
+                    critical: task.critical === 1 || task.critical === true,
+                    milestone: task.milestone === 1 || task.milestone === true || /gate/i.test(task.name || ''),
+                    tailed_out: task.tailed_out === 1 || task.tailed_out === true
+                }));
+
+                gateSignOffs = Object.fromEntries(signOffRows.map((row) => [row.gate_name, row]));
+                renderSchematic();
+            } catch (error) {
+                grid.innerHTML = '<div class="empty-state">Failed to load schematic schedule.</div>';
+                console.error('Error loading schematic schedule:', error);
+            }
+        }
+
+        function initializeSchematicAutoRefresh() {
+            let refreshTimer = window.setInterval(loadData, SCHEMATIC_REFRESH_MS);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    loadData();
+                    if (!refreshTimer) {
+                        refreshTimer = window.setInterval(loadData, SCHEMATIC_REFRESH_MS);
+                    }
+                } else if (refreshTimer) {
+                    window.clearInterval(refreshTimer);
+                    refreshTimer = null;
+                }
+            });
+
+            window.addEventListener('focus', loadData);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            initializeSchematicAutoRefresh();
+        });
+    </script>
+</body>
+</html>

@@ -81,10 +81,8 @@
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            text-decoration: none;
-            color: inherit;
-            display: block;
+            display: flex;
+            flex-direction: column;
         }
         
         .project-card:hover {
@@ -96,13 +94,54 @@
             font-size: 20px;
             font-weight: bold;
             color: #333;
+            line-height: 1.25;
+            min-height: calc(1.25em * 2);
             margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
         
         .project-manager {
             color: #666;
             font-size: 14px;
             margin-bottom: 15px;
+        }
+
+        .project-status-list {
+            list-style: none;
+            margin: 0 0 18px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .project-status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .project-status-ball {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex: 0 0 12px;
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
+        }
+
+        .project-status-item.on-track .project-status-ball {
+            background: #16a34a;
+        }
+
+        .project-status-item.delayed .project-status-ball {
+            background: #dc2626;
         }
         
         .project-stats {
@@ -131,6 +170,51 @@
             font-size: 12px;
             color: #999;
             margin-top: 10px;
+        }
+
+        .project-card-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+
+        .project-card-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+        }
+
+        .project-card-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+        }
+
+        .project-card-btn.primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .project-card-btn.primary:hover {
+            background: #1d4ed8;
+        }
+
+        .project-card-btn.secondary {
+            background: #eef4ff;
+            color: #214b8f;
+            border: 1px solid #c8dafb;
+        }
+
+        .project-card-btn.secondary:hover {
+            background: #e1edff;
         }
         
         .empty-state {
@@ -302,11 +386,20 @@
 
         .project-name-cell {
             justify-content: flex-start;
+            align-items: flex-start;
             padding: 14px 16px;
             line-height: 1.35;
             font-size: 14px;
             color: #f8fbff;
             background: #1b2138;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .project-name-meta {
+            font-size: 11px;
+            color: #a8b8df;
+            line-height: 1.35;
         }
 
         .lane-cell {
@@ -360,6 +453,15 @@
             color: #fff2f3;
         }
 
+        .lane-cell .critical-bar {
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .lane-cell .critical-bar:hover {
+            transform: translateY(-1px);
+        }
+
         .gate-date {
             font-size: 10px;
             font-weight: 600;
@@ -411,6 +513,7 @@
         .legend-done { background: #57c253; }
         .legend-planned { background: #ff9f1a; }
         .legend-rework { background: #d94b57; }
+        .legend-driver { background: linear-gradient(135deg, #b32939 0%, #ef6670 100%); }
         .legend-line {
             width: 14px;
             height: 12px;
@@ -1531,6 +1634,14 @@
         let currentDashboardTab = 'schedule';
         const dashboardTabStorageKey = 'overall-dashboard-active-tab';
 
+        function fetchFresh(url, options = {}) {
+            const separator = url.includes('?') ? '&' : '?';
+            return fetch(`${url}${separator}_ts=${Date.now()}`, {
+                ...options,
+                cache: 'no-store'
+            });
+        }
+
         function setActiveDashboardTab(tabName) {
             currentDashboardTab = tabName;
             document.querySelectorAll('.dashboard-tab').forEach((button) => {
@@ -1566,7 +1677,7 @@
                     return;
                 }
 
-                const response = await fetch('/api/stats');
+                const response = await fetchFresh('/api/stats');
                 const stats = await response.json();
 
                 if (totalProjectsEl) totalProjectsEl.textContent = stats.total_projects;
@@ -1579,7 +1690,7 @@
         
         async function loadProjects() {
             try {
-                const response = await fetch('/api/projects');
+                const response = await fetchFresh('/api/projects');
                 const projects = await response.json();
                 
                 const container = document.getElementById('projectsContainer');
@@ -1595,9 +1706,15 @@
                     `;
                 } else {
                     const projectsHTML = projects.map(project => `
-                        <a href="/project/${encodeURIComponent(project.name)}" class="project-card">
+                        <div class="project-card">
                             <div class="project-name">${escapeHtml(project.name)}</div>
                             <div class="project-manager">👤 ${escapeHtml(project.manager || 'No manager')}</div>
+                            <ul class="project-status-list">
+                                <li class="project-status-item ${project.is_delayed ? 'delayed' : 'on-track'}">
+                                    <span class="project-status-ball" aria-hidden="true"></span>
+                                    <span>${project.is_delayed ? 'PROJECTS IN DELAY' : 'PROJECT ON TRACK'}</span>
+                                </li>
+                            </ul>
                             <div class="project-stats">
                                 <div class="project-stat">
                                     <div class="project-stat-value">${project.task_count}</div>
@@ -1607,9 +1724,13 @@
                             <div class="project-updated">
                                 Last updated: ${formatDate(project.updated_at)}
                             </div>
-                        </a>
+                            <div class="project-card-actions">
+                                <a href="/project/${encodeURIComponent(project.name)}" class="project-card-btn primary">Detailed Gantt</a>
+                                <a href="/project/${encodeURIComponent(project.name)}/schematic" class="project-card-btn secondary">Schematic Schedule</a>
+                            </div>
+                        </div>
                     `).join('');
-                    
+                     
                     container.innerHTML = `<div class="projects-grid">${projectsHTML}</div>`;
                 }
             } catch (error) {
@@ -1626,8 +1747,8 @@
 
         async function loadOverallGateTimeline() {
             try {
-                const response = await fetch('/api/overall-gate-timeline');
-                const timeline = await response.json();
+                const timelineResponse = await fetchFresh('/api/overall-gate-timeline');
+                const timeline = await timelineResponse.json();
                 const container = document.getElementById('timelineContainer');
 
                 if (!timeline.length) {
@@ -1640,14 +1761,15 @@
                     return;
                 }
 
-                const parsedDates = timeline.map(item => parseIsoDate(item.display_date));
+                const parsedDates = timeline.map((item) => parseIsoDate(item.display_date));
                 const minDate = parsedDates.reduce((min, date) => date < min ? date : min, parsedDates[0]);
                 const maxDate = parsedDates.reduce((max, date) => date > max ? date : max, parsedDates[0]);
                 const rangeStart = new Date(minDate.getFullYear(), 0, 1);
                 const rangeEnd = new Date(maxDate.getFullYear(), 11, 1);
+                const renderedRangeEnd = endOfMonth(rangeEnd);
                 const months = buildMonthRange(rangeStart, rangeEnd);
                 const monthCount = months.length;
-                const projects = [...new Set(timeline.map(item => item.project_name))];
+                const projects = [...new Set(timeline.map((item) => item.project_name))];
 
                 let boardHtml = `<div class="schedule-shell"><div class="schedule-grid" style="--month-count:${monthCount};">`;
 
@@ -1671,14 +1793,13 @@
                 }
 
                 projects.forEach((projectName) => {
-                    boardHtml += `<div class="schedule-cell project-name-cell">${escapeHtml(projectName)}</div>`;
+                    boardHtml += `<div class="schedule-cell project-name-cell"><div><a class="overview-link" href="/project/${encodeURIComponent(projectName)}">${escapeHtml(projectName)}</a></div></div>`;
                     boardHtml += `<div class="schedule-cell lane-cell">`;
-
                     timeline
                         .filter(item => item.project_name === projectName)
                         .forEach((item) => {
                             const itemDate = parseIsoDate(item.display_date);
-                            const leftPercent = getAdjustedTimelinePercent(item, itemDate, rangeStart, endOfMonth(rangeEnd));
+                            const leftPercent = getAdjustedTimelinePercent(item, itemDate, rangeStart, renderedRangeEnd);
                             boardHtml += `
                                 <div
                                     class="gate-chip ${getMarkerClass(item)}"
@@ -1695,8 +1816,8 @@
                 });
 
                 const today = new Date();
-                if (today >= rangeStart && today <= endOfMonth(rangeEnd)) {
-                    const leftPercent = getTimelinePercent(today, rangeStart, endOfMonth(rangeEnd));
+                if (today >= rangeStart && today <= renderedRangeEnd) {
+                    const leftPercent = getTimelinePercent(today, rangeStart, renderedRangeEnd);
                     boardHtml += `
                         <div class="today-line" style="left: calc(200px + ((100% - 200px) * ${leftPercent / 100}));">
                             <div class="today-label">TODAY</div>
@@ -1712,7 +1833,7 @@
                 document.getElementById('timelineContainer').innerHTML = `
                     <div class="empty-state">
                         <h2>Error Loading Timeline</h2>
-                        <p>Failed to load the unified gate timeline.</p>
+                        <p>Failed to load the interactive portfolio schedule.</p>
                     </div>
                 `;
             }
@@ -1720,7 +1841,7 @@
 
         async function loadOverallResourceLoad() {
             try {
-                const response = await fetch('/api/overall-resource-load');
+                const response = await fetchFresh('/api/overall-resource-load');
                 const payload = await response.json();
                 currentResourcePayload = payload;
                 const summaryContainer = document.getElementById('resourceSummary');
@@ -1756,7 +1877,7 @@
 
         async function loadOverallCriticalPathOverview() {
             try {
-                const response = await fetch('/api/overall-critical-path-overview');
+                const response = await fetchFresh('/api/overall-critical-path-overview');
                 const payload = await response.json();
                 currentCriticalPayload = payload;
                 renderOverallCriticalPathOverview();
@@ -1916,7 +2037,7 @@
         
         async function getWatchedFolder() {
             try {
-                const response = await fetch('/api/stats');
+                const response = await fetchFresh('/api/stats');
                 const stats = await response.json();
                 return stats.watched_folder;
             } catch {
@@ -1930,7 +2051,7 @@
             btn.textContent = 'Reloading...';
             
             try {
-                await fetch('/api/reload');
+                await fetchFresh('/api/reload');
                 location.reload();
             } catch (error) {
                 console.error('Error reloading:', error);

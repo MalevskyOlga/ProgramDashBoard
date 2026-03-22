@@ -179,14 +179,70 @@ class DatabaseManager:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT p.*, COUNT(t.id) as task_count
+            WITH task_counts AS (
+                SELECT
+                    project_id,
+                    COUNT(*) AS task_count
+                FROM tasks
+                GROUP BY project_id
+            ),
+            gate_status AS (
+                SELECT
+                    p.id AS project_id,
+                    t.name AS gate_name,
+                    gb.baseline_date,
+                    t.end_date AS projected_date,
+                    gso.sign_off_date,
+                    COALESCE(gso.sign_off_date, t.end_date, gb.baseline_date) AS current_gate_date,
+                    CASE
+                        WHEN gb.baseline_date IS NOT NULL
+                             AND COALESCE(gso.sign_off_date, t.end_date, gb.baseline_date) IS NOT NULL
+                             AND COALESCE(gso.sign_off_date, t.end_date, gb.baseline_date) != gb.baseline_date THEN 1
+                        ELSE 0
+                    END AS is_gate_changed
+                FROM projects p
+                LEFT JOIN tasks t
+                    ON t.project_id = p.id
+                   AND t.milestone = 1
+                   AND t.name IN ('Gate 4', 'Gate 5')
+                LEFT JOIN gate_baselines gb
+                    ON gb.project_name = p.name
+                   AND gb.gate_name = t.name
+                LEFT JOIN gate_sign_offs gso
+                    ON gso.project_name = p.name
+                   AND gso.gate_name = t.name
+                WHERE t.id IS NOT NULL
+            ),
+            gate_rollup AS (
+                SELECT
+                    project_id,
+                    SUM(is_gate_changed) AS changed_gate_count,
+                    GROUP_CONCAT(CASE WHEN is_gate_changed = 1 THEN gate_name END, ', ') AS changed_gate_names
+                FROM gate_status
+                GROUP BY project_id
+            )
+            SELECT
+                p.*,
+                COALESCE(tc.task_count, 0) AS task_count,
+                COALESCE(gr.changed_gate_count, 0) AS changed_gate_count,
+                COALESCE(gr.changed_gate_names, '') AS changed_gate_names
             FROM projects p
-            LEFT JOIN tasks t ON p.id = t.project_id
-            GROUP BY p.id
+            LEFT JOIN task_counts tc
+                ON tc.project_id = p.id
+            LEFT JOIN gate_rollup gr
+                ON gr.project_id = p.id
             ORDER BY p.updated_at DESC
         ''')
         
-        projects = [dict(row) for row in cursor.fetchall()]
+        projects = []
+        for row in cursor.fetchall():
+            project = dict(row)
+            changed_gate_count = int(project.get('changed_gate_count') or 0)
+            changed_gate_names = [name.strip() for name in (project.get('changed_gate_names') or '').split(',') if name and name.strip()]
+            project['changed_gate_count'] = changed_gate_count
+            project['changed_gate_names'] = changed_gate_names
+            project['is_delayed'] = changed_gate_count > 0
+            projects.append(project)
         conn.close()
         
         return projects

@@ -34,6 +34,16 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'xlsx'
 
 
+@app.after_request
+def add_no_cache_headers(response):
+    """Force fresh dashboard/API reads so detailed gantt edits propagate everywhere."""
+    if request.method == 'GET':
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
 @app.route('/')
 def index():
     """Home page - list all available projects"""
@@ -54,6 +64,23 @@ def view_project(project_name):
                          PROJECT_NAME=project_name,
                          PROJECT_MANAGER=project['manager'],
                          GENERATED_DATE=datetime.now().strftime('%Y-%m-%d %H:%M'))
+
+
+@app.route('/project/<project_name>/schematic')
+def view_project_schematic(project_name):
+    """View a standalone schematic schedule for a project"""
+    project = db_manager.get_project_by_name(project_name)
+    if not project:
+        return f"Project '{project_name}' not found", 404
+
+    return render_template(
+        'project_schematic.html',
+        project_name=project_name,
+        project_manager=project['manager'],
+        PROJECT_NAME=project_name,
+        PROJECT_MANAGER=project['manager'],
+        GENERATED_DATE=datetime.now().strftime('%Y-%m-%d %H:%M')
+    )
 
 
 @app.route('/api/projects')
@@ -306,6 +333,32 @@ def api_export_to_excel(project_name):
         )
     else:
         return jsonify({'error': 'Failed to export to Excel'}), 500
+
+
+@app.route('/api/project/<project_name>/export-ppt')
+def api_export_schematic_to_ppt(project_name):
+    """API endpoint to export project schematic to PowerPoint"""
+    from ppt_exporter import PptExporter
+
+    project = db_manager.get_project_by_name(project_name)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    tasks = db_manager.get_tasks_by_project(project_name)
+    gate_sign_offs = db_manager.get_gate_sign_offs(project_name)
+
+    exporter = PptExporter()
+    ppt_path = exporter.export_schematic(project, tasks, gate_sign_offs, config.EXCEL_OUTPUT_FOLDER)
+
+    if ppt_path and os.path.exists(ppt_path):
+        return send_file(
+            ppt_path,
+            as_attachment=True,
+            download_name=os.path.basename(ppt_path),
+            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        )
+
+    return jsonify({'error': 'Failed to export schematic to PowerPoint'}), 500
 
 
 @app.route('/api/stats')
