@@ -6,7 +6,7 @@ Handles all SQLite database operations
 import sqlite3
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import config
 
@@ -592,6 +592,18 @@ class DatabaseManager:
         task_rows = [dict(row) for row in cursor.fetchall()]
         conn.close()
 
+        def count_working_days(start_date, end_date):
+            current_date = start_date
+            working_days = 0
+            while current_date <= end_date:
+                if current_date.weekday() < 5:
+                    working_days += 1
+                current_date = current_date + timedelta(days=1)
+            return max(1, working_days)
+
+        def normalize_status(value):
+            return (value or '').strip().lower().replace('-', ' ')
+
         owners = {}
         all_dates = []
         today = datetime.now().date()
@@ -607,8 +619,10 @@ class DatabaseManager:
                 start_date, end_date = end_date, start_date
 
             duration_days = max(1, (end_date - start_date).days + 1)
+            working_days = count_working_days(start_date, end_date)
             is_active_today = start_date <= today <= end_date
             status_value = (row['status'] or '').strip()
+            normalized_status = normalize_status(status_value)
             is_completed = status_value.lower() == 'completed'
             closed_date_value = (row['date_closed'] or '').strip()
             closed_date = datetime.strptime(closed_date_value[:10], '%Y-%m-%d').date() if closed_date_value else None
@@ -630,6 +644,7 @@ class DatabaseManager:
                 'critical': bool(row['critical']),
                 'tailed_out': bool(row['tailed_out']),
                 'duration_days': duration_days,
+                'working_days': working_days,
                 'is_active_today': is_active_today,
                 'is_delayed': is_delayed,
                 'delay_reason': delay_reason
@@ -642,6 +657,8 @@ class DatabaseManager:
                 'critical_task_count': 0,
                 'delayed_task_count': 0,
                 'tailed_out_count': 0,
+                'planned_working_days': 0,
+                'in_process_working_days': 0,
                 'project_names': set(),
                 'date_points': [],
                 'tasks': []
@@ -652,6 +669,8 @@ class DatabaseManager:
             owner_entry['critical_task_count'] += 1 if task_item['critical'] else 0
             owner_entry['delayed_task_count'] += 1 if task_item['is_delayed'] else 0
             owner_entry['tailed_out_count'] += 1 if task_item['tailed_out'] else 0
+            owner_entry['planned_working_days'] += working_days if normalized_status == 'planned' else 0
+            owner_entry['in_process_working_days'] += working_days if normalized_status == 'in process' else 0
             owner_entry['project_names'].add(row['project_name'])
             owner_entry['date_points'].append((start_date, 1))
             owner_entry['date_points'].append((end_date, -1))
@@ -676,6 +695,8 @@ class DatabaseManager:
                 'critical_task_count': owner_entry['critical_task_count'],
                 'delayed_task_count': owner_entry['delayed_task_count'],
                 'tailed_out_count': owner_entry['tailed_out_count'],
+                'planned_working_days': owner_entry['planned_working_days'],
+                'in_process_working_days': owner_entry['in_process_working_days'],
                 'project_count': len(owner_entry['project_names']),
                 'project_names': sorted(owner_entry['project_names']),
                 'peak_parallel_tasks': peak_load,
@@ -693,6 +714,8 @@ class DatabaseManager:
             'owners_without_delays': sum(1 for owner in owner_rows if not owner['has_delayed_tasks']),
             'delayed_task_count': sum(owner['delayed_task_count'] for owner in owner_rows),
             'max_parallel_tasks': max((owner['peak_parallel_tasks'] for owner in owner_rows), default=0),
+            'planned_working_days': sum(owner['planned_working_days'] for owner in owner_rows),
+            'in_process_working_days': sum(owner['in_process_working_days'] for owner in owner_rows),
             'range_start': min(all_dates).isoformat() if all_dates else None,
             'range_end': max(all_dates).isoformat() if all_dates else None
         }

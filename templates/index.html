@@ -15,7 +15,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 12px;
+            padding: 8px;
         }
         
         .container {
@@ -23,13 +23,23 @@
             max-width: none;
             margin: 0 auto;
         }
+
+        body.schedule-tab-active {
+            overflow: hidden;
+        }
+
+        body.schedule-tab-active .container {
+            min-height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+        }
         
         header {
             background: white;
-            padding: 30px;
+            padding: 18px 24px;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            margin-bottom: 16px;
         }
         
         h1 {
@@ -271,7 +281,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            margin-bottom: 22px;
+            margin-bottom: 14px;
         }
 
         .dashboard-tab {
@@ -307,24 +317,38 @@
             display: block;
         }
 
+        body.schedule-tab-active .tab-pane[data-pane="schedule"].active {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
         .timeline-section {
             background: #171c31;
-            padding: 28px;
+            padding: 18px 20px 16px;
             border-radius: 12px;
             box-shadow: 0 12px 30px rgba(0,0,0,0.18);
-            margin-bottom: 30px;
+            margin-bottom: 18px;
             color: #eef3ff;
+        }
+
+        body.schedule-tab-active .timeline-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            margin-bottom: 0;
         }
 
         .timeline-section h2 {
             color: #f8fbff;
-            margin-bottom: 6px;
-            font-size: 32px;
+            margin-bottom: 4px;
+            font-size: 28px;
         }
 
         .timeline-section p {
             color: #96a6cf;
-            margin-bottom: 18px;
+            margin-bottom: 12px;
             text-transform: uppercase;
             letter-spacing: 0.35em;
             font-size: 11px;
@@ -332,12 +356,17 @@
 
         .schedule-shell {
             overflow-x: auto;
+            overflow-y: hidden;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: flex-start;
         }
 
         .schedule-grid {
             display: grid;
-            grid-template-columns: 200px repeat(var(--month-count), minmax(42px, 1fr));
-            width: max(100%, 980px);
+            grid-template-columns: 210px repeat(var(--month-count), minmax(44px, 1fr));
+            width: max(100%, 1120px);
             min-width: 0;
             border-top: 1px solid #2a3258;
             border-left: 1px solid #2a3258;
@@ -348,7 +377,7 @@
         .schedule-cell {
             border-right: 1px solid #2a3258;
             border-bottom: 1px solid #2a3258;
-            min-height: 38px;
+            min-height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -387,17 +416,17 @@
         .project-name-cell {
             justify-content: flex-start;
             align-items: flex-start;
-            padding: 14px 16px;
+            padding: 12px 14px;
             line-height: 1.35;
             font-size: 14px;
             color: #f8fbff;
             background: #1b2138;
             flex-direction: column;
-            gap: 6px;
+            gap: 5px;
         }
 
         .project-name-meta {
-            font-size: 11px;
+            font-size: 10px;
             color: #a8b8df;
             line-height: 1.35;
         }
@@ -413,15 +442,15 @@
 
         .gate-chip {
             position: absolute;
-            top: 10px;
-            min-width: 44px;
-            min-height: 22px;
+            top: 7px;
+            min-width: 48px;
+            min-height: 28px;
             padding: 4px 8px;
             display: inline-flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             color: #fff;
             transform: translateX(-50%);
@@ -463,11 +492,20 @@
         }
 
         .gate-date {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
             line-height: 1.1;
-            margin-top: 2px;
+            margin-top: 1px;
             opacity: 0.95;
+        }
+
+        .gate-fiscal {
+            font-size: 8px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-top: 1px;
+            opacity: 0.92;
+            letter-spacing: 0.03em;
         }
 
         .today-line {
@@ -493,7 +531,7 @@
             display: flex;
             gap: 24px;
             flex-wrap: wrap;
-            margin-top: 16px;
+            margin-top: 10px;
             color: #a9b6dc;
             font-size: 12px;
         }
@@ -971,6 +1009,27 @@
 
         .resource-table-projects {
             color: #9fb1dd;
+        }
+
+        .resource-matrix-cell {
+            min-width: 88px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .resource-matrix-primary {
+            font-weight: 700;
+            color: #f8fbff;
+        }
+
+        .resource-matrix-subline {
+            margin-top: 3px;
+            font-size: 11px;
+            color: #9fb1dd;
+        }
+
+        .resource-matrix-zero {
+            color: #6f84b8;
         }
 
         .resource-table-actions {
@@ -1644,6 +1703,7 @@
 
         function setActiveDashboardTab(tabName) {
             currentDashboardTab = tabName;
+            document.body.classList.toggle('schedule-tab-active', tabName === 'schedule');
             document.querySelectorAll('.dashboard-tab').forEach((button) => {
                 button.classList.toggle('active', button.dataset.tab === tabName);
             });
@@ -1807,6 +1867,7 @@
                                     title="${escapeHtml(getMarkerTitle(item))}"
                                 >
                                     <span>${escapeHtml(getMarkerLabel(item))}</span>
+                                    <span class="gate-fiscal">${escapeHtml(getMarkerFiscalLabel(item))}</span>
                                     <span class="gate-date">${escapeHtml(formatIsoDate(item.display_date))}</span>
                                 </div>
                             `;
@@ -2122,6 +2183,10 @@
             return Math.floor(shiftedMonth / 3) + 1;
         }
 
+        function getFiscalPeriod(date) {
+            return ((date.getMonth() + 3) % 12) + 1;
+        }
+
         function getMarkerClass(item) {
             if (item.date_source === 'Rework Due') return 'rework';
             if (item.date_source === 'Signed Off') return 'done';
@@ -2142,6 +2207,11 @@
                 parts.push(item.sign_off_status);
             }
             return parts.filter(Boolean).join(' · ');
+        }
+
+        function getMarkerFiscalLabel(item) {
+            const markerDate = parseIsoDate(item.display_date);
+            return `P${getFiscalPeriod(markerDate)} FY${getFiscalYear(markerDate)}`;
         }
 
         function assignTaskLanes(tasks) {
@@ -2248,6 +2318,14 @@
             const summaryContainer = document.getElementById('resourceSummary');
             if (!payload || !payload.summary) return;
 
+            const relevantTaskCount = payload.owners.reduce((total, owner) =>
+                total + owner.tasks.filter((task) => {
+                    const normalizedStatus = (task.status || '').trim().toLowerCase();
+                    return normalizedStatus === 'planned' || normalizedStatus === 'in process';
+                }).length,
+            0);
+            const totalWorkingDays = (payload.summary.planned_working_days || 0) + (payload.summary.in_process_working_days || 0);
+
             summaryContainer.innerHTML = `
                 <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'owners' ? 'active' : ''}" onclick="setResourceDrilldown('owners')">
                     <div class="resource-summary-value">${payload.summary.owner_count}</div>
@@ -2259,10 +2337,15 @@
                     <div class="resource-summary-label">Owners active today</div>
                     <div class="resource-summary-hint">Click to show active tasks</div>
                 </button>
+                <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'task-matrix' ? 'active' : ''}" onclick="setResourceDrilldown('task-matrix')">
+                    <div class="resource-summary-value">${relevantTaskCount}</div>
+                    <div class="resource-summary-label">Tasks by owner/project</div>
+                    <div class="resource-summary-hint">Click to show task quantity matrix</div>
+                </button>
                 <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'tasks' ? 'active' : ''}" onclick="setResourceDrilldown('tasks')">
-                    <div class="resource-summary-value">${payload.summary.task_count}</div>
-                    <div class="resource-summary-label">Scheduled owner tasks</div>
-                    <div class="resource-summary-hint">Click to show all tasks</div>
+                    <div class="resource-summary-value">${totalWorkingDays}</div>
+                    <div class="resource-summary-label">Overall working days per owner per project</div>
+                    <div class="resource-summary-hint">Click to show working-days matrix</div>
                 </button>
                 <button type="button" class="resource-summary-card clickable ${currentResourceDrilldown === 'parallel' ? 'active' : ''}" onclick="setResourceDrilldown('parallel')">
                     <div class="resource-summary-value">${payload.summary.max_parallel_tasks}</div>
@@ -2443,9 +2526,12 @@
             const allTasks = payload.owners
                 .flatMap(owner => owner.tasks.map(task => ({ owner: owner.owner, ...task })))
                 .sort((left, right) => left.owner.localeCompare(right.owner) || left.start_date.localeCompare(right.start_date) || left.project_name.localeCompare(right.project_name));
+            const scheduledSections = renderScheduledOwnerProjectSections(allTasks);
 
-            detailContainer.innerHTML = renderResourceTaskTable(allTasks, 'No scheduled tasks found.');
-            applyTableFilters('resourceTaskTable');
+            detailContainer.innerHTML = currentResourceDrilldown === 'task-matrix'
+                ? scheduledSections.taskMatrixHtml
+                : scheduledSections.workingDayHtml;
+            scheduledSections.tableIds.forEach((tableId) => applyTableFilters(tableId));
         }
 
         function renderResourceTaskTable(tasks, emptyMessage) {
@@ -2460,15 +2546,204 @@
                     <td>${escapeHtml(task.task_name)}</td>
                     <td>${escapeHtml(task.start_date)}</td>
                     <td>${escapeHtml(task.end_date)}</td>
+                    <td>${task.working_days ?? '-'}</td>
                     <td>${escapeHtml(task.status || '')}</td>
                 </tr>
             `).join('');
 
             return renderFilterableTable(
                 'resourceTaskTable',
-                ['Owner', 'Project', 'Task', 'Start', 'End', 'Status'],
+                ['Owner', 'Project', 'Task', 'Start', 'End', 'Working Days', 'Status'],
                 rows
             );
+        }
+
+        function renderSimpleResourceTable(headers, rowsHtml) {
+            const headerRow = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('');
+            return `
+                <div class="resource-table-wrap">
+                    <div class="resource-table-scroll">
+                        <table class="resource-table">
+                            <thead>
+                                <tr>${headerRow}</tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderScheduledOwnerProjectSections(tasks) {
+            const relevantTasks = tasks.filter((task) => {
+                const normalizedStatus = (task.status || '').trim().toLowerCase();
+                return normalizedStatus === 'planned' || normalizedStatus === 'in process';
+            });
+
+            if (!relevantTasks.length) {
+                return {
+                    html: `<div class="resource-detail-empty">No Planned or In Process tasks found.</div>`,
+                    tableIds: []
+                };
+            }
+
+            const ownerProjectMap = new Map();
+            relevantTasks.forEach((task) => {
+                const mapKey = `${task.owner}||${task.project_name}`;
+                const existing = ownerProjectMap.get(mapKey) || {
+                    owner: task.owner,
+                    project_name: task.project_name,
+                    task_count: 0,
+                    planned_working_days: 0,
+                    in_process_working_days: 0,
+                    planned_task_count: 0,
+                    in_process_task_count: 0
+                };
+
+                existing.task_count += 1;
+
+                if ((task.status || '').trim().toLowerCase() === 'planned') {
+                    existing.planned_task_count += 1;
+                    existing.planned_working_days += Number(task.working_days || 0);
+                }
+
+                if ((task.status || '').trim().toLowerCase() === 'in process') {
+                    existing.in_process_task_count += 1;
+                    existing.in_process_working_days += Number(task.working_days || 0);
+                }
+
+                ownerProjectMap.set(mapKey, existing);
+            });
+
+            const ownerProjects = Array.from(ownerProjectMap.values())
+                .map((entry) => ({
+                    ...entry,
+                    total_working_days: entry.planned_working_days + entry.in_process_working_days
+                }));
+
+            const projectNames = Array.from(new Set(ownerProjects.map((entry) => entry.project_name)))
+                .sort((left, right) => {
+                    const leftTotal = ownerProjects.reduce((sum, entry) => sum + (entry.project_name === left ? entry.task_count : 0), 0);
+                    const rightTotal = ownerProjects.reduce((sum, entry) => sum + (entry.project_name === right ? entry.task_count : 0), 0);
+                    return rightTotal - leftTotal || left.localeCompare(right);
+                });
+
+            const ownerMap = new Map();
+            ownerProjects.forEach((entry) => {
+                const existing = ownerMap.get(entry.owner) || {
+                    owner: entry.owner,
+                    total_task_count: 0,
+                    total_planned_task_count: 0,
+                    total_in_process_task_count: 0,
+                    total_planned_working_days: 0,
+                    total_in_process_working_days: 0,
+                    projects: new Map()
+                };
+
+                existing.total_task_count += entry.task_count;
+                existing.total_planned_task_count += entry.planned_task_count;
+                existing.total_in_process_task_count += entry.in_process_task_count;
+                existing.total_planned_working_days += entry.planned_working_days;
+                existing.total_in_process_working_days += entry.in_process_working_days;
+                existing.projects.set(entry.project_name, entry);
+                ownerMap.set(entry.owner, existing);
+            });
+
+            const ownerRows = Array.from(ownerMap.values())
+                .map((owner) => ({
+                    ...owner,
+                    total_working_days: owner.total_planned_working_days + owner.total_in_process_working_days
+                }));
+
+            const taskQuantityRows = ownerRows
+                .slice()
+                .sort((left, right) =>
+                    right.total_task_count - left.total_task_count
+                    || left.owner.localeCompare(right.owner)
+                )
+                .map((owner) => {
+                    const projectCells = projectNames.map((projectName) => {
+                        const project = owner.projects.get(projectName);
+                        if (!project) {
+                            return `<td class="resource-matrix-cell resource-matrix-zero">0</td>`;
+                        }
+
+                        return `
+                            <td class="resource-matrix-cell">
+                                <div class="resource-matrix-primary">${project.task_count}</div>
+                                <div class="resource-matrix-subline">Planned ${project.planned_task_count} · In Process ${project.in_process_task_count}</div>
+                            </td>
+                        `;
+                    }).join('');
+
+                    return `
+                        <tr>
+                            <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
+                            ${projectCells}
+                            <td class="resource-matrix-cell">
+                                <div class="resource-matrix-primary">${owner.total_task_count}</div>
+                                <div class="resource-matrix-subline">Planned ${owner.total_planned_task_count} · In Process ${owner.total_in_process_task_count}</div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            const workingDayRows = ownerRows
+                .slice()
+                .sort((left, right) =>
+                    right.total_working_days - left.total_working_days
+                    || left.owner.localeCompare(right.owner)
+                )
+                .map((owner) => {
+                    const projectCells = projectNames.map((projectName) => {
+                        const project = owner.projects.get(projectName);
+                        if (!project || (!project.planned_working_days && !project.in_process_working_days)) {
+                            return `<td class="resource-matrix-cell resource-matrix-zero">0</td>`;
+                        }
+
+                        return `
+                            <td class="resource-matrix-cell">
+                                <div class="resource-matrix-primary">${project.total_working_days}</div>
+                                <div class="resource-matrix-subline">Planned ${project.planned_working_days} · In Process ${project.in_process_working_days}</div>
+                            </td>
+                        `;
+                    }).join('');
+
+                    return `
+                        <tr>
+                            <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
+                            ${projectCells}
+                            <td class="resource-matrix-cell">
+                                <div class="resource-matrix-primary">${owner.total_working_days}</div>
+                                <div class="resource-matrix-subline">Planned ${owner.total_planned_working_days} · In Process ${owner.total_in_process_working_days}</div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            return {
+                taskMatrixHtml: `
+                    <div class="resource-detail-panel" style="margin-bottom: 14px;">
+                        <h3>Overall tasks per project per owner</h3>
+                        <p>Owners are shown in rows, with all projects across the columns so you can see the full task distribution in one shot.</p>
+                        ${renderSimpleResourceTable(
+                            ['Owner', ...projectNames, 'Total Tasks'],
+                            taskQuantityRows
+                        )}
+                    </div>
+                `,
+                workingDayHtml: `
+                    <div class="resource-detail-panel" style="margin-bottom: 14px;">
+                        <h3>Overall working days per owner per project</h3>
+                        <p>Owners are shown in rows, with all projects across the columns. Each cell shows total working days, plus <strong>Planned</strong> and <strong>In Process</strong> splits.</p>
+                        ${renderSimpleResourceTable(
+                            ['Owner', ...projectNames, 'Total WD'],
+                            workingDayRows
+                        )}
+                    </div>
+                `,
+                tableIds: []
+            };
         }
 
         function renderDelayedTaskTable(tasks, emptyMessage) {
