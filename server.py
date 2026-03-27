@@ -19,6 +19,9 @@ from werkzeug.utils import secure_filename
 from database_manager import DatabaseManager
 from excel_parser import ExcelParser
 import config
+import sqlite3
+
+PORTFOLIO_DB_PATH = Path(__file__).parent / "database" / "portfolio.db"
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dashboard-generator-secret-key'
@@ -27,6 +30,22 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Initialize database manager
 db_manager = DatabaseManager(config.DATABASE_PATH)
 db_manager.initialize_database()
+
+
+def _get_portfolio_conn():
+    PORTFOLIO_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(PORTFOLIO_DB_PATH))
+    conn.row_factory = sqlite3.Row
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS resource_teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            team_name TEXT NOT NULL,
+            owner_name TEXT NOT NULL UNIQUE,
+            capacity_hrs_per_week REAL
+        )
+    """)
+    conn.commit()
+    return conn
 
 
 def allowed_file(filename):
@@ -466,6 +485,179 @@ def api_create_dependency(project_name):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/disciplines')
+def disciplines_page():
+    return render_template('disciplines.html')
+
+
+@app.route('/api/v1/admin/resource-teams', methods=['GET'])
+def api_resource_teams_get():
+    try:
+        conn = _get_portfolio_conn()
+        rows = conn.execute(
+            "SELECT id, team_name, owner_name, capacity_hrs_per_week FROM resource_teams ORDER BY owner_name"
+        ).fetchall()
+        conn.close()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/v1/admin/resource-teams/bulk', methods=['POST'])
+def api_resource_teams_bulk():
+    mappings = request.get_json(silent=True) or []
+    if not isinstance(mappings, list):
+        return jsonify({'error': 'Expected a JSON array of {owner_name, team_name}'}), 400
+    try:
+        conn = _get_portfolio_conn()
+        conn.execute("DELETE FROM resource_teams")
+        count = 0
+        for m in mappings:
+            owner = (m.get('owner_name') or '').strip()
+            team = (m.get('team_name') or '').strip()
+            if owner and team:
+                conn.execute(
+                    """INSERT INTO resource_teams (owner_name, team_name, capacity_hrs_per_week)
+                       VALUES (?, ?, ?)
+                       ON CONFLICT(owner_name) DO UPDATE SET
+                           team_name = excluded.team_name""",
+                    (owner, team, m.get('capacity_hrs_per_week') or 37.5),
+                )
+                count += 1
+        conn.commit()
+        conn.close()
+        return jsonify({'saved': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/discipline-resource-load')
+def api_discipline_resource_load():
+    import calendar
+    from datetime import date as _date
+    today = _date.today()
+
+    # Build 13-month window: 1 past + current + 11 future
+    months = []
+    for i in range(-1, 12):
+        raw_month = today.month - 1 + i
+        y = today.year + raw_month // 12
+        m = raw_month % 12 + 1
+        months.append(_date(y, m, 1))
+
+    # Load discipline mappings from portfolio.db (case-insensitive key)
+    p_conn = _get_portfolio_conn()
+    mappings = p_conn.execute("SELECT TRIM(owner_name), team_name FROM resource_teams").fetchall()
+    p_conn.close()
+    owner_to_disc = {row[0].lower(): row[1] for row in mappings}
+
+    # Count owners per discipline
+    disc_owners = {}
+    for owner_lower, disc in owner_to_disc.items():
+        disc_owners[disc] = disc_owners.get(disc, 0) + 1
+
+    # Load active tasks from dashboards.db
+    db_path = Path(__file__).parent / 'database' / 'dashboards.db'
+    t_conn = sqlite3.connect(str(db_path))
+    tasks = t_conn.execute("""
+        SELECT TRIM(owner), start_date, end_date, status
+        FROM tasks
+        WHERE status IN ('In Process','Planned')
+          AND start_date IS NOT NULL AND start_date != ''
+          AND end_date   IS NOT NULL AND end_date   != ''
+    """).fetchall()
+    t_conn.close()
+
+    # Compute monthly task counts per discipline
+    disc_monthly = {}
+    for owner_raw, start_str, end_str, status in tasks:
+        disc = owner_to_disc.get((owner_raw or '').lower())
+        if not disc:
+            continue
+        try:
+            start = _date.fromisoformat(start_str[:10])
+            end   = _date.fromisoformat(end_str[:10])
+        except Exception:
+            continue
+        if disc not in disc_monthly:
+            disc_monthly[disc] = {'In Process': [0]*len(months), 'Planned': [0]*len(months)}
+        bucket = 'In Process' if status == 'In Process' else 'Planned'
+        for i, ms in enumerate(months):
+            last_day = calendar.monthrange(ms.year, ms.month)[1]
+            me = _date(ms.year, ms.month, last_day)
+            if start <= me and end >= ms:
+                disc_monthly[disc][bucket][i] += 1
+
+    # Inject PM overhead (+5/month per managed project) into discipline monthly counts
+    PM_LOAD_PER_PROJECT = 5
+    pm_conn = sqlite3.connect(str(db_path))
+    pm_conn.row_factory = sqlite3.Row
+    pm_proj_rows = pm_conn.execute("""
+        SELECT TRIM(p.manager) AS manager,
+               MIN(CASE WHEN t.status IN ('In Process','Planned') THEN t.start_date ELSE NULL END) AS proj_start,
+               MAX(CASE WHEN t.status IN ('In Process','Planned') THEN t.end_date   ELSE NULL END) AS proj_end,
+               SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks
+        FROM projects p
+        LEFT JOIN tasks t ON t.project_id = p.id
+        WHERE TRIM(COALESCE(p.manager,'')) != ''
+        GROUP BY p.id, p.name, p.manager
+        HAVING active_tasks > 0
+    """).fetchall()
+    pm_conn.close()
+
+    for pr in pm_proj_rows:
+        manager   = (pr['manager'] or '').strip()
+        pstart_s  = pr['proj_start']
+        pend_s    = pr['proj_end']
+        if not manager or not pstart_s or not pend_s:
+            continue
+        # Resolve manager name → discipline (exact, then first-name)
+        disc = owner_to_disc.get(manager.lower())
+        if not disc:
+            disc = owner_to_disc.get(manager.split()[0].lower())
+        if not disc:
+            continue
+        try:
+            pstart = _date.fromisoformat(pstart_s[:10])
+            pend   = _date.fromisoformat(pend_s[:10])
+        except Exception:
+            continue
+        if disc not in disc_monthly:
+            disc_monthly[disc] = {'In Process': [0]*len(months), 'Planned': [0]*len(months)}
+        for i, ms in enumerate(months):
+            last_day = calendar.monthrange(ms.year, ms.month)[1]
+            me = _date(ms.year, ms.month, last_day)
+            if pstart <= me and pend >= ms:
+                bucket = 'In Process' if ms <= today else 'Planned'
+                disc_monthly[disc][bucket][i] += PM_LOAD_PER_PROJECT
+
+    result = []
+    for disc in sorted(disc_monthly):
+        ip = disc_monthly[disc]['In Process']
+        pl = disc_monthly[disc]['Planned']
+        combined = [ip[i] + pl[i] for i in range(len(months))]
+        peak = max(combined) if combined else 0
+        peak_idx = combined.index(peak) if peak else 0
+        owner_count = disc_owners.get(disc, 1)
+        result.append({
+            'name': disc,
+            'owner_count': owner_count,
+            'in_process': ip,
+            'planned': pl,
+            'combined': combined,
+            'peak_count': peak,
+            'peak_month': months[peak_idx].strftime('%Y-%m'),
+        })
+
+    result.sort(key=lambda x: x['peak_count'], reverse=True)
+    return jsonify({
+        'months': [m.strftime('%Y-%m') for m in months],
+        'month_labels': [m.strftime("%b '%y") for m in months],
+        'today_month': today.strftime('%Y-%m'),
+        'disciplines': result,
+    })
+
+
 @app.route('/api/dependency/<int:dep_id>', methods=['DELETE'])
 def api_delete_dependency(dep_id):
     """Delete a specific dependency"""
@@ -521,6 +713,19 @@ def api_delete_gate_sign_off(project_name, gate_name):
     """Remove a gate sign-off"""
     success = db_manager.delete_gate_sign_off(project_name, gate_name)
     return jsonify({'success': success})
+
+
+@app.route('/api/project/<project_name>', methods=['DELETE'])
+def api_delete_project(project_name):
+    """Delete a project and all its data"""
+    try:
+        success = db_manager.delete_project(project_name)
+        if success:
+            return jsonify({'success': True, 'message': f'Project "{project_name}" deleted'})
+        else:
+            return jsonify({'success': False, 'error': 'Project not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 if __name__ == '__main__':

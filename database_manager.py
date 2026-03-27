@@ -428,6 +428,30 @@ class DatabaseManager:
         conn.close()
         
         return deleted_count
+
+    def delete_project(self, project_name):
+        """Delete a project and all its related data (tasks, dependencies, gates)"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute('SELECT id FROM projects WHERE name = ?', (project_name,))
+            row = cursor.fetchone()
+            if not row:
+                return False
+            project_id = row[0]
+            cursor.execute('DELETE FROM tasks WHERE project_id = ?', (project_id,))
+            cursor.execute('DELETE FROM task_dependencies WHERE project_name = ?', (project_name,))
+            cursor.execute('DELETE FROM gate_sign_offs WHERE project_name = ?', (project_name,))
+            cursor.execute('DELETE FROM gate_baselines WHERE project_name = ?', (project_name,))
+            cursor.execute('DELETE FROM gate_change_log WHERE project_name = ?', (project_name,))
+            cursor.execute('DELETE FROM projects WHERE id = ?', (project_id,))
+            conn.commit()
+            return True
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            conn.close()
     
     def get_total_task_count(self):
         """Get total number of tasks across all projects"""
@@ -620,10 +644,10 @@ class DatabaseManager:
 
             duration_days = max(1, (end_date - start_date).days + 1)
             working_days = count_working_days(start_date, end_date)
-            is_active_today = start_date <= today <= end_date
             status_value = (row['status'] or '').strip()
             normalized_status = normalize_status(status_value)
             is_completed = status_value.lower() == 'completed'
+            is_active_today = (start_date <= today <= end_date) and not is_completed
             closed_date_value = (row['date_closed'] or '').strip()
             closed_date = datetime.strptime(closed_date_value[:10], '%Y-%m-%d').date() if closed_date_value else None
             is_open_delayed = (not is_completed) and end_date < today
@@ -661,6 +685,7 @@ class DatabaseManager:
                 'in_process_working_days': 0,
                 'project_names': set(),
                 'date_points': [],
+                'pm_date_points': [],
                 'tasks': []
             })
 
@@ -672,20 +697,140 @@ class DatabaseManager:
             owner_entry['planned_working_days'] += working_days if normalized_status == 'planned' else 0
             owner_entry['in_process_working_days'] += working_days if normalized_status == 'in process' else 0
             owner_entry['project_names'].add(row['project_name'])
-            owner_entry['date_points'].append((start_date, 1))
-            owner_entry['date_points'].append((end_date, -1))
+            # Only count active/future tasks for concurrent load (exclude completed)
+            if normalized_status in ('planned', 'in process'):
+                owner_entry['date_points'].append((start_date, 1))
+                owner_entry['date_points'].append((end_date, -1))
             owner_entry['tasks'].append(task_item)
             all_dates.extend([start_date, end_date])
 
+        # Build managed-projects map: manager_name -> list of active projects they own
+        conn2 = self.get_connection()
+        proj_rows = conn2.execute('''
+            SELECT p.name AS proj_name,
+                   TRIM(p.manager) AS manager,
+                   SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks,
+                   MIN(CASE WHEN t.status IN ('In Process','Planned') THEN t.start_date ELSE NULL END) AS proj_start,
+                   MAX(CASE WHEN t.status IN ('In Process','Planned') THEN t.end_date ELSE NULL END) AS proj_end
+            FROM projects p
+            LEFT JOIN tasks t ON t.project_id = p.id
+            WHERE TRIM(COALESCE(p.manager,'')) != ''
+            GROUP BY p.id, p.name, p.manager
+        ''').fetchall()
+        conn2.close()
+
+        manager_projects = {}
+        for pr in proj_rows:
+            proj_name  = pr['proj_name']
+            manager    = pr['manager']
+            active_cnt = pr['active_tasks'] or 0
+            if active_cnt > 0:
+                manager_projects.setdefault(manager, []).append({
+                    'name': proj_name,
+                    'active_tasks': active_cnt,
+                    'start_date': pr['proj_start'],
+                    'end_date': pr['proj_end']
+                })
+
+        # Build flexible manager-to-owner lookup:
+        # Try exact match first, then first-name-only match (e.g. "Olga Malevsky" -> "Olga")
+        def resolve_manager(manager_name, owner_names_set):
+            if manager_name in owner_names_set:
+                return manager_name
+            first = manager_name.split()[0] if manager_name else ''
+            if first and first in owner_names_set:
+                return first
+            # Try: any owner whose name is a prefix/suffix of manager name
+            for owner in owner_names_set:
+                if owner and (manager_name.startswith(owner) or manager_name.endswith(owner)):
+                    return owner
+            return None
+
+        owner_names_set = set(owners.keys())
+        # Remap manager_projects keys to match actual owner keys
+        remapped_manager_projects = {}
+        for manager_name, projs in manager_projects.items():
+            resolved = resolve_manager(manager_name, owner_names_set)
+            if resolved:
+                existing = remapped_manager_projects.setdefault(resolved, [])
+                # avoid duplicates
+                seen = {p['name'] for p in existing}
+                for p in projs:
+                    if p['name'] not in seen:
+                        existing.append(p)
+                        seen.add(p['name'])
+
+        # Inject PM overhead into pm_date_points and add synthetic [PM] tasks
+        PM_LOAD_PER_PROJECT = 5  # 5 equivalent tasks per month per managed project
+        today_str = today.isoformat()
+        for owner_name, managed_projs in remapped_manager_projects.items():
+            if owner_name not in owners:
+                owners[owner_name] = {
+                    'owner': owner_name,
+                    'task_count': 0,
+                    'active_today_count': 0,
+                    'critical_task_count': 0,
+                    'delayed_task_count': 0,
+                    'tailed_out_count': 0,
+                    'planned_working_days': 0,
+                    'in_process_working_days': 0,
+                    'project_names': set(),
+                    'date_points': [],
+                    'pm_date_points': [],
+                    'tasks': []
+                }
+            owner_entry = owners[owner_name]
+            for proj in managed_projs:
+                pstart = proj.get('start_date')
+                pend   = proj.get('end_date')
+                if pstart and pend:
+                    owner_entry['pm_date_points'].append((pstart, PM_LOAD_PER_PROJECT))
+                    owner_entry['pm_date_points'].append((pend,  -PM_LOAD_PER_PROJECT))
+                    is_active = pstart <= today_str <= pend
+                    owner_entry['active_today_count'] += 1 if is_active else 0
+                    owner_entry['project_names'].add(proj['name'])
+                    owner_entry['task_count'] += 1  # 1 synthetic task entry
+                    owner_entry['tasks'].append({
+                        'task_id': f'pm_{proj["name"]}',
+                        'task_name': f'[PM] {proj["name"]}',
+                        'project_name': proj['name'],
+                        'start_date': pstart,
+                        'end_date': pend,
+                        'status': 'In Process' if is_active else 'Planned',
+                        'date_closed': None,
+                        'critical': False,
+                        'tailed_out': False,
+                        'duration_days': 0,
+                        'working_days': 0,
+                        'is_active_today': is_active,
+                        'is_delayed': False,
+                        'delay_reason': None,
+                        'is_pm_overhead': True,
+                        'pm_weight': PM_LOAD_PER_PROJECT,
+                        'phase': '',
+                        'owner': owner_name
+                    })
+
         owner_rows = []
         for owner_name, owner_entry in owners.items():
-            peak_load = 0
+            # Sweep real task date_points for direct concurrent load
+            concurrent_load = 0
             current_load = 0
-
             for date_point, delta in sorted(owner_entry['date_points'], key=lambda item: (item[0], -item[1])):
                 current_load += delta
-                if current_load > peak_load:
-                    peak_load = current_load
+                if current_load > concurrent_load:
+                    concurrent_load = current_load
+
+            # Sweep combined (real + PM overhead) for effective concurrent load
+            effective_concurrent_load = 0
+            current_eff = 0
+            combined_points = owner_entry['date_points'] + owner_entry['pm_date_points']
+            for date_point, delta in sorted(combined_points, key=lambda item: (item[0], -item[1])):
+                current_eff += delta
+                if current_eff > effective_concurrent_load:
+                    effective_concurrent_load = current_eff
+
+            managed = remapped_manager_projects.get(owner_name, [])
 
             owner_entry['tasks'].sort(key=lambda item: (item['start_date'], item['end_date'], item['project_name'], item['task_name']))
             owner_rows.append({
@@ -699,12 +844,15 @@ class DatabaseManager:
                 'in_process_working_days': owner_entry['in_process_working_days'],
                 'project_count': len(owner_entry['project_names']),
                 'project_names': sorted(owner_entry['project_names']),
-                'peak_parallel_tasks': peak_load,
+                'peak_parallel_tasks': concurrent_load,
+                'concurrent_load': concurrent_load,
+                'effective_concurrent_load': effective_concurrent_load,
+                'managed_projects': managed,
                 'has_delayed_tasks': owner_entry['delayed_task_count'] > 0,
                 'tasks': owner_entry['tasks']
             })
 
-        owner_rows.sort(key=lambda item: (-item['active_today_count'], -item['peak_parallel_tasks'], item['owner'].lower()))
+        owner_rows.sort(key=lambda item: (-item['active_today_count'], -item['effective_concurrent_load'], item['owner'].lower()))
 
         summary = {
             'owner_count': len(owner_rows),
@@ -713,7 +861,8 @@ class DatabaseManager:
             'owners_with_delays': sum(1 for owner in owner_rows if owner['has_delayed_tasks']),
             'owners_without_delays': sum(1 for owner in owner_rows if not owner['has_delayed_tasks']),
             'delayed_task_count': sum(owner['delayed_task_count'] for owner in owner_rows),
-            'max_parallel_tasks': max((owner['peak_parallel_tasks'] for owner in owner_rows), default=0),
+            'max_parallel_tasks': max((owner['effective_concurrent_load'] for owner in owner_rows), default=0),
+            'max_concurrent_load': max((owner['effective_concurrent_load'] for owner in owner_rows), default=0),
             'planned_working_days': sum(owner['planned_working_days'] for owner in owner_rows),
             'in_process_working_days': sum(owner['in_process_working_days'] for owner in owner_rows),
             'range_start': min(all_dates).isoformat() if all_dates else None,
