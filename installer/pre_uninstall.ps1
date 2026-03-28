@@ -16,4 +16,7 @@ if (Test-Path $winswService) {
 # Remove firewall rule
 Remove-NetFirewallRule -DisplayName "Overall Programs Dashboard (port $Port)" -ErrorAction SilentlyContinue
 
+# Remove backup scheduled task
+Unregister-ScheduledTask -TaskName "OverallDashboard_NightlyBackup" -Confirm:$false -ErrorAction SilentlyContinue
+
 Write-Host "Service removed. Data files in C:\ProgramData\OverallDashboard are preserved."

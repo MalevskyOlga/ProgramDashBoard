@@ -113,7 +113,7 @@ Copy-Item $WinSwExe $winswService -Force
 if ($LASTEXITCODE -ne 0) { throw "WinSW service install failed" }
 
 # ── 5. Open firewall port ────────────────────────────────────────────────────
-Write-Host "[5/5] Opening firewall port $Port..."
+Write-Host "[5/6] Opening firewall port $Port..."
 $ruleName = "Overall Programs Dashboard (port $Port)"
 Remove-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
 New-NetFirewallRule `
@@ -123,6 +123,32 @@ New-NetFirewallRule `
     -LocalPort   $Port    `
     -Action      Allow    `
     -Profile     Domain,Private | Out-Null
+
+# ── 6. Register nightly backup Task Scheduler job ────────────────────────────
+Write-Host "[6/6] Registering nightly backup task..."
+$backupScript = Join-Path $InstallDir "installer\backup_db.ps1"
+$taskName     = "OverallDashboard_NightlyBackup"
+
+# Remove existing task if upgrading
+Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+
+$action  = New-ScheduledTaskAction `
+    -Execute    "powershell.exe" `
+    -Argument   "-NoProfile -ExecutionPolicy Bypass -File `"$backupScript`" -DataDir `"$DataDir`" -BackupRoot `"$DataDir\backups`""
+$trigger = New-ScheduledTaskTrigger -Daily -At "01:00"
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable:$false
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+
+Register-ScheduledTask `
+    -TaskName  $taskName `
+    -Action    $action   `
+    -Trigger   $trigger  `
+    -Settings  $settings `
+    -Principal $principal `
+    -Description "Nightly SQLite backup of Overall Programs Dashboard databases" | Out-Null
+
+Write-Host "  ✓ Backup scheduled: daily at 01:00, keeps 30 daily + 4 weekly"
+Write-Host "  ✓ Backup location: $DataDir\backups"
 
 # ── Start service ────────────────────────────────────────────────────────────
 Write-Host "Starting service..."
@@ -138,6 +164,7 @@ if ($svc -and $svc.Status -eq 'Running') {
     Write-Host "  Service:   $ServiceName (auto-start)"
     Write-Host "  Data:      $DataDir"
     Write-Host "  Logs:      $LogDir"
+    Write-Host "  Backups:   $DataDir\backups (daily 01:00)"
     Write-Host "========================================="
 } else {
     throw "Service did not start. Check logs at $LogDir"

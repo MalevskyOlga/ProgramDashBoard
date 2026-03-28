@@ -140,6 +140,7 @@ Source: "nssm\WinSW.exe";                  DestDir: "{app}\nssm";               
 ; Installer helper scripts
 Source: "post_install.ps1";                DestDir: "{app}\installer";           Flags: ignoreversion
 Source: "pre_uninstall.ps1";               DestDir: "{app}\installer";           Flags: ignoreversion
+Source: "backup_db.ps1";                   DestDir: "{app}\installer";           Flags: ignoreversion
 
 ; Seed database — only installed if no database exists yet (never overwrites production data)
 Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{commonappdata}\OverallDashboard"; Flags: onlyifdoesntexist uninsneveruninstall
