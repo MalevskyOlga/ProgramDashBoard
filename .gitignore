@@ -3,3 +3,11 @@ __pycache__/
 
 database/*.db
 database/*.db-*
+
+.venv/
+logs/
+exports/
+
+installer/nssm/nssm.exe
+installer/nssm/WinSW.exe
+installer/Output/

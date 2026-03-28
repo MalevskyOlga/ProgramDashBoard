@@ -28,9 +28,16 @@ if errorlevel 10 (
     exit /b 0
 )
 
+REM Prefer venv Python if present, fall back to system Python
+if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%.venv\Scripts\python.exe"
+    echo [INFO] Using venv Python: %PYTHON_EXE%
+    goto :python_found
+)
+
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python is not installed or not in PATH
+    echo [ERROR] Python is not installed or not in PATH, and no .venv found.
     pause
     exit /b 1
 )
@@ -40,13 +47,18 @@ if not defined PYTHON_EXE (
     set "PYTHON_EXE=python"
 )
 
+:python_found
+
 echo [INFO] Python found
 echo [INFO] Using Python: %PYTHON_EXE%
 echo.
-echo [INFO] Checking dependencies...
-"%PYTHON_EXE%" -m pip install -q -r requirements.txt
-if errorlevel 1 (
-    echo [WARNING] Some dependencies may not have installed correctly
+if not exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
+    echo [INFO] Checking dependencies...
+    "%PYTHON_EXE%" -m pip install -q -r requirements.txt
+    if errorlevel 1 (
+        echo [WARNING] Some dependencies may not have installed correctly
+    )
+    echo.
 )
 
 echo.

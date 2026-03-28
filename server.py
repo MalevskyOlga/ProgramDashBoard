@@ -21,7 +21,7 @@ from excel_parser import ExcelParser
 import config
 import sqlite3
 
-PORTFOLIO_DB_PATH = Path(__file__).parent / "database" / "portfolio.db"
+PORTFOLIO_DB_PATH = config.PORTFOLIO_DATABASE_PATH
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dashboard-generator-secret-key'
@@ -557,7 +557,7 @@ def api_discipline_resource_load():
         disc_owners[disc] = disc_owners.get(disc, 0) + 1
 
     # Load active tasks from dashboards.db
-    db_path = Path(__file__).parent / 'database' / 'dashboards.db'
+    db_path = config.DATABASE_PATH
     t_conn = sqlite3.connect(str(db_path))
     tasks = t_conn.execute("""
         SELECT TRIM(owner), start_date, end_date, status

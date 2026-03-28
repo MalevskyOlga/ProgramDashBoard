@@ -40,6 +40,7 @@ from aggregate_repository import (
     list_unmapped_owners,
     update_programme_escalation,
     upsert_milestone_baseline,
+    upsert_resource_teams_bulk,
 )
 from database_manager import DatabaseManager
 from excel_parser import ExcelParser
@@ -533,6 +534,21 @@ def create_app() -> Flask:
             return _json_error(str(exc), 400)
         except Exception as exc:
             return _json_error(str(exc), 500)
+
+    @app.route("/api/v1/admin/resource-teams/bulk", methods=["POST"])
+    def api_admin_resource_teams_bulk():
+        mappings = request.get_json(silent=True) or []
+        if not isinstance(mappings, list):
+            return _json_error("Expected a JSON array of {owner_name, team_name}", 400)
+        try:
+            count = upsert_resource_teams_bulk(mappings)
+            return jsonify({"saved": count})
+        except Exception as exc:
+            return _json_error(str(exc), 500)
+
+    @app.route("/disciplines")
+    def disciplines_page():
+        return render_template("disciplines.html")
 
     @app.route("/api/v1/admin/milestone-baselines", methods=["GET", "POST"])
     def api_admin_milestone_baselines():

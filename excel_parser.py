@@ -94,7 +94,7 @@ class ExcelParser:
                     'reference_id': str(ref_id or '').strip(),
                     'name': description_str,
                     'phase': str(source or '').strip(),
-                    'owner': str(assigned_to or '').strip(),
+                    'owner': str(assigned_to or '').strip().split(',')[0].strip(),
                     'start_date': start_date_str,
                     'end_date': end_date_str,
                     'status': str(status or 'Planned').strip(),

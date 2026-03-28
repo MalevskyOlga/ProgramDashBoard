@@ -34,11 +34,17 @@ if errorlevel 1 (
     echo.
 )
 
-REM Check if Python is installed
+REM Prefer venv Python if present, fall back to system Python
+if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%.venv\Scripts\python.exe"
+    echo [INFO] Using venv Python: %PYTHON_EXE%
+    goto :python_found
+)
+
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] Python is not installed or not in PATH
-    echo Please install Python 3.7+ from python.org
+    echo [ERROR] Python is not installed or not in PATH, and no .venv found.
+    echo Please install Python 3.7+ from python.org or create a venv.
     pause
     exit /b 1
 )
@@ -48,18 +54,21 @@ if not defined PYTHON_EXE (
     set "PYTHON_EXE=python"
 )
 
+:python_found
+
 echo [INFO] Python found
 echo [INFO] Using Python: %PYTHON_EXE%
 echo.
 
-REM Install dependencies if needed
-echo [INFO] Checking dependencies...
-"%PYTHON_EXE%" -m pip install -q -r requirements.txt
-if errorlevel 1 (
-    echo [WARNING] Some dependencies may not have installed correctly
+REM Install dependencies only when NOT using venv (venv is pre-built)
+if not exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
+    echo [INFO] Checking dependencies...
+    "%PYTHON_EXE%" -m pip install -q -r requirements.txt
+    if errorlevel 1 (
+        echo [WARNING] Some dependencies may not have installed correctly
+    )
+    echo.
 )
-
-echo.
 echo ========================================
 echo   Server Configuration:
 echo   - URL: http://localhost:%PORT%

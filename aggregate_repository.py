@@ -397,7 +397,29 @@ def create_resource_team(team_name: str, owner_name: str, capacity_hrs_per_week:
     return dict(row)
 
 
-def list_milestone_baselines(programme_id: int | None = None) -> list[dict[str, Any]]:
+def upsert_resource_teams_bulk(mappings: list[dict]) -> int:
+    """Replace all resource_team entries with the provided owner→discipline mappings.
+    Each mapping dict must have 'owner_name' and 'team_name' keys.
+    Returns count of rows saved."""
+    conn = get_connection()
+    conn.execute("DELETE FROM resource_teams")
+    count = 0
+    for m in mappings:
+        owner = (m.get("owner_name") or "").strip()
+        team = (m.get("team_name") or "").strip()
+        if not owner or not team:
+            continue
+        conn.execute(
+            "INSERT INTO resource_teams (team_name, owner_name, capacity_hrs_per_week) VALUES (?, ?, ?)",
+            (team, owner, aggregate_config.DEFAULT_TEAM_CAPACITY_HOURS),
+        )
+        count += 1
+    conn.commit()
+    conn.close()
+    return count
+
+
+
     conn = get_connection()
     query = """
         SELECT mb.*
@@ -415,6 +437,27 @@ def list_milestone_baselines(programme_id: int | None = None) -> list[dict[str, 
 
     query += " ORDER BY mb.project_name, mb.task_name"
     rows = conn.execute(query, params).fetchall()
+    conn.close()
+    return _rows_to_dicts(rows)
+
+
+def list_milestone_baselines(programme_id: int | None = None) -> list[dict[str, Any]]:
+    conn = get_connection()
+    if programme_id is not None:
+        rows = conn.execute(
+            """
+            SELECT mb.*
+            FROM milestone_baselines mb
+            JOIN programme_projects pp ON pp.project_name = mb.project_name
+            WHERE pp.programme_id = ?
+            ORDER BY mb.project_name, mb.task_name
+            """,
+            (programme_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM milestone_baselines ORDER BY project_name, task_name"
+        ).fetchall()
     conn.close()
     return _rows_to_dicts(rows)
 

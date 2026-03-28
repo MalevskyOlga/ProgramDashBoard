@@ -13,6 +13,7 @@ DEBUG_MODE = False  # ALWAYS False for stability - prevents crashes during code 
 # Paths
 BASE_DIR = Path(__file__).parent
 DATABASE_PATH = BASE_DIR / 'database' / 'dashboards.db'
+PORTFOLIO_DATABASE_PATH = BASE_DIR / 'database' / 'portfolio.db'
 
 # Excel file locations (not used for auto-import, but for manual export)
 EXCEL_OUTPUT_FOLDER = BASE_DIR / 'exports'

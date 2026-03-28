@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Owner Discipline Mapping</title>
+<style>
+  body { background:#0d1b2e; color:#cdd9e5; font-family:'Segoe UI',sans-serif; margin:0; padding:24px; }
+  h1 { font-size:1.3em; color:#7ec8ff; margin-bottom:4px; }
+  .subtitle { font-size:0.85em; color:#6b7fa3; margin-bottom:20px; }
+  .toolbar { display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .btn { padding:8px 18px; border:none; border-radius:6px; cursor:pointer; font-size:0.88em; font-weight:600; }
+  .btn-save { background:#4a9eff; color:#fff; }
+  .btn-save:hover { background:#2176d9; }
+  .btn-back { background:#1a2740; color:#7ec8ff; border:1px solid #24355f; }
+  .btn-back:hover { background:#24355f; }
+  .search { padding:7px 12px; border-radius:6px; border:1px solid #24355f; background:#0f1d35; color:#cdd9e5; font-size:0.88em; width:200px; }
+  .saved-msg { color:#9cf79a; font-size:0.85em; display:none; }
+  .error-msg { color:#ff6b6b; font-size:0.85em; display:none; }
+  table { width:100%; border-collapse:collapse; font-size:0.88em; }
+  thead th { text-align:left; padding:8px 12px; color:#6b7fa3; border-bottom:2px solid #24355f; font-weight:500; position:sticky; top:0; background:#0d1b2e; }
+  tbody tr:hover { background:#0f1d35; }
+  tbody td { padding:5px 8px; border-bottom:1px solid #13233f; }
+  .owner-name { color:#cdd9e5; font-weight:500; }
+  .disc-input {
+    background:#0f1d35; border:1px solid #24355f; color:#cdd9e5;
+    border-radius:5px; padding:5px 10px; font-size:0.87em; width:100%;
+    box-sizing:border-box;
+  }
+  .disc-input:focus { outline:none; border-color:#4a9eff; background:#0d1b2e; }
+  .disc-input.filled { border-color:#4a9eff44; color:#7ec8ff; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:0.78em; font-weight:600; }
+  .stat { font-size:0.8em; color:#6b7fa3; }
+  #filterInput::placeholder { color:#445566; }
+  .summary-bar { display:flex; gap:20px; margin-bottom:16px; font-size:0.82em; }
+  .summary-bar span { color:#6b7fa3; }
+  .summary-bar strong { color:#cdd9e5; }
+</style>
+</head>
+<body>
+<h1>🏷️ Owner → Discipline Mapping</h1>
+<p class="subtitle">Assign each owner to a discipline. Used for resource aggregation by team in the portfolio dashboard.</p>
+
+<div class="toolbar">
+  <a href="/" class="btn btn-back">← Back to Dashboard</a>
+  <button class="btn btn-save" onclick="saveAll()">💾 Save All</button>
+  <input id="filterInput" class="search" type="text" placeholder="Filter owners..." oninput="filterTable()">
+  <span class="saved-msg" id="savedMsg">✅ Saved successfully!</span>
+  <span class="error-msg" id="errorMsg"></span>
+</div>
+
+<div class="summary-bar">
+  <span>Total owners: <strong id="totalCount">—</strong></span>
+  <span>Mapped: <strong id="mappedCount" style="color:#9cf79a;">—</strong></span>
+  <span>Unmapped: <strong id="unmappedCount" style="color:#ffa94d;">—</strong></span>
+</div>
+
+<table id="mappingTable">
+  <thead>
+    <tr>
+      <th style="width:35%">Owner</th>
+      <th style="width:30%">Discipline</th>
+      <th style="width:35%">Projects / Tasks</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody">
+    <tr><td colspan="3" style="color:#6b7fa3;padding:20px;">Loading owners...</td></tr>
+  </tbody>
+</table>
+
+<script>
+let allOwners = [];
+let existingMappings = {};
+
+async function loadData() {
+  try {
+    const [ownersRes, teamsRes] = await Promise.all([
+      fetch('/api/overall-resource-load'),
+      fetch('/api/v1/admin/resource-teams')
+    ]);
+    const ownersData = await ownersRes.json();
+    const teamsData = await teamsRes.json();
+
+    // Build existing mapping lookup
+    existingMappings = {};
+    teamsData.forEach(t => { existingMappings[t.owner_name] = t.team_name; });
+
+    // Collect all unique INDIVIDUAL owners by splitting comma-separated owner strings
+    const ownerMap = {};
+    (ownersData.owners || []).forEach(o => {
+      // Split combined owner strings like "Alex, Bob" into individual names
+      const individuals = (o.owner || '').split(',').map(n => n.trim()).filter(Boolean);
+      individuals.forEach(person => {
+        if (!ownerMap[person]) {
+          ownerMap[person] = { owner: person, projects: new Set(), task_count: 0, active: 0 };
+        }
+        (o.project_names || []).forEach(p => ownerMap[person].projects.add(p));
+        ownerMap[person].task_count += o.task_count || 0;
+        ownerMap[person].active += o.active_today_count || 0;
+      });
+    });
+    // Convert sets to arrays
+    Object.values(ownerMap).forEach(o => { o.projects = [...o.projects]; });
+
+    allOwners = Object.values(ownerMap).sort((a, b) => a.owner.localeCompare(b.owner));
+    renderTable(allOwners);
+    updateSummary();
+  } catch (e) {
+    document.getElementById('tableBody').innerHTML =
+      `<tr><td colspan="3" style="color:#ff6b6b;">Error loading data: ${e.message}</td></tr>`;
+  }
+}
+
+function renderTable(owners) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = owners.map(o => {
+    const discipline = existingMappings[o.owner] || '';
+    const projects = o.projects.join(', ') || '—';
+    return `
+      <tr data-owner="${o.owner.replace(/"/g,'&quot;')}">
+        <td class="owner-name">${escHtml(o.owner)}</td>
+        <td>
+          <input class="disc-input ${discipline ? 'filled' : ''}"
+            type="text"
+            value="${escHtml(discipline)}"
+            placeholder="e.g. Mechanical, SW, EE..."
+            data-owner="${escHtml(o.owner)}"
+            oninput="onInput(this)"
+            list="discipline-suggestions">
+        </td>
+        <td class="stat">${escHtml(projects)}<br><span style="color:#445566;">${o.task_count} tasks · ${o.active} active today</span></td>
+      </tr>`;
+  }).join('');
+
+  // suggestions datalist
+  const disciplines = [...new Set(Object.values(existingMappings).filter(Boolean))].sort();
+  let dl = document.getElementById('discipline-suggestions');
+  if (!dl) { dl = document.createElement('datalist'); dl.id = 'discipline-suggestions'; document.body.appendChild(dl); }
+  dl.innerHTML = disciplines.map(d => `<option value="${escHtml(d)}">`).join('');
+}
+
+function onInput(input) {
+  const owner = input.getAttribute('data-owner');
+  existingMappings[owner] = input.value.trim();
+  input.classList.toggle('filled', !!input.value.trim());
+  updateSummary();
+}
+
+function updateSummary() {
+  const total = allOwners.length;
+  const mapped = allOwners.filter(o => existingMappings[o.owner] && existingMappings[o.owner].trim()).length;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('mappedCount').textContent = mapped;
+  document.getElementById('unmappedCount').textContent = total - mapped;
+}
+
+function filterTable() {
+  const q = document.getElementById('filterInput').value.toLowerCase();
+  const filtered = q ? allOwners.filter(o =>
+    o.owner.toLowerCase().includes(q) ||
+    (existingMappings[o.owner] || '').toLowerCase().includes(q)
+  ) : allOwners;
+  renderTable(filtered);
+}
+
+async function saveAll() {
+  const inputs = document.querySelectorAll('.disc-input');
+  const mappings = [];
+  inputs.forEach(input => {
+    const owner = input.getAttribute('data-owner');
+    const team = input.value.trim();
+    if (owner && team) mappings.push({ owner_name: owner, team_name: team });
+  });
+
+  try {
+    const res = await fetch('/api/v1/admin/resource-teams/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mappings)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Save failed');
+    const msg = document.getElementById('savedMsg');
+    msg.textContent = `✅ Saved ${data.saved} mappings!`;
+    msg.style.display = 'inline';
+    document.getElementById('errorMsg').style.display = 'none';
+    setTimeout(() => { msg.style.display = 'none'; }, 3000);
+    // Refresh existing mappings
+    inputs.forEach(input => {
+      const owner = input.getAttribute('data-owner');
+      if (owner) existingMappings[owner] = input.value.trim();
+    });
+    updateSummary();
+  } catch (e) {
+    const err = document.getElementById('errorMsg');
+    err.textContent = '❌ ' + e.message;
+    err.style.display = 'inline';
+  }
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadData();
+</script>
+</body>
+</html>
