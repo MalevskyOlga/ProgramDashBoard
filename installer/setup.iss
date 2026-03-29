@@ -131,8 +131,8 @@ Source: "{#SrcRoot}\templates\*";          DestDir: "{app}\templates";          
 Source: "{#SrcRoot}\aggregate_templates\*"; DestDir: "{app}\aggregate_templates"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SrcRoot}\aggregate_frontend\*"; DestDir: "{app}\aggregate_frontend";  Flags: ignoreversion recursesubdirs createallsubdirs
 
-; Bundled Python virtual environment (pre-built on dev machine, Windows x64)
-Source: "{#SrcRoot}\.venv\*";              DestDir: "{app}\.venv";               Flags: ignoreversion recursesubdirs createallsubdirs
+; Bundled Python installer (run silently during post-install to create local venv)
+Source: "python-installer.exe";            DestDir: "{app}\installer";           Flags: ignoreversion
 
 ; WinSW service wrapper (bundled — no external dependency)
 Source: "nssm\WinSW.exe";                  DestDir: "{app}\nssm";                Flags: ignoreversion

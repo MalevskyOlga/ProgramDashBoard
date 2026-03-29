@@ -10,4 +10,5 @@ exports/
 
 installer/nssm/nssm.exe
 installer/nssm/WinSW.exe
+installer/python-installer.exe
 installer/Output/
