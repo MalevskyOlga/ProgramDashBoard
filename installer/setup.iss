@@ -74,16 +74,20 @@ end;
 
 procedure RunPowerShell(Script: String; Args: String);
 var
-  Cmd, Params: String;
-  ResultCode:  Integer;
+  Cmd, Params, LogFile: String;
+  ResultCode: Integer;
 begin
-  Cmd    := 'powershell.exe';
-  Params := '-NoProfile -ExecutionPolicy Bypass -File "' + Script + '" ' + Args;
+  LogFile := ExpandConstant('{commonappdata}\OverallDashboard\logs\install-ps.log');
+  // Use cmd /c to redirect stdout+stderr so we always get a log even if PS crashes early
+  Cmd    := ExpandConstant('{sys}\cmd.exe');
+  Params := '/c "md "' + ExpandConstant('{commonappdata}\OverallDashboard\logs') + '" 2>nul & ' +
+            'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + Script + '" ' + Args +
+            ' >> "' + LogFile + '" 2>&1"';
   if not Exec(Cmd, Params, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    MsgBox('PowerShell could not be launched. Exit code: ' + IntToStr(ResultCode), mbError, MB_OK);
+    MsgBox('cmd.exe could not be launched. Exit code: ' + IntToStr(ResultCode), mbError, MB_OK);
   if ResultCode <> 0 then
     MsgBox('Post-install step failed (exit ' + IntToStr(ResultCode) + '). ' +
-           'Check logs in {#DataDir}\logs', mbError, MB_OK);
+           'Check log: ' + LogFile, mbError, MB_OK);
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
