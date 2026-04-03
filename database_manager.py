@@ -160,6 +160,16 @@ class DatabaseManager:
             )
         ''')
 
+        # Resource teams table - maps owners to discipline/team for resource load view
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS resource_teams (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_name TEXT NOT NULL,
+                owner_name TEXT NOT NULL UNIQUE,
+                capacity_hrs_per_week REAL NOT NULL DEFAULT 37.5
+            )
+        ''')
+
         # Create indexes for better performance
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)')
@@ -167,6 +177,8 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_gate_baselines_project ON gate_baselines(project_name)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_gate_change_log_project ON gate_change_log(project_name)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_task_deps_project ON task_dependencies(project_name)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_resource_teams_owner ON resource_teams(owner_name)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_resource_teams_team ON resource_teams(team_name)')
         
         conn.commit()
         conn.close()

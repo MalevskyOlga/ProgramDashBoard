@@ -21,8 +21,6 @@ from excel_parser import ExcelParser
 import config
 import sqlite3
 
-PORTFOLIO_DB_PATH = config.PORTFOLIO_DATABASE_PATH
-
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dashboard-generator-secret-key'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -30,22 +28,6 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Initialize database manager
 db_manager = DatabaseManager(config.DATABASE_PATH)
 db_manager.initialize_database()
-
-
-def _get_portfolio_conn():
-    PORTFOLIO_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(PORTFOLIO_DB_PATH))
-    conn.row_factory = sqlite3.Row
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS resource_teams (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            team_name TEXT NOT NULL,
-            owner_name TEXT NOT NULL UNIQUE,
-            capacity_hrs_per_week REAL
-        )
-    """)
-    conn.commit()
-    return conn
 
 
 def allowed_file(filename):
@@ -493,7 +475,7 @@ def disciplines_page():
 @app.route('/api/v1/admin/resource-teams', methods=['GET'])
 def api_resource_teams_get():
     try:
-        conn = _get_portfolio_conn()
+        conn = db_manager.get_connection()
         rows = conn.execute(
             "SELECT id, team_name, owner_name, capacity_hrs_per_week FROM resource_teams ORDER BY owner_name"
         ).fetchall()
@@ -509,7 +491,7 @@ def api_resource_teams_bulk():
     if not isinstance(mappings, list):
         return jsonify({'error': 'Expected a JSON array of {owner_name, team_name}'}), 400
     try:
-        conn = _get_portfolio_conn()
+        conn = db_manager.get_connection()
         conn.execute("DELETE FROM resource_teams")
         count = 0
         for m in mappings:
@@ -545,8 +527,8 @@ def api_discipline_resource_load():
         m = raw_month % 12 + 1
         months.append(_date(y, m, 1))
 
-    # Load discipline mappings from portfolio.db (case-insensitive key)
-    p_conn = _get_portfolio_conn()
+    # Load discipline mappings from dashboards.db (case-insensitive key)
+    p_conn = db_manager.get_connection()
     mappings = p_conn.execute("SELECT TRIM(owner_name), team_name FROM resource_teams").fetchall()
     p_conn.close()
     owner_to_disc = {row[0].lower(): row[1] for row in mappings}
