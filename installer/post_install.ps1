@@ -7,71 +7,88 @@ param(
     [string]$ServiceName = "OverallDashboard"
 )
 
-$ErrorActionPreference = "Stop"
+# ── Log to file from the very first line (before ErrorActionPreference) ───────
+$LogDir    = "C:\ProgramData\OverallDashboard\logs"
+$null      = New-Item -ItemType Directory -Force -Path $LogDir
+$LogFile   = Join-Path $LogDir "install-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+function Log($msg) {
+    $line = "$(Get-Date -Format 'HH:mm:ss')  $msg"
+    Add-Content -Path $LogFile -Value $line
+    Write-Host $line
+}
+Log "=== post_install.ps1 started ==="
+Log "InstallDir=$InstallDir  DataDir=$DataDir  Port=$Port  ServiceName=$ServiceName"
 
-# ── Write all output to a log file so errors are visible ─────────────────────
-$LogDir = Join-Path (Join-Path $env:ProgramData "OverallDashboard") "logs"
-New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
-$transcript = Join-Path $LogDir "install-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
-Start-Transcript -Path $transcript -Append | Out-Null
-Write-Host "=== post_install.ps1 started $(Get-Date) ==="
+$ErrorActionPreference = "Stop"
+trap {
+    Log "ERROR: $_"
+    Log "=== FAILED ==="
+    exit 1
+}
 
 $PythonInstaller = Join-Path $InstallDir "installer\python-installer.exe"
-$PythonDir  = Join-Path $InstallDir "python"
-$PythonExe  = Join-Path $PythonDir  "python.exe"
-$VenvDir    = Join-Path $InstallDir ".venv"
-$WinSwExe   = Join-Path $InstallDir "nssm\WinSW.exe"
-$ServerPy   = Join-Path $InstallDir "server.py"
-$LogDir     = Join-Path $DataDir    "logs"
+$PythonDir       = Join-Path $InstallDir "python"
+$PythonExe       = Join-Path $PythonDir  "python.exe"
+$VenvDir         = Join-Path $InstallDir ".venv"
+$WinSwExe        = Join-Path $InstallDir "nssm\WinSW.exe"
+$WheelsDir       = Join-Path $InstallDir "installer\wheels"
 
 # ── 1. Create data & log directories ─────────────────────────────────────────
-New-Item -ItemType Directory -Force -Path $DataDir  | Out-Null
-New-Item -ItemType Directory -Force -Path $LogDir   | Out-Null
-Write-Host "[1/6] Data directory ready: $DataDir"
+New-Item -ItemType Directory -Force -Path $DataDir                  | Out-Null
+New-Item -ItemType Directory -Force -Path (Join-Path $DataDir "exports") | Out-Null
+Log "[1/7] Data directory ready: $DataDir"
 
-# ── 2. Install Python app-local (silently, no system PATH change) ─────────────
-Write-Host "[2/6] Installing Python to $PythonDir ..."
+# ── 2. Install Python app-local ───────────────────────────────────────────────
+Log "[2/7] Installing Python to $PythonDir ..."
 if (-not (Test-Path $PythonExe)) {
+    if (-not (Test-Path $PythonInstaller)) {
+        throw "Python installer not found at: $PythonInstaller"
+    }
     $installArgs = "/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 " +
                    "Include_launcher=0 Include_doc=0 " +
                    "TargetDir=`"$PythonDir`""
-    Start-Process -FilePath $PythonInstaller -ArgumentList $installArgs -Wait
-    if (-not (Test-Path $PythonExe)) { throw "Python installation failed — $PythonExe not found" }
-    Write-Host "      Python installed OK"
+    Log "      Running: $PythonInstaller $installArgs"
+    $proc = Start-Process -FilePath $PythonInstaller -ArgumentList $installArgs -Wait -PassThru
+    Log "      Python installer exit code: $($proc.ExitCode)"
+    if (-not (Test-Path $PythonExe)) {
+        throw "Python install finished but python.exe not found at: $PythonExe"
+    }
+    Log "      Python installed OK"
 } else {
-    Write-Host "      Python already present, skipping"
+    Log "      Python already present, skipping"
 }
 
-# ── 3. Create venv and install dependencies ───────────────────────────────────
-Write-Host "[3/6] Creating virtual environment..."
+# ── 3. Create venv and install dependencies (offline wheels) ──────────────────
+Log "[3/7] Creating virtual environment at $VenvDir ..."
 if (-not (Test-Path "$VenvDir\Scripts\python.exe")) {
     & $PythonExe -m venv $VenvDir
-    if ($LASTEXITCODE -ne 0) { throw "venv creation failed" }
+    if ($LASTEXITCODE -ne 0) { throw "venv creation failed (exit $LASTEXITCODE)" }
 }
-Write-Host "      Installing dependencies (offline wheels)..."
-$wheelsDir = Join-Path $InstallDir "installer\wheels"
-& "$VenvDir\Scripts\pip.exe" install -q --no-index --find-links $wheelsDir -r (Join-Path $InstallDir "requirements.txt")
-if ($LASTEXITCODE -ne 0) { throw "pip install failed" }
-Write-Host "      Dependencies installed OK"
+Log "      Installing dependencies from bundled wheels..."
+if (-not (Test-Path $WheelsDir)) { throw "Wheels folder not found: $WheelsDir" }
+& "$VenvDir\Scripts\pip.exe" install --no-index --find-links $WheelsDir -r (Join-Path $InstallDir "requirements.txt") 2>&1 | ForEach-Object { Log "pip: $_" }
+if ($LASTEXITCODE -ne 0) { throw "pip install failed (exit $LASTEXITCODE)" }
+Log "      Dependencies installed OK"
 
-# Use venv python for all subsequent steps
-$PythonExe = "$VenvDir\Scripts\python.exe"
+$VenvPython = "$VenvDir\Scripts\python.exe"
 
-# ── 4. Write prod_config.py (overrides dev config.py) ────────────────────────
+# ── 4. Write production config.py ─────────────────────────────────────────────
+Log "[4/7] Writing production config..."
+$InstallDirEsc = $InstallDir -replace "\\","\\\\"
+$DataDirEsc    = $DataDir    -replace "\\","\\\\"
 $prodConfig = @"
 # Production configuration — generated by installer. Do not edit manually.
-# Re-run the installer to change port or paths.
 import os
 from pathlib import Path
 
-SERVER_HOST  = '0.0.0.0'          # listen on all interfaces (intranet access)
+SERVER_HOST  = '0.0.0.0'
 SERVER_PORT  = $Port
 DEBUG_MODE   = False
 
-BASE_DIR     = Path(r'$($InstallDir -replace "\\","\\\\")' )
-DATABASE_PATH        = Path(r'$($DataDir -replace "\\","\\\\")') / 'dashboards.db'
-PORTFOLIO_DATABASE_PATH = Path(r'$($DataDir -replace "\\","\\\\")') / 'portfolio.db'
-EXCEL_OUTPUT_FOLDER  = Path(r'$($DataDir -replace "\\","\\\\")') / 'exports'
+BASE_DIR                 = Path(r'$InstallDirEsc')
+DATABASE_PATH            = Path(r'$DataDirEsc') / 'dashboards.db'
+PORTFOLIO_DATABASE_PATH  = Path(r'$DataDirEsc') / 'portfolio.db'
+EXCEL_OUTPUT_FOLDER      = Path(r'$DataDirEsc') / 'exports'
 
 DB_TIMEOUT = 30
 
@@ -98,38 +115,40 @@ DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 EXCEL_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 "@
 $prodConfig | Set-Content -Encoding UTF8 -Path (Join-Path $InstallDir "config.py")
-Write-Host "[4/6] Production config written (port $Port)"
+Log "      Config written (port $Port)"
 
-# ── 5. Verify database is present ────────────────────────────────────────────
-Write-Host "[5/6] Checking database..."
+# ── 5. Verify database ────────────────────────────────────────────────────────
+Log "[5/7] Checking database..."
 $dbPath = Join-Path $DataDir "dashboards.db"
 if (Test-Path $dbPath) {
-    $sizeMB = [math]::Round((Get-Item $dbPath).Length / 1MB, 2)
-    Write-Host "      Database found ($sizeMB MB): $dbPath"
+    Log "      DB found ($([math]::Round((Get-Item $dbPath).Length/1MB,2)) MB)"
 } else {
-    Write-Host "      WARNING: Database not found at $dbPath"
-    Write-Host "      A fresh empty database will be created on first server start."
+    Log "      WARNING: DB not found — will be created on first start"
 }
 
-# ── 6. Register Windows Service via WinSW ────────────────────────────────────
-Write-Host "[6/7] Registering Windows service '$ServiceName'..."
+# ── 6. Register Windows service via WinSW ────────────────────────────────────
+Log "[6/7] Registering Windows service '$ServiceName'..."
 
-# Remove existing service if upgrading
 $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existing) {
+    Log "      Stopping existing service..."
     Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 3
     sc.exe delete $ServiceName | Out-Null
-    Start-Sleep -Seconds 2
+    # Wait for service to be fully deleted (up to 15s)
+    $waited = 0
+    while ((Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) -and $waited -lt 15) {
+        Start-Sleep -Seconds 1; $waited++
+    }
+    Log "      Old service removed (waited ${waited}s)"
 }
 
-# Write WinSW XML config
 $winswXml = @"
 <service>
   <id>$ServiceName</id>
   <name>Overall Programs Dashboard</name>
   <description>Web-based project dashboard (Flask, port $Port)</description>
-  <executable>$PythonExe</executable>
+  <executable>$VenvPython</executable>
   <arguments>server.py</arguments>
   <workingdirectory>$InstallDir</workingdirectory>
   <logpath>$LogDir</logpath>
@@ -141,74 +160,49 @@ $winswXml = @"
   <onfailure action="restart" delay="20 sec"/>
 </service>
 "@
-$xmlPath = Join-Path $InstallDir "nssm\$ServiceName.xml"
-$winswXml | Set-Content -Encoding UTF8 -Path $xmlPath
-
-# WinSW requires the exe to be named after the service
+$xmlPath     = Join-Path $InstallDir "nssm\$ServiceName.xml"
 $winswService = Join-Path $InstallDir "nssm\$ServiceName.exe"
+$winswXml | Set-Content -Encoding UTF8 -Path $xmlPath
 Copy-Item $WinSwExe $winswService -Force
 
-& $winswService install
-if ($LASTEXITCODE -ne 0) { throw "WinSW service install failed" }
+Log "      Running WinSW install..."
+$out = & $winswService install 2>&1
+Log "      WinSW output: $out  (exit $LASTEXITCODE)"
+if ($LASTEXITCODE -ne 0) { throw "WinSW install failed (exit $LASTEXITCODE)" }
 
-# ── 7. Open firewall port ────────────────────────────────────────────────────
-Write-Host "[7/8] Opening firewall port $Port..."
+# ── 7. Open firewall & register backup task ───────────────────────────────────
+Log "[7/7] Firewall + backup task..."
 $ruleName = "Overall Programs Dashboard (port $Port)"
 Remove-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-New-NetFirewallRule `
-    -DisplayName $ruleName `
-    -Direction   Inbound  `
-    -Protocol    TCP      `
-    -LocalPort   $Port    `
-    -Action      Allow    `
-    -Profile     Domain,Private | Out-Null
+New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Protocol TCP `
+    -LocalPort $Port -Action Allow -Profile Domain,Private | Out-Null
 
-# ── 8. Register nightly backup Task Scheduler job ────────────────────────────
-Write-Host "[8/8] Registering nightly backup task..."
 $backupScript = Join-Path $InstallDir "installer\backup_db.ps1"
 $taskName     = "OverallDashboard_NightlyBackup"
-
-# Remove existing task if upgrading
 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-
-$action  = New-ScheduledTaskAction `
-    -Execute    "powershell.exe" `
-    -Argument   "-NoProfile -ExecutionPolicy Bypass -File `"$backupScript`" -DataDir `"$DataDir`" -BackupRoot `"$DataDir\backups`""
-$trigger = New-ScheduledTaskTrigger -Daily -At "01:00"
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable:$false
+$action    = New-ScheduledTaskAction -Execute "powershell.exe" `
+    -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$backupScript`" -DataDir `"$DataDir`" -BackupRoot `"$DataDir\backups`""
+$trigger   = New-ScheduledTaskTrigger -Daily -At "01:00"
+$settings  = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable:$false
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger `
+    -Settings $settings -Principal $principal | Out-Null
 
-Register-ScheduledTask `
-    -TaskName  $taskName `
-    -Action    $action   `
-    -Trigger   $trigger  `
-    -Settings  $settings `
-    -Principal $principal `
-    -Description "Nightly SQLite backup of Overall Programs Dashboard databases" | Out-Null
-
-Write-Host "  ✓ Backup scheduled: daily at 01:00, keeps 30 daily + 4 weekly"
-Write-Host "  ✓ Backup location: $DataDir\backups"
-
-# ── Start service ────────────────────────────────────────────────────────────
-Write-Host "Starting service..."
-& $winswService start
+# ── Start service ─────────────────────────────────────────────────────────────
+Log "Starting service..."
+& $winswService start 2>&1 | ForEach-Object { Log "WinSW start: $_" }
 Start-Sleep -Seconds 5
 
 $svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($svc -and $svc.Status -eq 'Running') {
-    Write-Host ""
-    Write-Host "========================================="
-    Write-Host "  Installation complete!"
-    Write-Host "  Dashboard: http://localhost:$Port"
-    Write-Host "  Service:   $ServiceName (auto-start)"
-    Write-Host "  Data:      $DataDir"
-    Write-Host "  Logs:      $LogDir"
-    Write-Host "  Backups:   $DataDir\backups (daily 01:00)"
-    Write-Host "========================================="
-    Write-Host "=== post_install.ps1 completed OK ==="
-    Stop-Transcript | Out-Null
+    Log "========================================="
+    Log "  Installation complete!"
+    Log "  Dashboard: http://localhost:$Port"
+    Log "  Logs:      $LogDir"
+    Log "  Log file:  $LogFile"
+    Log "========================================="
+    Log "=== SUCCESS ==="
 } else {
-    Write-Host "ERROR: Service did not start. Status: $($svc.Status)"
-    Stop-Transcript | Out-Null
-    throw "Service did not start. Check logs at $LogDir"
+    $status = if ($svc) { $svc.Status } else { "not found" }
+    throw "Service did not start (status: $status). Check $LogDir for WinSW logs."
 }
