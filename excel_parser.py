@@ -70,10 +70,6 @@ class ExcelParser:
                 description_str = str(description or '').strip()
                 is_gate_milestone = bool(re.match(r'^Gate\s*\d+\s*$', description_str, re.IGNORECASE))
                 
-                # Skip rows without owner (unless it's a gate milestone)
-                if not assigned_to and not is_gate_milestone:
-                    continue
-                
                 # Parse dates
                 start_date_str = self._parse_date(date_entered)
                 end_date_str = self._parse_date(due_date)
