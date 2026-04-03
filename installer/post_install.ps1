@@ -8,6 +8,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# ── Write all output to a log file so errors are visible ─────────────────────
+$LogDir = Join-Path (Join-Path $env:ProgramData "OverallDashboard") "logs"
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+$transcript = Join-Path $LogDir "install-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+Start-Transcript -Path $transcript -Append | Out-Null
+Write-Host "=== post_install.ps1 started $(Get-Date) ==="
+
 $PythonInstaller = Join-Path $InstallDir "installer\python-installer.exe"
 $PythonDir  = Join-Path $InstallDir "python"
 $PythonExe  = Join-Path $PythonDir  "python.exe"
@@ -40,8 +48,9 @@ if (-not (Test-Path "$VenvDir\Scripts\python.exe")) {
     & $PythonExe -m venv $VenvDir
     if ($LASTEXITCODE -ne 0) { throw "venv creation failed" }
 }
-Write-Host "      Installing dependencies..."
-& "$VenvDir\Scripts\pip.exe" install -q -r (Join-Path $InstallDir "requirements.txt")
+Write-Host "      Installing dependencies (offline wheels)..."
+$wheelsDir = Join-Path $InstallDir "installer\wheels"
+& "$VenvDir\Scripts\pip.exe" install -q --no-index --find-links $wheelsDir -r (Join-Path $InstallDir "requirements.txt")
 if ($LASTEXITCODE -ne 0) { throw "pip install failed" }
 Write-Host "      Dependencies installed OK"
 
@@ -196,6 +205,10 @@ if ($svc -and $svc.Status -eq 'Running') {
     Write-Host "  Logs:      $LogDir"
     Write-Host "  Backups:   $DataDir\backups (daily 01:00)"
     Write-Host "========================================="
+    Write-Host "=== post_install.ps1 completed OK ==="
+    Stop-Transcript | Out-Null
 } else {
+    Write-Host "ERROR: Service did not start. Status: $($svc.Status)"
+    Stop-Transcript | Out-Null
     throw "Service did not start. Check logs at $LogDir"
 }

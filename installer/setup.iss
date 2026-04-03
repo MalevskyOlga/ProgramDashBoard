@@ -142,6 +142,9 @@ Source: "post_install.ps1";                DestDir: "{app}\installer";          
 Source: "pre_uninstall.ps1";               DestDir: "{app}\installer";           Flags: ignoreversion
 Source: "backup_db.ps1";                   DestDir: "{app}\installer";           Flags: ignoreversion
 
+; Offline pip wheels — allows install on intranet servers with no internet
+Source: "wheels\*";                        DestDir: "{app}\installer\wheels";    Flags: ignoreversion recursesubdirs
+
 ; Seed database — only installed if no database exists yet (never overwrites production data)
 Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{commonappdata}\OverallDashboard"; Flags: onlyifdoesntexist uninsneveruninstall
 Source: "{#SrcRoot}\database\portfolio.db";  DestDir: "{commonappdata}\OverallDashboard"; Flags: onlyifdoesntexist uninsneveruninstall
