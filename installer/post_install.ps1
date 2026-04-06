@@ -168,7 +168,7 @@ Log "      Config written (port $Port)"
 # -- 5. Verify database and seed resource_teams --------------------------------
 Log "[5/7] Checking database..."
 $dbPath     = Join-Path $DataDir "dashboards.db"
-$seedDbPath = Join-Path $InstallDir "database\dashboards.db"
+$seedDbPath = Join-Path $InstallDir "installer\seed_dashboards.db"
 if (Test-Path $dbPath) {
     Log "      DB found ($([math]::Round((Get-Item $dbPath).Length/1MB,2)) MB)"
 } else {
@@ -199,9 +199,14 @@ else:
     print(f"resource_teams already has {count} rows, skipping seed")
 src.close(); dst.close()
 '@ | Set-Content -Encoding UTF8 -Path $seedFile
-    $seedOut = & $VenvPython $seedFile $dbPath $seedDbPath 2>&1
-    Log "      DB seed: $seedOut"
-    Remove-Item $seedFile -ErrorAction SilentlyContinue
+    try {
+        $seedOut = & $VenvPython $seedFile $dbPath $seedDbPath 2>&1 | Out-String
+        Log "      DB seed: $seedOut"
+    } catch {
+        Log "      DB seed warning (non-fatal): $_"
+    } finally {
+        Remove-Item $seedFile -ErrorAction SilentlyContinue
+    }
 }
 
 # -- 6. Register Windows service via WinSW ------------------------------------

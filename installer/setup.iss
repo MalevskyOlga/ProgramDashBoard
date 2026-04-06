@@ -151,7 +151,8 @@ Source: "wheels\*";                        DestDir: "{app}\installer\wheels";   
 
 ; Seed database — only installed if no database exists yet (never overwrites production data)
 Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{commonappdata}\OverallDashboard"; Flags: onlyifdoesntexist uninsneveruninstall
-Source: "{#SrcRoot}\database\portfolio.db";  DestDir: "{commonappdata}\OverallDashboard"; Flags: onlyifdoesntexist uninsneveruninstall
+; Separate seed copy always deployed so post_install.ps1 can seed resource_teams on upgrades too
+Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{app}\installer"; DestName: "seed_dashboards.db"; Flags: ignoreversion
 
 ; ── Start Menu shortcut ───────────────────────────────────────────────────────
 [Icons]
