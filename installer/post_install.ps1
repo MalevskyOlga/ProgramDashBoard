@@ -50,8 +50,17 @@ if (-not (Test-Path $PythonExe)) {
     Log "      Running: $PythonInstaller $installArgs"
     $proc = Start-Process -FilePath $PythonInstaller -ArgumentList $installArgs -Wait -PassThru
     Log "      Python installer exit code: $($proc.ExitCode)"
+
+    # Exit code 1618 = another MSI in progress. Wait and retry once.
+    if ($proc.ExitCode -eq 1618) {
+        Log "      Exit 1618 (another installer running) - waiting 15s then retrying..."
+        Start-Sleep -Seconds 15
+        $proc = Start-Process -FilePath $PythonInstaller -ArgumentList $installArgs -Wait -PassThru
+        Log "      Python installer retry exit code: $($proc.ExitCode)"
+    }
+
     if (-not (Test-Path $PythonExe)) {
-        throw "Python install finished but python.exe not found at: $PythonExe"
+        throw "Python install finished (exit $($proc.ExitCode)) but python.exe not found at: $PythonExe"
     }
     Log "      Python installed OK"
 } else {
@@ -60,14 +69,24 @@ if (-not (Test-Path $PythonExe)) {
 
 # -- 3. Create venv and install dependencies (offline wheels) ------------------
 Log "[3/7] Creating virtual environment at $VenvDir ..."
-if (-not (Test-Path "$VenvDir\Scripts\python.exe")) {
-    & $PythonExe -m venv $VenvDir
-    if ($LASTEXITCODE -ne 0) { throw "venv creation failed (exit $LASTEXITCODE)" }
+# Always remove a stale venv (e.g. from a previous failed install) before recreating
+if (Test-Path $VenvDir) {
+    Log "      Removing existing venv for clean reinstall..."
+    Remove-Item -Recurse -Force $VenvDir
 }
+& $PythonExe -m venv $VenvDir
+if ($LASTEXITCODE -ne 0) { throw "venv creation failed (exit $LASTEXITCODE)" }
+Log "      Venv created OK"
+
 Log "      Installing dependencies from bundled wheels..."
 if (-not (Test-Path $WheelsDir)) { throw "Wheels folder not found: $WheelsDir" }
-& "$VenvDir\Scripts\pip.exe" install --no-index --find-links $WheelsDir -r (Join-Path $InstallDir "requirements.txt") 2>&1 | ForEach-Object { Log "pip: $_" }
-if ($LASTEXITCODE -ne 0) { throw "pip install failed (exit $LASTEXITCODE)" }
+$reqFile   = Join-Path $InstallDir "requirements.txt"
+$pipLog    = Join-Path $LogDir "pip-install.log"
+& "$VenvDir\Scripts\pip.exe" install --no-index --find-links "$WheelsDir" -r "$reqFile" --log "$pipLog" 2>&1 | ForEach-Object { Log "pip: $_" }
+if ($LASTEXITCODE -ne 0) {
+    Log "      pip failed - full output in: $pipLog"
+    throw "pip install failed (exit $LASTEXITCODE) - see $pipLog"
+}
 Log "      Dependencies installed OK"
 
 $VenvPython = "$VenvDir\Scripts\python.exe"
