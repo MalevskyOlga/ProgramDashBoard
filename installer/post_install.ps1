@@ -177,28 +177,31 @@ if (Test-Path $dbPath) {
 
 # Seed resource_teams from the bundled DB if the table is empty (fresh install or upgrade)
 if ((Test-Path $dbPath) -and (Test-Path $seedDbPath)) {
-    $seedScript = @"
+    $seedFile = Join-Path $env:TEMP "dashboard_seed.py"
+    @'
 import sqlite3, sys
-dst = sqlite3.connect(r'$dbPath')
-src = sqlite3.connect(r'$seedDbPath')
-dst.execute('''CREATE TABLE IF NOT EXISTS resource_teams (
+db_path, seed_path = sys.argv[1], sys.argv[2]
+dst = sqlite3.connect(db_path)
+src = sqlite3.connect(seed_path)
+dst.execute("""CREATE TABLE IF NOT EXISTS resource_teams (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     team_name TEXT NOT NULL,
     owner_name TEXT NOT NULL UNIQUE,
-    capacity_hrs_per_week REAL NOT NULL DEFAULT 37.5)''')
-existing = dst.execute('SELECT COUNT(*) FROM resource_teams').fetchone()[0]
-if existing == 0:
-    rows = src.execute('SELECT owner_name, team_name, capacity_hrs_per_week FROM resource_teams').fetchall()
+    capacity_hrs_per_week REAL NOT NULL DEFAULT 37.5)""")
+count = dst.execute("SELECT COUNT(*) FROM resource_teams").fetchone()[0]
+if count == 0:
+    rows = src.execute("SELECT owner_name, team_name, capacity_hrs_per_week FROM resource_teams").fetchall()
     for row in rows:
-        dst.execute('INSERT OR IGNORE INTO resource_teams (owner_name, team_name, capacity_hrs_per_week) VALUES (?,?,?)', row)
+        dst.execute("INSERT OR IGNORE INTO resource_teams (owner_name, team_name, capacity_hrs_per_week) VALUES (?,?,?)", row)
     dst.commit()
-    print(f'Seeded {len(rows)} resource_teams rows')
+    print(f"Seeded {len(rows)} resource_teams rows")
 else:
-    print(f'resource_teams already has {existing} rows, skipping seed')
+    print(f"resource_teams already has {count} rows, skipping seed")
 src.close(); dst.close()
-"@
-    $seedOut = & $VenvPython -c $seedScript 2>&1
+'@ | Set-Content -Encoding UTF8 -Path $seedFile
+    $seedOut = & $VenvPython $seedFile $dbPath $seedDbPath 2>&1
     Log "      DB seed: $seedOut"
+    Remove-Item $seedFile -ErrorAction SilentlyContinue
 }
 
 # -- 6. Register Windows service via WinSW ------------------------------------
