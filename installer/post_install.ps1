@@ -46,18 +46,31 @@ function Invoke-PythonInstaller {
     if (-not (Test-Path $PythonInstaller)) {
         throw "Python installer not found at: $PythonInstaller"
     }
-    $args = "/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 " +
-            "Include_launcher=0 Include_doc=0 " +
-            "TargetDir=`"$PythonDir`""
-    Log "      Running: $PythonInstaller $args"
-    $p = Start-Process -FilePath $PythonInstaller -ArgumentList $args -Wait -PassThru
+    $msiLog = Join-Path $LogDir "python-msi-install.log"
+    $installArgs = "/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 " +
+                   "Include_launcher=0 Include_doc=0 " +
+                   "TargetDir=`"$PythonDir`" " +
+                   "/log `"$msiLog`""
+    Log "      Running: $PythonInstaller $installArgs"
+    Log "      MSI log will be written to: $msiLog"
+    $p = Start-Process -FilePath $PythonInstaller -ArgumentList $installArgs -Wait -PassThru
     Log "      Python installer exit code: $($p.ExitCode)"
     # Exit 1618 = another MSI in progress; wait and retry once
     if ($p.ExitCode -eq 1618) {
         Log "      Exit 1618 - waiting 20s then retrying..."
         Start-Sleep -Seconds 20
-        $p = Start-Process -FilePath $PythonInstaller -ArgumentList $args -Wait -PassThru
+        $p = Start-Process -FilePath $PythonInstaller -ArgumentList $installArgs -Wait -PassThru
         Log "      Python installer retry exit code: $($p.ExitCode)"
+    }
+    # Exit 1603 = fatal MSI error (antivirus, policy, missing prereq)
+    if ($p.ExitCode -eq 1603) {
+        if (Test-Path $msiLog) {
+            $tail = Get-Content $msiLog -ErrorAction SilentlyContinue | Select-Object -Last 20
+            Log "      MSI log tail: $($tail -join ' | ')"
+        }
+        throw "Python installer failed with exit 1603 (fatal MSI error). " +
+              "Possible causes: antivirus blocking, Group Policy restriction, or missing VC++ redistributable. " +
+              "Check MSI log: $msiLog"
     }
     return $p
 }
