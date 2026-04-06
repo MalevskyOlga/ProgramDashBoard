@@ -40,31 +40,53 @@ Log "[1/7] Data directory ready: $DataDir"
 
 # -- 2. Install Python app-local -----------------------------------------------
 Log "[2/7] Installing Python to $PythonDir ..."
-if (-not (Test-Path $PythonExe)) {
+
+# Helper: run the Python installer and return the process
+function Invoke-PythonInstaller {
     if (-not (Test-Path $PythonInstaller)) {
         throw "Python installer not found at: $PythonInstaller"
     }
-    $installArgs = "/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 " +
-                   "Include_launcher=0 Include_doc=0 " +
-                   "TargetDir=`"$PythonDir`""
-    Log "      Running: $PythonInstaller $installArgs"
-    $proc = Start-Process -FilePath $PythonInstaller -ArgumentList $installArgs -Wait -PassThru
-    Log "      Python installer exit code: $($proc.ExitCode)"
-
-    # Exit code 1618 = another MSI in progress. Wait and retry once.
-    if ($proc.ExitCode -eq 1618) {
-        Log "      Exit 1618 (another installer running) - waiting 15s then retrying..."
-        Start-Sleep -Seconds 15
-        $proc = Start-Process -FilePath $PythonInstaller -ArgumentList $installArgs -Wait -PassThru
-        Log "      Python installer retry exit code: $($proc.ExitCode)"
+    $args = "/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 " +
+            "Include_launcher=0 Include_doc=0 " +
+            "TargetDir=`"$PythonDir`""
+    Log "      Running: $PythonInstaller $args"
+    $p = Start-Process -FilePath $PythonInstaller -ArgumentList $args -Wait -PassThru
+    Log "      Python installer exit code: $($p.ExitCode)"
+    # Exit 1618 = another MSI in progress; wait and retry once
+    if ($p.ExitCode -eq 1618) {
+        Log "      Exit 1618 - waiting 20s then retrying..."
+        Start-Sleep -Seconds 20
+        $p = Start-Process -FilePath $PythonInstaller -ArgumentList $args -Wait -PassThru
+        Log "      Python installer retry exit code: $($p.ExitCode)"
     }
+    return $p
+}
 
+# Check if Python exists AND actually runs (file present doesn't mean install succeeded)
+$pythonOK = $false
+if (Test-Path $PythonExe) {
+    $testOut = & $PythonExe -c "print('ok')" 2>&1
+    $pythonOK = ($LASTEXITCODE -eq 0)
+    if (-not $pythonOK) {
+        Log "      python.exe exists but cannot run (exit $LASTEXITCODE): $testOut"
+        Log "      Removing broken Python installation..."
+        Remove-Item -Recurse -Force $PythonDir
+    }
+}
+
+if (-not $pythonOK) {
+    $proc = Invoke-PythonInstaller
     if (-not (Test-Path $PythonExe)) {
         throw "Python install finished (exit $($proc.ExitCode)) but python.exe not found at: $PythonExe"
     }
-    Log "      Python installed OK"
+    # Final verification
+    $testOut = & $PythonExe -c "print('ok')" 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "Python installed but cannot run (exit $LASTEXITCODE - likely missing DLLs): $testOut"
+    }
+    Log "      Python installed and verified OK"
 } else {
-    Log "      Python already present, skipping"
+    Log "      Python already present and working, skipping"
 }
 
 # -- 3. Create venv and install dependencies (offline wheels) ------------------
