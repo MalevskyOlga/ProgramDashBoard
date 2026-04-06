@@ -91,6 +91,13 @@ if (-not $pythonOK) {
 
 # -- 3. Create venv and install dependencies (offline wheels) ------------------
 Log "[3/7] Creating virtual environment at $VenvDir ..."
+# Stop the service first — running Python locks DLL files inside the venv
+$existingSvc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+if ($existingSvc -and $existingSvc.Status -ne 'Stopped') {
+    Log "      Stopping service '$ServiceName' to release file locks..."
+    Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 4
+}
 # Always remove a stale venv (e.g. from a previous failed install) before recreating
 if (Test-Path $VenvDir) {
     Log "      Removing existing venv for clean reinstall..."
