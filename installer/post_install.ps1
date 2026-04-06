@@ -47,7 +47,7 @@ function Invoke-PythonInstaller {
         throw "Python installer not found at: $PythonInstaller"
     }
     $msiLog = Join-Path $LogDir "python-msi-install.log"
-    $installArgs = "/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 " +
+    $installArgs = "/quiet InstallAllUsers=1 PrependPath=0 Include_test=0 " +
                    "Include_launcher=0 Include_doc=0 Include_tcltk=0 " +
                    "TargetDir=`"$PythonDir`" " +
                    "/log `"$msiLog`""
