@@ -165,13 +165,40 @@ $cfgLines = @(
 $cfgLines -join "`r`n" | Set-Content -Encoding UTF8 -Path (Join-Path $InstallDir 'config.py')
 Log "      Config written (port $Port)"
 
-# -- 5. Verify database --------------------------------------------------------
+# -- 5. Verify database and seed resource_teams --------------------------------
 Log "[5/7] Checking database..."
-$dbPath = Join-Path $DataDir "dashboards.db"
+$dbPath     = Join-Path $DataDir "dashboards.db"
+$seedDbPath = Join-Path $InstallDir "database\dashboards.db"
 if (Test-Path $dbPath) {
     Log "      DB found ($([math]::Round((Get-Item $dbPath).Length/1MB,2)) MB)"
 } else {
     Log "      WARNING: DB not found - will be created on first start"
+}
+
+# Seed resource_teams from the bundled DB if the table is empty (fresh install or upgrade)
+if ((Test-Path $dbPath) -and (Test-Path $seedDbPath)) {
+    $seedScript = @"
+import sqlite3, sys
+dst = sqlite3.connect(r'$dbPath')
+src = sqlite3.connect(r'$seedDbPath')
+dst.execute('''CREATE TABLE IF NOT EXISTS resource_teams (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_name TEXT NOT NULL,
+    owner_name TEXT NOT NULL UNIQUE,
+    capacity_hrs_per_week REAL NOT NULL DEFAULT 37.5)''')
+existing = dst.execute('SELECT COUNT(*) FROM resource_teams').fetchone()[0]
+if existing == 0:
+    rows = src.execute('SELECT owner_name, team_name, capacity_hrs_per_week FROM resource_teams').fetchall()
+    for row in rows:
+        dst.execute('INSERT OR IGNORE INTO resource_teams (owner_name, team_name, capacity_hrs_per_week) VALUES (?,?,?)', row)
+    dst.commit()
+    print(f'Seeded {len(rows)} resource_teams rows')
+else:
+    print(f'resource_teams already has {existing} rows, skipping seed')
+src.close(); dst.close()
+"@
+    $seedOut = & $VenvPython -c $seedScript 2>&1
+    Log "      DB seed: $seedOut"
 }
 
 # -- 6. Register Windows service via WinSW ------------------------------------
