@@ -41,6 +41,36 @@ Log "[1/7] Data directory ready: $DataDir"
 # -- 2. Install Python app-local -----------------------------------------------
 Log "[2/7] Installing Python to $PythonDir ..."
 
+# Helper: remove any Python 3.14 MSI components left by previous (partial) installs.
+# Without this, the bundle migrates JustForMe→AllUsers and then uninstalls the
+# JustForMe packages — wiping the same files it just installed (same TargetDir).
+function Invoke-PythonPreclean {
+    $regPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+    )
+    $found = 0
+    foreach ($regPath in $regPaths) {
+        if (-not (Test-Path $regPath)) { continue }
+        Get-ChildItem $regPath -ErrorAction SilentlyContinue | ForEach-Object {
+            $props = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
+            if ($props.DisplayName -match "Python 3\.14") {
+                $productCode = $_.PSChildName
+                Log "      Pre-removing: $($props.DisplayName) ($productCode)"
+                $p = Start-Process "msiexec.exe" -ArgumentList "/x `"$productCode`" /quiet /norestart" -Wait -PassThru
+                Log "      msiexec /x exit: $($p.ExitCode)"
+                $found++
+            }
+        }
+    }
+    if ($found -eq 0) {
+        Log "      No existing Python 3.14 components found, nothing to pre-clean"
+    } else {
+        Log "      Pre-clean removed $found Python 3.14 component(s)"
+    }
+}
+
 # Helper: run the Python installer and return the process
 function Invoke-PythonInstaller {
     if (-not (Test-Path $PythonInstaller)) {
@@ -88,6 +118,7 @@ if (Test-Path $PythonExe) {
 }
 
 if (-not $pythonOK) {
+    Invoke-PythonPreclean
     $proc = Invoke-PythonInstaller
     if (-not (Test-Path $PythonExe)) {
         throw "Python install finished (exit $($proc.ExitCode)) but python.exe not found at: $PythonExe"
