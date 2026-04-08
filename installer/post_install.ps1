@@ -45,6 +45,19 @@ Log "[2/7] Installing Python to $PythonDir ..."
 # Without this, the bundle migrates JustForMe→AllUsers and then uninstalls the
 # JustForMe packages — wiping the same files it just installed (same TargetDir).
 function Invoke-PythonPreclean {
+    # Convert a product code GUID to the squished form used by Windows Installer registry
+    function Convert-GuidToSquished([string]$Guid) {
+        $g = $Guid.ToUpper() -replace '[{}-]', ''
+        if ($g.Length -ne 32) { return $null }
+        # Segments 1-3: reverse byte pairs; segments 4-5: reverse individual chars
+        $s1 = -join ($g[6],$g[7],$g[4],$g[5],$g[2],$g[3],$g[0],$g[1])
+        $s2 = -join ($g[10],$g[11],$g[8],$g[9])
+        $s3 = -join ($g[14],$g[15],$g[12],$g[13])
+        $s4 = -join ($g[19],$g[18],$g[17],$g[16])
+        $s5 = -join ($g[31],$g[30],$g[29],$g[28],$g[27],$g[26],$g[25],$g[24],$g[23],$g[22],$g[21],$g[20])
+        return $s1 + $s2 + $s3 + $s4 + $s5
+    }
+
     $regPaths = @(
         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
         "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
@@ -57,13 +70,54 @@ function Invoke-PythonPreclean {
             $props = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
             if ($props.DisplayName -match "Python 3\.14") {
                 $productCode = $_.PSChildName
+                $keyPath     = $_.PSPath
                 Log "      Pre-removing: $($props.DisplayName) ($productCode)"
-                $p = Start-Process "msiexec.exe" -ArgumentList "/x `"$productCode`" /quiet /norestart" -Wait -PassThru
+                # MSIFASTINSTALL=7: skip rollback/file-check so uninstall succeeds even with missing files
+                $p = Start-Process "msiexec.exe" -ArgumentList "/x `"$productCode`" /quiet /norestart MSIFASTINSTALL=7" -Wait -PassThru
                 Log "      msiexec /x exit: $($p.ExitCode)"
+                # If msiexec still failed, force-remove registry entries so the WiX bundle
+                # doesn't see this package as "Present" on the next run
+                if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 1605) {
+                    Log "      Force-removing registry entries for: $productCode"
+                    Remove-Item $keyPath -Recurse -Force -ErrorAction SilentlyContinue
+                    $squished = Convert-GuidToSquished $productCode
+                    if ($squished) {
+                        @(
+                            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\$squished",
+                            "HKLM:\SOFTWARE\Classes\Installer\Products\$squished"
+                        ) | ForEach-Object {
+                            if (Test-Path $_) {
+                                Remove-Item $_ -Recurse -Force -ErrorAction SilentlyContinue
+                                Log "      Removed MSI tracking key: $_"
+                            }
+                        }
+                    }
+                }
                 $found++
             }
         }
     }
+
+    # Clear Python 3.14 package cache — stale "cached: Complete" entries cause the WiX
+    # bundle planner to skip lib_AllUsers (execute: None, uncache: Yes) instead of installing it
+    $packageCache = Join-Path $env:ProgramData "Package Cache"
+    if (Test-Path $packageCache) {
+        Get-ChildItem $packageCache -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $hasPyMsi = Get-ChildItem $_.FullName -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match "^(core|exe|lib|pip|dev|tcltk|test|doc|launcher)\.msi$" }
+            if ($hasPyMsi) {
+                Log "      Clearing package cache: $($_.FullName)"
+                Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+                $found++
+            }
+        }
+        $unverified = Join-Path $packageCache ".unverified"
+        if (Test-Path $unverified) {
+            Remove-Item $unverified -Recurse -Force -ErrorAction SilentlyContinue
+            Log "      Cleared .unverified package cache"
+        }
+    }
+
     if ($found -eq 0) {
         Log "      No existing Python 3.14 components found, nothing to pre-clean"
     } else {
