@@ -105,15 +105,25 @@ function Invoke-PythonInstaller {
     return $p
 }
 
+# Helper: test python.exe without letting stderr trigger $ErrorActionPreference = Stop
+function Test-PythonOK {
+    $savedPref = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $out = & $PythonExe -c "print('ok')" 2>&1
+    $code = $LASTEXITCODE
+    $ErrorActionPreference = $savedPref
+    return [PSCustomObject]@{ OK = ($code -eq 0); ExitCode = $code; Output = "$out" }
+}
+
 # Check if Python exists AND actually runs (file present doesn't mean install succeeded)
 $pythonOK = $false
 if (Test-Path $PythonExe) {
-    $testOut = & $PythonExe -c "print('ok')" 2>&1
-    $pythonOK = ($LASTEXITCODE -eq 0)
+    $result = Test-PythonOK
+    $pythonOK = $result.OK
     if (-not $pythonOK) {
-        Log "      python.exe exists but cannot run (exit $LASTEXITCODE): $testOut"
+        Log "      python.exe exists but cannot run (exit $($result.ExitCode)): $($result.Output)"
         Log "      Removing broken Python installation..."
-        Remove-Item -Recurse -Force $PythonDir
+        Remove-Item -Recurse -Force $PythonDir -ErrorAction SilentlyContinue
     }
 }
 
@@ -124,9 +134,9 @@ if (-not $pythonOK) {
         throw "Python install finished (exit $($proc.ExitCode)) but python.exe not found at: $PythonExe"
     }
     # Final verification
-    $testOut = & $PythonExe -c "print('ok')" 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        throw "Python installed but cannot run (exit $LASTEXITCODE - likely missing DLLs): $testOut"
+    $result = Test-PythonOK
+    if (-not $result.OK) {
+        throw "Python installed but cannot run (exit $($result.ExitCode) - likely missing DLLs): $($result.Output)"
     }
     Log "      Python installed and verified OK"
 } else {
