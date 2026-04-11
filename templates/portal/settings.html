@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Pipeline Portal</title>
+<style>
+:root {
+  --navy: #1F3964;
+  --blue: #0070C0;
+  --green: #70AD47;
+  --orange: #FF9900;
+  --red: #e53935;
+  --grey: #D6DCE4;
+  --bg: #f4f6fb;
+  --card-bg: #fff;
+  --border: #dde3f0;
+  --text: #222;
+  --muted: #888;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+
+.topbar {
+  background: var(--navy); color: #fff;
+  padding: 12px 28px; display: flex; align-items: center; gap: 16px;
+  position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.topbar a { color: #aac4ff; text-decoration: none; font-size: 13px; }
+.topbar h1 { font-size: 16px; font-weight: 700; flex: 1; }
+
+.page { max-width: 960px; margin: 0 auto; padding: 32px 24px; }
+
+.section-card {
+  background: var(--card-bg); border-radius: 10px; border: 1px solid var(--border);
+  padding: 24px; margin-bottom: 28px; box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.section-card h2 {
+  font-size: 14px; font-weight: 700; color: var(--navy); text-transform: uppercase;
+  letter-spacing: .05em; margin-bottom: 4px;
+}
+.section-card .desc { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { background: var(--navy); color: #fff; padding: 8px 12px; text-align: left; font-weight: 600; font-size: 12px; }
+td { padding: 8px 12px; border-bottom: 1px solid #eef0f6; vertical-align: middle; }
+tr:hover td { background: #f8f9ff; }
+
+select, input[type=text] {
+  border: 1px solid #ccd4e8; border-radius: 5px; padding: 5px 8px;
+  font-size: 12px; background: #fff; width: 100%;
+}
+select:focus, input:focus { outline: 2px solid var(--blue); border-color: var(--blue); }
+
+.btn {
+  padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; transition: opacity .15s;
+}
+.btn:hover { opacity: .85; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-danger  { background: var(--red);  color: #fff; }
+.btn-ghost   { background: #eee; color: #444; }
+
+.add-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; align-items: flex-end; }
+.add-row label { font-size: 11px; color: var(--muted); margin-bottom: 2px; display: block; }
+.add-row .field { display: flex; flex-direction: column; min-width: 180px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.legend-dot { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+.threshold-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-top: 12px; }
+.threshold-card { background: #f8f9ff; border: 1px solid #dde3f0; border-radius: 8px; padding: 14px; }
+.threshold-card .label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.threshold-card .val { font-size: 20px; font-weight: 700; color: var(--navy); }
+.threshold-card input { width: 80px; font-size: 16px; font-weight: 700; border: 1px solid #ccd4e8; border-radius: 4px; padding: 3px 6px; }
+
+.toast {
+  position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+  padding: 11px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0,0,0,.18); opacity: 0;
+  transition: opacity .3s;
+}
+.toast.show { opacity: 1; }
+.toast.ok  { background: var(--green); color: #fff; }
+.toast.err { background: var(--red);   color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/portal">&#8592; Portfolio</a>
+  <span style="opacity:.4">|</span>
+  <h1>Settings</h1>
+</div>
+
+<div class="page">
+
+  <!-- ── 1. Owner → Discipline Mapping ─────────────────────────── -->
+  <div class="section-card">
+    <h2>Owner → Discipline Mapping</h2>
+    <p class="desc">
+      Maps each person's name (as it appears in Gantt task "Owner" fields) to one or more resource disciplines.
+      This drives the automatic resource coverage computation in the Portfolio Overview.
+      One person can map to multiple disciplines.
+    </p>
+
+    <table id="mapTable">
+      <thead>
+        <tr>
+          <th>Owner Name</th>
+          <th>Discipline</th>
+          <th style="width:80px">Action</th>
+        </tr>
+      </thead>
+      <tbody id="mapBody">
+        {% for m in mappings %}
+        <tr id="maprow-{{ m.id }}">
+          <td>{{ m.owner_name }}</td>
+          <td>{{ m.discipline }}</td>
+          <td>
+            <button class="btn btn-danger" style="padding:3px 10px;font-size:11px"
+                    onclick="deleteMapping({{ m.id }})">Remove</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr id="emptyRow"><td colspan="3" style="color:var(--muted);text-align:center;padding:20px">
+          No mappings yet. Add one below.
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Add row -->
+    <div class="add-row">
+      <div class="field">
+        <label>Owner Name</label>
+        <input type="text" id="newOwner" placeholder="e.g. Alon" />
+      </div>
+      <div class="field">
+        <label>Discipline</label>
+        <select id="newDisc">
+          {% for d in disciplines %}
+          <option>{{ d }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="addMapping()">+ Add Mapping</button>
+    </div>
+
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-ghost" onclick="loadPresets()">Load Emerson Presets</button>
+      <button class="btn btn-ghost" onclick="clearAllMappings()">Clear All</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend" style="margin-top:20px;padding-top:16px;border-top:1px solid #eee">
+      <strong style="font-size:12px;color:var(--navy);width:100%">Coverage Color Reference</strong>
+      <div class="legend-item"><div class="legend-dot" style="background:#70AD47"></div>Fully — all tasks in discipline have owners</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#FF9900"></div>Partially — some tasks missing owners</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e53935"></div>No — discipline tasks exist but no owners assigned</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#D6DCE4"></div>N/A — no tasks for this discipline in project</div>
+    </div>
+  </div>
+
+  <!-- ── 2. Demand Thresholds ──────────────────────────────────── -->
+  <div class="section-card">
+    <h2>Demand Thresholds (Working Days)</h2>
+    <p class="desc">
+      Defines the day thresholds for Large / Medium / Small demand buckets.
+      Demand = total working days of a discipline's tasks overlapping the next 60 days.
+      Default: Large &gt; 16d, Medium 5–16d, Small &lt; 5d (matching ≈120hr / 40hr at 7.5hr/day).
+    </p>
+    <div class="threshold-grid">
+      <div class="threshold-card" style="border-top:3px solid #e53935">
+        <div class="label">LARGE (days &gt;)</div>
+        <input type="number" id="thLarge" value="16" min="1" max="60" />
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">≈ &gt;120 hr</div>
+      </div>
+      <div class="threshold-card" style="border-top:3px solid #FF9900">
+        <div class="label">MEDIUM (days ≥)</div>
+        <input type="number" id="thMedium" value="5" min="1" max="60" />
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">≈ 40–120 hr</div>
+      </div>
+      <div class="threshold-card" style="border-top:3px solid #70AD47">
+        <div class="label">SMALL (days &lt; Medium)</div>
+        <div class="val" style="font-size:14px;margin-top:6px;color:var(--muted)">Auto-calculated</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">≈ &lt;40 hr</div>
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn btn-primary" onclick="saveThresholds()">Save Thresholds</button>
+    </div>
+  </div>
+
+  <!-- ── 3. Disciplines List ───────────────────────────────────── -->
+  <div class="section-card">
+    <h2>Discipline List</h2>
+    <p class="desc">
+      These are the resource disciplines shown in the Priority Overview table
+      (matches the Excel priority list column headers).
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+      {% for d in disciplines %}
+      <span style="background:#f0f4ff;border:1px solid #c4d0f0;border-radius:16px;
+                   padding:4px 14px;font-size:12px;color:var(--navy)">{{ d }}</span>
+      {% endfor %}
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin-top:12px">
+      To change disciplines, edit <code>config.py → DISCIPLINES</code> and restart the server.
+    </p>
+  </div>
+
+  <!-- ── 4. Snapshot Management ───────────────────────────────── -->
+  <div class="section-card">
+    <h2>Snapshot Management</h2>
+    <p class="desc">
+      Snapshots capture the full portfolio state (priorities, resource statuses) at a point in time.
+      Use these to track month-over-month changes. Auto-snapshot is taken on each Excel import.
+    </p>
+    <button class="btn btn-primary" onclick="saveSnapshot()" style="margin-bottom:16px">
+      Save Snapshot Now
+    </button>
+    <table id="snapTable">
+      <thead>
+        <tr><th>Date</th><th>Source</th><th>Created</th><th style="width:100px">Action</th></tr>
+      </thead>
+      <tbody id="snapBody">
+        <tr><td colspan="4" style="color:var(--muted);text-align:center;padding:16px">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ── Presets (known Emerson Flame & Gas team) ──────────────────────────────
+const PRESETS = [
+  {owner_name:'Olga',   discipline:'Proj. Mgmt'},
+  {owner_name:'Olga',   discipline:'ATE'},
+  {owner_name:'Olga',   discipline:'NPD & Main.'},
+  {owner_name:'Olga Malevsky', discipline:'Proj. Mgmt'},
+  {owner_name:'Dima',   discipline:'Optics'},
+  {owner_name:'Dima',   discipline:'Sderot Cert.'},
+  {owner_name:'Elisha', discipline:'EE'},
+  {owner_name:'Alon',   discipline:'ME'},
+  {owner_name:'Alik',   discipline:'SW DEV'},
+  {owner_name:'Alik',   discipline:'R&D QA'},
+  {owner_name:'Nick',   discipline:'RSK Cert.'},
+  {owner_name:'Steve I',discipline:'FCT'},
+  {owner_name:'Pete',   discipline:'RSK Ops'},
+  {owner_name:'Dima M.',discipline:'Sderot'},
+  {owner_name:'Jordan', discipline:'RSK'},
+  {owner_name:'Zach',   discipline:'Product Mgmt'},
+  {owner_name:'Darren', discipline:'Proj. Mgmt'},
+  {owner_name:'Oz',     discipline:'Proj. Mgmt'},
+  {owner_name:'Tami',   discipline:'Proj. Mgmt'},
+  {owner_name:'Alex',   discipline:'Proj. Mgmt'},
+  {owner_name:'Meir',   discipline:'ME'},
+];
+
+// ── Mapping CRUD ──────────────────────────────────────────────────────────
+async function addMapping() {
+  const owner = document.getElementById('newOwner').value.trim();
+  const disc  = document.getElementById('newDisc').value;
+  if (!owner) { showToast('Enter owner name', 'err'); return; }
+
+  const res = await fetch('/api/settings/discipline-map', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({owner_name: owner, discipline: disc})
+  });
+  if (res.ok) {
+    document.getElementById('newOwner').value = '';
+    document.getElementById('emptyRow') && document.getElementById('emptyRow').remove();
+    await refreshMappings();
+    showToast('Mapping added', 'ok');
+  } else {
+    showToast('Error adding mapping', 'err');
+  }
+}
+
+async function deleteMapping(id) {
+  if (!confirm('Remove this mapping?')) return;
+  const res = await fetch(`/api/settings/discipline-map/${id}`, {method:'DELETE'});
+  if (res.ok) {
+    document.getElementById(`maprow-${id}`)?.remove();
+    showToast('Removed', 'ok');
+  }
+}
+
+async function refreshMappings() {
+  const rows = await fetch('/api/settings/discipline-map').then(r=>r.json());
+  const tbody = document.getElementById('mapBody');
+  tbody.innerHTML = rows.length === 0
+    ? `<tr id="emptyRow"><td colspan="3" style="color:var(--muted);text-align:center;padding:20px">No mappings yet.</td></tr>`
+    : rows.map(m => `
+      <tr id="maprow-${m.id}">
+        <td>${esc(m.owner_name)}</td>
+        <td>${esc(m.discipline)}</td>
+        <td><button class="btn btn-danger" style="padding:3px 10px;font-size:11px"
+            onclick="deleteMapping(${m.id})">Remove</button></td>
+      </tr>`).join('');
+}
+
+async function loadPresets() {
+  if (!confirm(`Load ${PRESETS.length} preset mappings? Existing mappings are kept.`)) return;
+  await fetch('/api/settings/discipline-map', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify([]) // clear first if needed — actually merge
+  });
+  for (const p of PRESETS) {
+    await fetch('/api/settings/discipline-map', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(p)
+    });
+  }
+  await refreshMappings();
+  showToast('Presets loaded', 'ok');
+}
+
+async function clearAllMappings() {
+  if (!confirm('Clear ALL mappings? This cannot be undone.')) return;
+  await fetch('/api/settings/discipline-map', {
+    method:'PUT', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify([])
+  });
+  await refreshMappings();
+  showToast('All mappings cleared', 'ok');
+}
+
+// ── Thresholds ────────────────────────────────────────────────────────────
+function saveThresholds() {
+  const large  = parseInt(document.getElementById('thLarge').value) || 16;
+  const medium = parseInt(document.getElementById('thMedium').value) || 5;
+  localStorage.setItem('pipeline_threshold_large',  large);
+  localStorage.setItem('pipeline_threshold_medium', medium);
+  showToast(`Thresholds saved: Large>${large}d, Medium≥${medium}d`, 'ok');
+}
+
+function loadThresholds() {
+  const l = localStorage.getItem('pipeline_threshold_large');
+  const m = localStorage.getItem('pipeline_threshold_medium');
+  if (l) document.getElementById('thLarge').value  = l;
+  if (m) document.getElementById('thMedium').value = m;
+}
+
+// ── Snapshots ─────────────────────────────────────────────────────────────
+async function saveSnapshot() {
+  const res = await fetch('/api/portfolio/snapshots', {method:'POST'});
+  if (res.ok) { showToast('Snapshot saved', 'ok'); loadSnapshots(); }
+  else         showToast('Error saving snapshot', 'err');
+}
+
+async function loadSnapshots() {
+  const snaps = await fetch('/api/portfolio/snapshots').then(r=>r.json());
+  const tbody = document.getElementById('snapBody');
+  if (!snaps.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:16px">No snapshots yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = snaps.map(s => `
+    <tr>
+      <td><b>${s.snapshot_date}</b></td>
+      <td>${s.source}</td>
+      <td style="font-size:11px;color:var(--muted)">${(s.created_at||'').substring(0,16)}</td>
+      <td><a href="/api/portfolio/snapshots/${s.id}" target="_blank"
+             style="color:var(--blue);font-size:11px">View JSON</a></td>
+    </tr>`).join('');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────
+function showToast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadThresholds();
+loadSnapshots();
+</script>
+</body>
+</html>

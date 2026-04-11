@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Server settings
 SERVER_HOST = '127.0.0.1'  # localhost only
-SERVER_PORT = 5001  # Different port from DashboardGeneratorWeb
+SERVER_PORT = 5003  # Unified server port
 DEBUG_MODE = False  # ALWAYS False for stability - prevents crashes during code changes
 
 # Paths
@@ -42,6 +42,20 @@ EXCEL_COLUMNS = {
     'result': 'I'
 }
 
+# Disciplines list (must match Excel column headers)
+DISCIPLINES = [
+    'Proj. Mgmt', 'Optics', 'EE', 'ME', 'SW DEV', 'R&D QA',
+    'Sderot Cert.', 'RSK Cert.', 'ATE', 'NPD & Main.',
+    'FCT', 'RSK Ops', 'Sderot', 'RSK', 'Product Mgmt',
+]
+
+# Demand thresholds (working days in next 60 days)
+DEMAND_LARGE_DAYS  = 16   # > 16 days  → Large  (≈ >120 hr)
+DEMAND_MEDIUM_DAYS = 5    # 5–16 days  → Medium (≈ 40–120 hr)
+                          # < 5 days   → Small  (≈ <40 hr)
+
 # Ensure directories exist
 DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 EXCEL_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+LOG_FOLDER = BASE_DIR / 'logs'
+LOG_FOLDER.mkdir(parents=True, exist_ok=True)

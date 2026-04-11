@@ -1,6 +1,5 @@
 """
-Dashboard Generator Web Server
-Flask-based web server for managing project dashboards
+Dashboard Generator Web Server — Blueprint version for unified server
 """
 
 import os
@@ -9,25 +8,18 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-# Ensure stdout/stderr use UTF-8 so Unicode characters (✓ ✗ etc.) don't crash on Windows
-if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-if sys.stderr.encoding and sys.stderr.encoding.lower() not in ('utf-8', 'utf8'):
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-from flask import Flask, render_template, jsonify, request, send_file
+from flask import Blueprint, render_template, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 from database_manager import DatabaseManager
 from excel_parser import ExcelParser
 import config
 import sqlite3
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dashboard-generator-secret-key'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+dashboard_pages = Blueprint('dashboard_pages', __name__)
+dashboard_api   = Blueprint('dashboard_api',   __name__)
 
-# Initialize database manager
+# Initialize database manager (initialize_database() called from register_dashboard)
 db_manager = DatabaseManager(config.DATABASE_PATH)
-db_manager.initialize_database()
 
 
 def allowed_file(filename):
@@ -35,31 +27,21 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'xlsx'
 
 
-@app.after_request
-def add_no_cache_headers(response):
-    """Force fresh dashboard/API reads so detailed gantt edits propagate everywhere."""
-    if request.method == 'GET':
-        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-        response.headers['Pragma'] = 'no-cache'
-        response.headers['Expires'] = '0'
-    return response
-
-
-@app.route('/')
+@dashboard_pages.route('/')
 def index():
     """Home page - list all available projects"""
     projects = db_manager.get_all_projects()
-    return render_template('index.html', projects=projects)
+    return render_template('dashboard/index.html', projects=projects)
 
 
-@app.route('/project/<project_name>')
+@dashboard_pages.route('/project/<project_name>')
 def view_project(project_name):
     """View a specific project dashboard"""
     project = db_manager.get_project_by_name(project_name)
     if not project:
         return f"Project '{project_name}' not found", 404
-    
-    return render_template('dashboard.html', 
+
+    return render_template('dashboard/dashboard.html',
                          project_name=project_name,
                          project_manager=project['manager'],
                          PROJECT_NAME=project_name,
@@ -67,7 +49,7 @@ def view_project(project_name):
                          GENERATED_DATE=datetime.now().strftime('%Y-%m-%d %H:%M'))
 
 
-@app.route('/project/<project_name>/schematic')
+@dashboard_pages.route('/project/<project_name>/schematic')
 def view_project_schematic(project_name):
     """View a standalone schematic schedule for a project"""
     project = db_manager.get_project_by_name(project_name)
@@ -75,7 +57,7 @@ def view_project_schematic(project_name):
         return f"Project '{project_name}' not found", 404
 
     return render_template(
-        'project_schematic.html',
+        'dashboard/project_schematic.html',
         project_name=project_name,
         project_manager=project['manager'],
         PROJECT_NAME=project_name,
@@ -84,165 +66,107 @@ def view_project_schematic(project_name):
     )
 
 
-@app.route('/api/projects')
+@dashboard_pages.route('/disciplines')
+def disciplines_page():
+    return render_template('dashboard/disciplines.html')
+
+
+@dashboard_api.route('/api/projects')
 def api_get_projects():
     """API endpoint to get all projects"""
     projects = db_manager.get_all_projects()
     return jsonify(projects)
 
 
-@app.route('/api/overall-gate-timeline')
+@dashboard_api.route('/api/overall-gate-timeline')
 def api_get_overall_gate_timeline():
     """API endpoint to get unified gate timeline across all projects"""
     timeline = db_manager.get_overall_gate_timeline()
     return jsonify(timeline)
 
 
-@app.route('/api/overall-resource-load')
+@dashboard_api.route('/api/overall-resource-load')
 def api_get_overall_resource_load():
     """API endpoint to get unified owner workload across all projects"""
     resource_load = db_manager.get_overall_resource_load()
     return jsonify(resource_load)
 
 
-@app.route('/api/overall-critical-path-overview')
+@dashboard_api.route('/api/overall-critical-path-overview')
 def api_get_overall_critical_path_overview():
     """API endpoint to get unified critical path overview across all projects"""
     critical_overview = db_manager.get_overall_critical_path_overview()
     return jsonify(critical_overview)
 
 
-@app.route('/api/project/<project_name>')
+@dashboard_api.route('/api/project/<project_name>')
 def api_get_project(project_name):
     """API endpoint to get project details"""
     project = db_manager.get_project_by_name(project_name)
     if not project:
         return jsonify({'error': 'Project not found'}), 404
-    
+
     return jsonify(project)
 
 
-@app.route('/api/project/<project_name>/tasks')
-def api_get_tasks(project_name):
-    """API endpoint to get all tasks for a project"""
-    tasks = db_manager.get_tasks_by_project(project_name)
-    return jsonify(tasks)
-
-
-@app.route('/api/task/<int:task_id>', methods=['GET'])
+@dashboard_api.route('/api/task/<int:task_id>', methods=['GET'])
 def api_get_task(task_id):
     """API endpoint to get a specific task"""
     task = db_manager.get_task_by_id(task_id)
     if not task:
         return jsonify({'error': 'Task not found'}), 404
-    
+
     return jsonify(task)
 
 
-@app.route('/api/task/<int:task_id>', methods=['PUT'])
-def api_update_task(task_id):
-    """API endpoint to update a task"""
-    data = request.json
-    
-    # Validate required fields
-    if not data:
-        return jsonify({'error': 'No data provided'}), 400
-    
-    success = db_manager.update_task(task_id, data)
-    
-    if success:
-        task = db_manager.get_task_by_id(task_id)
-        return jsonify({'message': 'Task updated successfully', 'task': task})
-    else:
-        return jsonify({'error': 'Failed to update task'}), 500
-
-
-@app.route('/api/project/<project_name>/task', methods=['POST'])
-def api_create_task(project_name):
-    """API endpoint to create a new task"""
-    data = request.json
-    
-    # Validate required fields
-    required_fields = ['name', 'phase', 'owner', 'start_date', 'end_date', 'status']
-    for field in required_fields:
-        if field not in data:
-            return jsonify({'error': f'Missing required field: {field}'}), 400
-    
-    # Get project ID
-    project = db_manager.get_project_by_name(project_name)
-    if not project:
-        return jsonify({'error': 'Project not found'}), 404
-    
-    data['project_id'] = project['id']
-    
-    task_id = db_manager.create_task(data)
-    
-    if task_id:
-        task = db_manager.get_task_by_id(task_id)
-        return jsonify({'message': 'Task created successfully', 'task': task}), 201
-    else:
-        return jsonify({'error': 'Failed to create task'}), 500
-
-
-@app.route('/api/task/<int:task_id>', methods=['DELETE'])
-def api_delete_task(task_id):
-    """API endpoint to delete a task"""
-    success = db_manager.delete_task(task_id)
-    
-    if success:
-        return jsonify({'message': 'Task deleted successfully'})
-    else:
-        return jsonify({'error': 'Failed to delete task'}), 500
-
-
-@app.route('/api/upload-excel', methods=['POST'])
+@dashboard_api.route('/api/upload-excel', methods=['POST'])
 def api_upload_excel():
     """API endpoint to upload and import Excel file"""
     temp_file_path = None
-    
+
     try:
         # Check if file is present in request
         if 'file' not in request.files:
             return jsonify({'error': 'No file provided'}), 400
-        
+
         file = request.files['file']
-        
+
         # Check if file was actually selected
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
-        
+
         # Validate file extension
         if not allowed_file(file.filename):
             return jsonify({'error': 'Only .xlsx files are allowed'}), 400
-        
+
         # Secure the filename
         filename = secure_filename(file.filename)
-        
+
         # Create temporary file to store upload
         temp_fd, temp_file_path = tempfile.mkstemp(suffix='.xlsx')
         os.close(temp_fd)
-        
+
         # Save uploaded file to temporary location
         file.save(temp_file_path)
-        
+
         # Initialize parser
         parser = ExcelParser()
-        
+
         # Parse Excel file
         project_info, tasks = parser.parse_excel_file(temp_file_path)
-        
+
         # Create or update project
         project_id = db_manager.create_or_update_project(
             name=project_info['name'],
             manager=project_info['manager'],
             excel_filename=filename
         )
-        
+
         # Delete existing tasks for this project
         deleted_count = db_manager.delete_tasks_by_project(project_id)
         if deleted_count > 0:
             print(f"  ✓ Removed {deleted_count} old tasks")
-        
+
         # Import all tasks
         imported_count = 0
         for task in tasks:
@@ -250,17 +174,15 @@ def api_upload_excel():
             task_id = db_manager.create_task(task)
             if task_id:
                 imported_count += 1
-        
+
         print(f"  ✓ Imported {imported_count} tasks for project '{project_info['name']}'")
-        
+
         # Auto-detect dependencies by date matching (Finish-to-Start, delta <= 2 days)
-        # If 0 <= task_B.start_date - task_A.end_date <= 2 days, they are dependent
         from datetime import datetime, timedelta
         db_manager.delete_dependencies_by_project(project_info['name'])
         dep_count = 0
         all_tasks_for_project = db_manager.get_tasks_by_project(project_info['name'])
         DEP_DELTA_DAYS = 2
-        # Parse all end dates once for efficiency
         task_end_dates = {}
         for t in all_tasks_for_project:
             ed = t.get('end_date', '')
@@ -269,7 +191,6 @@ def api_upload_excel():
                     task_end_dates[t['id']] = datetime.strptime(ed, '%Y-%m-%d')
                 except ValueError:
                     pass
-        # For each task, find predecessors whose end_date is within DEP_DELTA_DAYS before this task's start_date
         for successor in all_tasks_for_project:
             sd = successor.get('start_date', '')
             if not sd:
@@ -289,7 +210,7 @@ def api_upload_excel():
                     db_manager.create_dependency(project_info['name'], predecessor['id'], successor['id'])
                     dep_count += 1
         print(f"  ✓ Detected {dep_count} task dependencies (Finish-to-Start, delta <= {DEP_DELTA_DAYS} days)")
-        
+
         return jsonify({
             'success': True,
             'message': f'Successfully imported {filename}',
@@ -298,12 +219,11 @@ def api_upload_excel():
             'dependencies_detected': dep_count,
             'filename': filename
         }), 200
-            
+
     except Exception as e:
         return jsonify({'error': f'Error processing file: {str(e)}'}), 500
-        
+
     finally:
-        # Clean up temporary file
         if temp_file_path and os.path.exists(temp_file_path):
             try:
                 os.unlink(temp_file_path)
@@ -311,20 +231,20 @@ def api_upload_excel():
                 print(f"Warning: Failed to delete temporary file {temp_file_path}: {e}")
 
 
-@app.route('/api/project/<project_name>/export')
+@dashboard_api.route('/api/project/<project_name>/export')
 def api_export_to_excel(project_name):
     """API endpoint to export project to Excel"""
     from excel_exporter import ExcelExporter
-    
+
     project = db_manager.get_project_by_name(project_name)
     if not project:
         return jsonify({'error': 'Project not found'}), 404
-    
+
     tasks = db_manager.get_tasks_by_project(project_name)
-    
+
     exporter = ExcelExporter()
     excel_path = exporter.export_project(project, tasks, config.EXCEL_OUTPUT_FOLDER)
-    
+
     if excel_path and os.path.exists(excel_path):
         return send_file(
             excel_path,
@@ -336,7 +256,7 @@ def api_export_to_excel(project_name):
         return jsonify({'error': 'Failed to export to Excel'}), 500
 
 
-@app.route('/api/project/<project_name>/export-ppt')
+@dashboard_api.route('/api/project/<project_name>/export-ppt')
 def api_export_schematic_to_ppt(project_name):
     """API endpoint to export project schematic to PowerPoint"""
     from ppt_exporter import PptExporter
@@ -362,7 +282,7 @@ def api_export_schematic_to_ppt(project_name):
     return jsonify({'error': 'Failed to export schematic to PowerPoint'}), 500
 
 
-@app.route('/api/stats')
+@dashboard_api.route('/api/stats')
 def api_get_stats():
     """API endpoint to get server statistics"""
     resource_load = db_manager.get_overall_resource_load()
@@ -375,104 +295,7 @@ def api_get_stats():
     return jsonify(stats)
 
 
-# Gate Baseline and Change Log Endpoints
-
-@app.route('/api/project/<project_name>/gate-baselines', methods=['GET'])
-def api_get_gate_baselines(project_name):
-    """Get all Gate baselines for a project"""
-    try:
-        baselines = db_manager.get_gate_baselines(project_name)
-        return jsonify(baselines)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/project/<project_name>/gate-baselines', methods=['POST'])
-def api_create_gate_baselines(project_name):
-    """Create/update Gate baselines for a project"""
-    try:
-        data = request.json
-        baselines = data.get('baselines', [])
-        
-        for baseline in baselines:
-            db_manager.create_gate_baseline(
-                project_name=project_name,
-                gate_name=baseline['gate_name'],
-                gate_id=baseline['gate_id'],
-                baseline_date=baseline['baseline_date']
-            )
-        
-        return jsonify({'success': True, 'count': len(baselines)})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/project/<project_name>/gate-change-log', methods=['GET'])
-def api_get_gate_change_log(project_name):
-    """Get all Gate change log entries for a project"""
-    try:
-        changes = db_manager.get_gate_change_log(project_name)
-        return jsonify(changes)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/project/<project_name>/gate-change-log', methods=['POST'])
-def api_add_gate_change_log(project_name):
-    """Add a Gate change log entry"""
-    try:
-        log_data = request.json
-        log_data['project_name'] = project_name
-        
-        log_id = db_manager.add_gate_change_log(log_data)
-        
-        return jsonify({'success': True, 'log_id': log_id})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/project/<project_name>/gate-change-log/<gate_name>', methods=['DELETE'])
-def api_delete_gate_change_log(project_name, gate_name):
-    """Delete all change log entries for a specific Gate"""
-    try:
-        deleted_count = db_manager.delete_gate_change_log_by_gate(project_name, gate_name)
-        
-        return jsonify({'success': True, 'deleted_count': deleted_count})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/project/<project_name>/dependencies', methods=['GET'])
-def api_get_dependencies(project_name):
-    """Get all task dependencies for a project"""
-    try:
-        deps = db_manager.get_dependencies_by_project(project_name)
-        return jsonify(deps)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/project/<project_name>/dependencies', methods=['POST'])
-def api_create_dependency(project_name):
-    """Create a task dependency"""
-    try:
-        data = request.json
-        predecessor_id = data.get('predecessor_id')
-        successor_id = data.get('successor_id')
-        if not predecessor_id or not successor_id:
-            return jsonify({'error': 'predecessor_id and successor_id required'}), 400
-        dep_id = db_manager.create_dependency(project_name, predecessor_id, successor_id)
-        return jsonify({'success': True, 'id': dep_id})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/disciplines')
-def disciplines_page():
-    return render_template('disciplines.html')
-
-
-@app.route('/api/v1/admin/resource-teams', methods=['GET'])
+@dashboard_api.route('/api/v1/admin/resource-teams', methods=['GET'])
 def api_resource_teams_get():
     try:
         conn = db_manager.get_connection()
@@ -485,7 +308,7 @@ def api_resource_teams_get():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/v1/admin/resource-teams/bulk', methods=['POST'])
+@dashboard_api.route('/api/v1/admin/resource-teams/bulk', methods=['POST'])
 def api_resource_teams_bulk():
     mappings = request.get_json(silent=True) or []
     if not isinstance(mappings, list):
@@ -513,13 +336,12 @@ def api_resource_teams_bulk():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/discipline-resource-load')
+@dashboard_api.route('/api/discipline-resource-load')
 def api_discipline_resource_load():
     import calendar
     from datetime import date as _date
     today = _date.today()
 
-    # Build 13-month window: 1 past + current + 11 future
     months = []
     for i in range(-1, 12):
         raw_month = today.month - 1 + i
@@ -527,18 +349,15 @@ def api_discipline_resource_load():
         m = raw_month % 12 + 1
         months.append(_date(y, m, 1))
 
-    # Load discipline mappings from dashboards.db (case-insensitive key)
     p_conn = db_manager.get_connection()
     mappings = p_conn.execute("SELECT TRIM(owner_name), team_name FROM resource_teams").fetchall()
     p_conn.close()
     owner_to_disc = {row[0].lower(): row[1] for row in mappings}
 
-    # Count owners per discipline
     disc_owners = {}
     for owner_lower, disc in owner_to_disc.items():
         disc_owners[disc] = disc_owners.get(disc, 0) + 1
 
-    # Load active tasks from dashboards.db
     db_path = config.DATABASE_PATH
     t_conn = sqlite3.connect(str(db_path))
     tasks = t_conn.execute("""
@@ -550,7 +369,6 @@ def api_discipline_resource_load():
     """).fetchall()
     t_conn.close()
 
-    # Compute monthly task counts per discipline
     disc_monthly = {}
     for owner_raw, start_str, end_str, status in tasks:
         disc = owner_to_disc.get((owner_raw or '').lower())
@@ -570,7 +388,6 @@ def api_discipline_resource_load():
             if start <= me and end >= ms:
                 disc_monthly[disc][bucket][i] += 1
 
-    # Inject PM overhead (+5/month per managed project) into discipline monthly counts
     PM_LOAD_PER_PROJECT = 5
     pm_conn = sqlite3.connect(str(db_path))
     pm_conn.row_factory = sqlite3.Row
@@ -593,7 +410,6 @@ def api_discipline_resource_load():
         pend_s    = pr['proj_end']
         if not manager or not pstart_s or not pend_s:
             continue
-        # Resolve manager name → discipline (exact, then first-name)
         disc = owner_to_disc.get(manager.lower())
         if not disc:
             disc = owner_to_disc.get(manager.split()[0].lower())
@@ -640,17 +456,7 @@ def api_discipline_resource_load():
     })
 
 
-@app.route('/api/dependency/<int:dep_id>', methods=['DELETE'])
-def api_delete_dependency(dep_id):
-    """Delete a specific dependency"""
-    try:
-        success = db_manager.delete_dependency(dep_id)
-        return jsonify({'success': success})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/project/<project_name>/dependencies/by-tasks', methods=['DELETE'])
+@dashboard_api.route('/api/project/<project_name>/dependencies/by-tasks', methods=['DELETE'])
 def api_delete_dependency_by_tasks(project_name):
     """Delete a dependency between two specific tasks"""
     try:
@@ -661,43 +467,7 @@ def api_delete_dependency_by_tasks(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/gate-sign-offs', methods=['GET'])
-def api_get_gate_sign_offs(project_name):
-    """Get all gate sign-offs for a project"""
-    sign_offs = db_manager.get_gate_sign_offs(project_name)
-    return jsonify(sign_offs)
-
-
-@app.route('/api/project/<project_name>/gate-sign-offs', methods=['POST'])
-def api_upsert_gate_sign_off(project_name):
-    """Create or update a gate sign-off"""
-    data = request.json
-    required = ['gate_name', 'gate_id', 'sign_off_date', 'status']
-    for field in required:
-        if field not in data:
-            return jsonify({'error': f'Missing required field: {field}'}), 400
-    if data['status'] == 'Passed with Rework' and not data.get('rework_due_date'):
-        return jsonify({'error': 'rework_due_date is required for Passed with Rework status'}), 400
-    success = db_manager.upsert_gate_sign_off(
-        project_name=project_name,
-        gate_name=data['gate_name'],
-        gate_id=data['gate_id'],
-        sign_off_date=data['sign_off_date'],
-        status=data['status'],
-        rework_due_date=data.get('rework_due_date'),
-        rework_sign_off_date=data.get('rework_sign_off_date')
-    )
-    return jsonify({'success': success})
-
-
-@app.route('/api/project/<project_name>/gate-sign-off/<gate_name>', methods=['DELETE'])
-def api_delete_gate_sign_off(project_name, gate_name):
-    """Remove a gate sign-off"""
-    success = db_manager.delete_gate_sign_off(project_name, gate_name)
-    return jsonify({'success': success})
-
-
-@app.route('/api/project/<project_name>', methods=['DELETE'])
+@dashboard_api.route('/api/project/<project_name>', methods=['DELETE'])
 def api_delete_project(project_name):
     """Delete a project and all its data"""
     try:
@@ -710,19 +480,7 @@ def api_delete_project(project_name):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-if __name__ == '__main__':
-    print("=" * 80)
-    print("Dashboard Generator Web Server")
-    print("=" * 80)
-    print(f"Server URL: http://localhost:{config.SERVER_PORT}")
-    print(f"Database: {config.DATABASE_PATH}")
-    print(f"Upload endpoint: /api/upload-excel")
-    print("=" * 80)
-    print("\nServer starts clean - upload Excel files via web interface")
-    print("Press Ctrl+C to stop the server\n")
-    
-    app.run(
-        host=config.SERVER_HOST,
-        port=config.SERVER_PORT,
-        debug=config.DEBUG_MODE
-    )
+def register_dashboard(app):
+    db_manager.initialize_database()
+    app.register_blueprint(dashboard_pages, url_prefix='/dashboard')
+    app.register_blueprint(dashboard_api)   # no prefix — API routes stay at /api/...

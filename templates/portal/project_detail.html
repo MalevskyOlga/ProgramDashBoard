@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ pp.name }} — Pipeline Portal</title>
+<style>
+/* ── CSS Variables ─────────────────────────────────────────────── */
+:root {
+  --navy:       #1F3964;
+  --navy-light: #274d82;
+  --blue:       #2563EB;
+  --blue-light: #EFF6FF;
+  --blue-mid:   #BFDBFE;
+  --grey-bg:    #F3F4F6;
+  --grey-border:#D1D5DB;
+  --grey-text:  #6B7280;
+  --white:      #FFFFFF;
+  --text:       #111827;
+  --text-sub:   #374151;
+
+  --green:      #16A34A;
+  --green-bg:   #DCFCE7;
+  --orange:     #EA580C;
+  --orange-bg:  #FED7AA;
+  --red:        #DC2626;
+  --red-bg:     #FEE2E2;
+  --yellow:     #CA8A04;
+  --yellow-bg:  #FEF9C3;
+  --purple:     #7C3AED;
+  --purple-bg:  #EDE9FE;
+
+  --radius:     8px;
+  --shadow:     0 1px 4px rgba(0,0,0,0.10);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.12);
+}
+
+/* ── Reset ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--grey-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Top Header ─────────────────────────────────────────────────── */
+.top-header {
+  background: var(--navy);
+  padding: 18px 28px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.top-header-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.header-left { flex: 1; min-width: 0; }
+.back-link {
+  color: #93C5FD;
+  text-decoration: none;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.back-link:hover { opacity: 1; }
+.header-title {
+  color: var(--white);
+  font-size: 18pt;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-meta {
+  color: #9CA3AF;
+  font-size: 12px;
+  margin-top: 4px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.header-meta span { display: flex; align-items: center; gap: 4px; }
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-primary   { background: var(--blue);  color: #fff; }
+.btn-primary:hover { background: #1D4ED8; }
+.btn-secondary { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+.btn-secondary:hover { background: rgba(255,255,255,0.25); }
+.btn-outline   { background: #fff; color: var(--blue); border: 1px solid var(--blue-mid); }
+.btn-outline:hover { background: var(--blue-light); }
+.btn-danger    { background: var(--red-bg); color: var(--red); border: 1px solid #FECACA; }
+.btn-danger:hover { background: #FEE2E2; }
+.btn-ghost     { background: transparent; color: var(--grey-text); border: 1px solid transparent; }
+.btn-ghost:hover { background: var(--grey-bg); border-color: var(--grey-border); }
+.btn-sm        { padding: 4px 10px; font-size: 12px; }
+.btn-xs        { padding: 2px 8px; font-size: 11px; border-radius: 4px; }
+
+/* ── Meta Pills Row ─────────────────────────────────────────────── */
+.meta-pills-bar {
+  background: var(--white);
+  border-bottom: 1px solid var(--grey-border);
+  padding: 10px 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.pill {
+  background: var(--grey-bg);
+  border: 1px solid var(--grey-border);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px;
+  color: var(--text-sub);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.pill-label { color: var(--grey-text); font-weight: 500; }
+.pill-value { color: var(--text); }
+
+/* ── Page Body ──────────────────────────────────────────────────── */
+.page-body {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 20px 60px;
+}
+
+/* ── Collapsible Section Card ───────────────────────────────────── */
+.section-card {
+  background: var(--white);
+  border: 1px solid var(--grey-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.section-header {
+  background: var(--blue);
+  color: var(--white);
+  padding: 11px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+.section-header:hover { background: var(--navy-light); }
+.section-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+}
+.section-toggle-icon {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+.section-toggle-icon.collapsed { transform: rotate(-90deg); }
+.section-body {
+  padding: 18px 20px;
+  transition: none;
+}
+.section-body.hidden { display: none; }
+
+/* ── Form Elements ──────────────────────────────────────────────── */
+label { font-size: 12px; font-weight: 600; color: var(--grey-text); display: block; margin-bottom: 4px; }
+textarea, input[type="text"], input[type="date"], input[type="number"], select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--grey-border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--white);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+textarea:focus, input:focus, select:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+textarea { resize: vertical; min-height: 80px; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.form-row-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.form-group { display: flex; flex-direction: column; }
+.form-actions { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+
+/* ── Tables ─────────────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table th {
+  background: #F8FAFC;
+  border: 1px solid var(--grey-border);
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--grey-text);
+  white-space: nowrap;
+}
+.data-table td {
+  border: 1px solid #E5E7EB;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+.data-table tr:hover td { background: #FAFBFF; }
+.data-table input[type="text"],
+.data-table input[type="date"],
+.data-table input[type="number"],
+.data-table select,
+.data-table textarea {
+  width: 100%;
+  padding: 4px 7px;
+  font-size: 12px;
+  min-height: unset;
+}
+.data-table textarea { min-height: 40px; resize: vertical; }
+.col-del { width: 36px; text-align: center; }
+.del-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--grey-text);
+  font-size: 16px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+}
+.del-btn:hover { color: var(--red); background: var(--red-bg); }
+.add-row-btn { margin-top: 10px; }
+
+/* ── Status Badges ──────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-not-started { background: #F3F4F6; color: var(--grey-text); }
+.badge-in-progress { background: #DBEAFE; color: #1D4ED8; }
+.badge-done        { background: var(--green-bg); color: var(--green); }
+.badge-blocked     { background: var(--red-bg); color: var(--red); }
+.badge-open        { background: var(--yellow-bg); color: var(--yellow); }
+.badge-mitigated   { background: var(--blue-light); color: var(--blue); }
+.badge-closed      { background: var(--green-bg); color: var(--green); }
+.badge-planned     { background: #F3F4F6; color: var(--grey-text); }
+.badge-submitted   { background: var(--yellow-bg); color: var(--yellow); }
+.badge-approved    { background: var(--green-bg); color: var(--green); }
+.badge-failed      { background: var(--red-bg); color: var(--red); }
+.badge-high        { background: var(--red-bg); color: var(--red); }
+.badge-medium      { background: var(--orange-bg); color: var(--orange); }
+.badge-low         { background: var(--green-bg); color: var(--green); }
+
+/* Coverage badges */
+.cov-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s, transform 0.1s;
+  border: none;
+}
+.cov-badge:hover { opacity: 0.85; transform: scale(1.05); }
+.cov-badge:active { transform: scale(0.97); }
+.cov-Fully     { background: var(--green-bg);  color: var(--green); }
+.cov-Partially { background: var(--orange-bg); color: var(--orange); }
+.cov-No        { background: var(--red-bg);    color: var(--red); }
+.cov-NA        { background: #F3F4F6;          color: var(--grey-text); }
+
+/* ── Resource Grid ──────────────────────────────────────────────── */
+.resource-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.resource-cell {
+  background: #FAFAFA;
+  border: 1px solid var(--grey-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.resource-cell-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--grey-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.resource-cell input[type="number"] {
+  width: 100%;
+  padding: 4px 7px;
+  font-size: 12px;
+  text-align: right;
+}
+.override-chip {
+  font-size: 10px;
+  background: var(--purple-bg);
+  color: var(--purple);
+  border-radius: 8px;
+  padding: 1px 6px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+/* ── Updates Log ─────────────────────────────────────────────────── */
+.updates-feed { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.update-entry {
+  background: var(--grey-bg);
+  border: 1px solid var(--grey-border);
+  border-left: 3px solid var(--blue);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.update-meta {
+  font-size: 11px;
+  color: var(--grey-text);
+  font-weight: 600;
+  white-space: nowrap;
+  margin-bottom: 3px;
+}
+.update-content { font-size: 13px; color: var(--text); white-space: pre-wrap; }
+.update-entry-body { flex: 1; }
+.update-new-form {
+  background: var(--grey-bg);
+  border: 1px solid var(--grey-border);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Notes Toggle ────────────────────────────────────────────────── */
+.notes-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--grey-text);
+  padding: 1px 4px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+.notes-toggle-btn:hover { color: var(--blue); }
+.notes-row td { background: #FAFBFF; }
+.notes-cell { padding: 4px 8px 8px 8px !important; }
+.notes-cell textarea { min-height: 36px; font-size: 12px; }
+
+/* ── Toast ───────────────────────────────────────────────────────── */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--text);
+  color: var(--white);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: auto;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast.toast-success { background: var(--green); }
+.toast.toast-error   { background: var(--red); }
+
+/* ── Divider ─────────────────────────────────────────────────────── */
+.divider { border: none; border-top: 1px solid var(--grey-border); margin: 14px 0; }
+
+/* ── Misc ────────────────────────────────────────────────────────── */
+.text-muted { color: var(--grey-text); font-size: 12px; }
+.empty-state {
+  text-align: center;
+  padding: 24px;
+  color: var(--grey-text);
+  font-style: italic;
+  font-size: 13px;
+}
+.info-chip {
+  background: var(--blue-light);
+  color: var(--blue);
+  border: 1px solid var(--blue-mid);
+  border-radius: 10px;
+  font-size: 11px;
+  padding: 1px 7px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+@media (max-width: 768px) {
+  .form-row, .form-row-4 { grid-template-columns: 1fr; }
+  .header-title { font-size: 15pt; }
+  .meta-pills-bar { padding: 8px 14px; }
+  .page-body { padding: 12px 10px 40px; }
+  .resource-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Top Header ─────────────────────────────────────────────────── -->
+<div class="top-header">
+  <div class="top-header-inner">
+    <div class="header-left">
+      <a href="/portal" class="back-link">&#8592; Portfolio</a>
+      <div class="header-title">
+        Priority #{{ pp.priority }} &nbsp;|&nbsp; {{ pp.name }}
+      </div>
+      <div class="header-meta">
+        <span>&#128100; {{ pp.leader or '—' }}</span>
+        <span>&#127937; {{ pp.next_gate or '—' }}</span>
+        <span>&#128197; Launch: {{ pp.planned_launch or '—' }}</span>
+        <span>&#128202; {{ pp.business_segment or '—' }}</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" onclick="openGanttImport()" title="Import a Gantt Excel file for this project — switches project to Gantt mode">
+        &#8686; Import Gantt Excel
+      </button>
+      <button class="btn btn-secondary" onclick="switchToGantt()" title="Switch management type to Gantt (requires Excel import first)">
+        &#9783; Gantt Mode
+      </button>
+      <a class="btn btn-primary" href="/api/portfolio/projects/{{ pp.id }}/generate-slide" download>
+        &#8659; Generate Slide
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Gantt Import Modal ──────────────────────────────────────────── -->
+<div id="ganttImportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:none;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:32px;width:500px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="font-size:16px;font-weight:700;color:#1F3964">Import Gantt Excel</h2>
+      <button onclick="closeGanttImport()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">&times;</button>
+    </div>
+
+    <p style="font-size:13px;color:#555;margin-bottom:18px">
+      Select the project Gantt Excel file (<code>.xlsx</code>). The file must follow the standard format:
+      project name in C3, manager in C5, headers in row 10, tasks from row 11.
+      Importing will switch this project to <strong>Gantt mode</strong>.
+    </p>
+
+    <div id="ganttDropZone" style="border:2px dashed #0070C0;border-radius:8px;padding:32px;text-align:center;cursor:pointer;background:#f0f6ff;margin-bottom:16px"
+         onclick="document.getElementById('ganttFileInput').click()"
+         ondragover="event.preventDefault();this.style.background='#dceeff'"
+         ondragleave="this.style.background='#f0f6ff'"
+         ondrop="handleGanttDrop(event)">
+      <div style="font-size:32px;margin-bottom:8px">&#128196;</div>
+      <div style="font-size:13px;color:#0070C0;font-weight:600">Click to browse or drag &amp; drop</div>
+      <div style="font-size:11px;color:#888;margin-top:4px">.xlsx files only</div>
+      <div id="ganttFileName" style="margin-top:10px;font-size:12px;color:#1F3964;font-weight:600"></div>
+    </div>
+    <input type="file" id="ganttFileInput" accept=".xlsx" style="display:none" onchange="handleGanttFileSelect(this)">
+
+    <div id="ganttImportStatus" style="display:none;padding:10px;border-radius:6px;font-size:13px;margin-bottom:12px"></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="closeGanttImport()" style="padding:8px 18px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:13px">Cancel</button>
+      <button id="ganttImportBtn" onclick="doGanttImport()" disabled
+              style="padding:8px 20px;border-radius:6px;border:none;background:#0070C0;color:#fff;cursor:pointer;font-size:13px;font-weight:600;opacity:.5">
+        Import &amp; Switch to Gantt
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Meta Pills ─────────────────────────────────────────────────── -->
+<div class="meta-pills-bar">
+  <div class="pill"><span class="pill-label">Process:</span><span class="pill-value">{{ pp.process_type or '—' }}</span></div>
+  <div class="pill"><span class="pill-label">Next Gate:</span><span class="pill-value">{{ pp.next_gate or '—' }}</span></div>
+  <div class="pill"><span class="pill-label">Launch:</span><span class="pill-value">{{ pp.planned_launch or '—' }}</span></div>
+  <div class="pill"><span class="pill-label">Objective:</span><span class="pill-value">{{ pp.objective or '—' }}</span></div>
+  <div class="pill"><span class="pill-label">Segment:</span><span class="pill-value">{{ pp.business_segment or '—' }}</span></div>
+  <div class="pill"><span class="pill-label">Leader:</span><span class="pill-value">{{ pp.leader or '—' }}</span></div>
+  <div class="pill"><span class="pill-label">Today:</span><span class="pill-value">{{ today }}</span></div>
+</div>
+
+<!-- ── Page Body ──────────────────────────────────────────────────── -->
+<div class="page-body">
+
+  <!-- ════════════════════════════════════════════════════
+       A. STATUS
+  ═════════════════════════════════════════════════════════ -->
+  <div class="section-card" id="sec-status">
+    <div class="section-header" onclick="toggleSection('status')">
+      <div class="section-header-left">
+        <span>&#128203;</span> STATUS
+      </div>
+      <span class="section-toggle-icon" id="icon-status">&#9660;</span>
+    </div>
+    <div class="section-body" id="body-status">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Current Status</label>
+          <textarea id="status-text" rows="5">{{ pp.status_text or '' }}</textarea>
+        </div>
+        <div class="form-group">
+          <label>Next Steps</label>
+          <textarea id="next-steps" rows="5">{{ pp.next_steps or '' }}</textarea>
+        </div>
+      </div>
+      <div class="form-row-4">
+        <div class="form-group">
+          <label>Start Date</label>
+          <input type="date" id="card-start" value="{{ card.start_date or '' }}">
+        </div>
+        <div class="form-group">
+          <label>End Date</label>
+          <input type="date" id="card-end" value="{{ card.end_date or '' }}">
+        </div>
+        <div class="form-group">
+          <label>Owner</label>
+          <input type="text" id="card-owner" value="{{ card.owner or '' }}" placeholder="Card owner">
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <input type="number" id="card-priority" value="{{ pp.priority or '' }}" placeholder="Priority #" min="1">
+        </div>
+      </div>
+      {% if card.description %}
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Card Description</label>
+        <div style="background:var(--grey-bg);border:1px solid var(--grey-border);border-radius:6px;padding:10px 12px;font-size:13px;white-space:pre-wrap;">{{ card.description }}</div>
+      </div>
+      {% endif %}
+      <div class="form-actions">
+        <button class="btn btn-primary" onclick="saveStatus()">&#10003; Save Status</button>
+        <span class="text-muted" id="status-save-msg"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       B. ACTION ITEMS
+  ═════════════════════════════════════════════════════════ -->
+  <div class="section-card" id="sec-actions">
+    <div class="section-header" onclick="toggleSection('actions')">
+      <div class="section-header-left">
+        <span>&#9989;</span> ACTION ITEMS
+        <span class="info-chip" id="actions-count">{{ actions|length }}</span>
+      </div>
+      <span class="section-toggle-icon" id="icon-actions">&#9660;</span>
+    </div>
+    <div class="section-body" id="body-actions">
+      <div style="overflow-x:auto">
+        <table class="data-table" id="actions-table">
+          <thead>
+            <tr>
+              <th style="min-width:220px">Description</th>
+              <th style="min-width:130px">Owner</th>
+              <th style="min-width:110px">Start</th>
+              <th style="min-width:110px">Due Date</th>
+              <th style="min-width:130px">Status</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="actions-tbody">
+            {% for a in actions %}
+            <tr data-aid="{{ a.id }}">
+              <td>
+                <div style="display:flex;flex-direction:column;gap:3px">
+                  <input type="text" class="act-desc" value="{{ a.description or '' }}" placeholder="Description" onchange="saveAction(this)">
+                  <div style="display:flex;align-items:center;gap:4px">
+                    <button class="notes-toggle-btn" onclick="toggleNotes(this)" title="Toggle notes">&#128196; notes</button>
+                  </div>
+                </div>
+              </td>
+              <td><input type="text" class="act-owner" value="{{ a.owner or '' }}" placeholder="Owner" onchange="saveAction(this)"></td>
+              <td><input type="date" class="act-start" value="{{ a.start_date or '' }}" onchange="saveAction(this)"></td>
+              <td><input type="date" class="act-due" value="{{ a.due_date or '' }}" onchange="saveAction(this)"></td>
+              <td>
+                <select class="act-status" onchange="saveAction(this)">
+                  <option value="Not Started" {% if a.status=='Not Started' %}selected{% endif %}>Not Started</option>
+                  <option value="In Progress" {% if a.status=='In Progress' %}selected{% endif %}>In Progress</option>
+                  <option value="Done"        {% if a.status=='Done'        %}selected{% endif %}>Done</option>
+                  <option value="Blocked"     {% if a.status=='Blocked'     %}selected{% endif %}>Blocked</option>
+                </select>
+              </td>
+              <td class="col-del"><button class="del-btn" onclick="deleteAction(this)" title="Delete">&#215;</button></td>
+            </tr>
+            <tr class="notes-row" data-aid="{{ a.id }}" style="display:none">
+              <td colspan="6" class="notes-cell">
+                <textarea class="act-notes" placeholder="Notes…" onchange="saveAction(this)">{{ a.notes or '' }}</textarea>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if not actions %}
+        <div class="empty-state" id="actions-empty">No action items yet.</div>
+        {% endif %}
+      </div>
+      <button class="btn btn-outline btn-sm add-row-btn" onclick="addAction()">+ Add Action Item</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       C. RISKS
+  ═════════════════════════════════════════════════════════ -->
+  <div class="section-card" id="sec-risks">
+    <div class="section-header" onclick="toggleSection('risks')">
+      <div class="section-header-left">
+        <span>&#9888;</span> RISKS
+        <span class="info-chip" id="risks-count">{{ risks|length }}</span>
+      </div>
+      <span class="section-toggle-icon" id="icon-risks">&#9660;</span>
+    </div>
+    <div class="section-body" id="body-risks">
+      <div style="overflow-x:auto">
+        <table class="data-table" id="risks-table">
+          <thead>
+            <tr>
+              <th style="min-width:220px">Description</th>
+              <th style="min-width:100px">Impact</th>
+              <th style="min-width:100px">Probability</th>
+              <th style="min-width:200px">Mitigation</th>
+              <th style="min-width:110px">Status</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="risks-tbody">
+            {% for r in risks %}
+            <tr data-rid="{{ r.id }}">
+              <td><textarea class="risk-desc" onchange="saveRisk(this)">{{ r.description or '' }}</textarea></td>
+              <td>
+                <select class="risk-impact" onchange="saveRisk(this)">
+                  <option value="High"   {% if r.impact=='High'   %}selected{% endif %}>High</option>
+                  <option value="Medium" {% if r.impact=='Medium' %}selected{% endif %}>Medium</option>
+                  <option value="Low"    {% if r.impact=='Low'    %}selected{% endif %}>Low</option>
+                </select>
+              </td>
+              <td>
+                <select class="risk-prob" onchange="saveRisk(this)">
+                  <option value="High"   {% if r.probability=='High'   %}selected{% endif %}>High</option>
+                  <option value="Medium" {% if r.probability=='Medium' %}selected{% endif %}>Medium</option>
+                  <option value="Low"    {% if r.probability=='Low'    %}selected{% endif %}>Low</option>
+                </select>
+              </td>
+              <td><textarea class="risk-mit" onchange="saveRisk(this)">{{ r.mitigation or '' }}</textarea></td>
+              <td>
+                <select class="risk-status" onchange="saveRisk(this)">
+                  <option value="Open"      {% if r.status=='Open'      %}selected{% endif %}>Open</option>
+                  <option value="Mitigated" {% if r.status=='Mitigated' %}selected{% endif %}>Mitigated</option>
+                  <option value="Closed"    {% if r.status=='Closed'    %}selected{% endif %}>Closed</option>
+                </select>
+              </td>
+              <td class="col-del"><button class="del-btn" onclick="deleteRisk(this)" title="Delete">&#215;</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if not risks %}
+        <div class="empty-state" id="risks-empty">No risks logged.</div>
+        {% endif %}
+      </div>
+      <button class="btn btn-outline btn-sm add-row-btn" onclick="addRisk()">+ Add Risk</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       D. CERTIFICATIONS
+  ═════════════════════════════════════════════════════════ -->
+  <div class="section-card" id="sec-certs">
+    <div class="section-header" onclick="toggleSection('certs')">
+      <div class="section-header-left">
+        <span>&#127942;</span> CERTIFICATIONS
+        <span class="info-chip" id="certs-count">{{ certs|length }}</span>
+      </div>
+      <span class="section-toggle-icon" id="icon-certs">&#9660;</span>
+    </div>
+    <div class="section-body" id="body-certs">
+      <div style="overflow-x:auto">
+        <table class="data-table" id="certs-table">
+          <thead>
+            <tr>
+              <th style="min-width:160px">Cert Name</th>
+              <th style="min-width:120px">Agency</th>
+              <th style="min-width:120px">Type</th>
+              <th style="min-width:120px">Status</th>
+              <th style="min-width:120px">Expected Date</th>
+              <th style="min-width:120px">Actual Date</th>
+              <th style="min-width:180px">Notes</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody id="certs-tbody">
+            {% for c in certs %}
+            <tr data-cid="{{ c.id }}">
+              <td><input type="text" class="cert-name" value="{{ c.cert_name or '' }}" placeholder="Cert name" onchange="saveCert(this)"></td>
+              <td><input type="text" class="cert-agency" value="{{ c.agency or '' }}" placeholder="Agency" onchange="saveCert(this)"></td>
+              <td><input type="text" class="cert-type" value="{{ c.cert_type or '' }}" placeholder="Type" onchange="saveCert(this)"></td>
+              <td>
+                <select class="cert-status" onchange="saveCert(this)">
+                  <option value="Planned"     {% if c.status=='Planned'     %}selected{% endif %}>Planned</option>
+                  <option value="In Progress" {% if c.status=='In Progress' %}selected{% endif %}>In Progress</option>
+                  <option value="Submitted"   {% if c.status=='Submitted'   %}selected{% endif %}>Submitted</option>
+                  <option value="Approved"    {% if c.status=='Approved'    %}selected{% endif %}>Approved</option>
+                  <option value="Failed"      {% if c.status=='Failed'      %}selected{% endif %}>Failed</option>
+                </select>
+              </td>
+              <td><input type="date" class="cert-exp" value="{{ c.expected_date or '' }}" onchange="saveCert(this)"></td>
+              <td><input type="date" class="cert-act" value="{{ c.actual_date or '' }}" onchange="saveCert(this)"></td>
+              <td><textarea class="cert-notes" onchange="saveCert(this)">{{ c.notes or '' }}</textarea></td>
+              <td class="col-del"><button class="del-btn" onclick="deleteCert(this)" title="Delete">&#215;</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if not certs %}
+        <div class="empty-state" id="certs-empty">No certifications logged.</div>
+        {% endif %}
+      </div>
+      <button class="btn btn-outline btn-sm add-row-btn" onclick="addCert()">+ Add Certification</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       E. RESOURCE GRID
+  ═════════════════════════════════════════════════════════ -->
+  <div class="section-card" id="sec-resources">
+    <div class="section-header" onclick="toggleSection('resources')">
+      <div class="section-header-left">
+        <span>&#128101;</span> RESOURCE GRID
+      </div>
+      <span class="section-toggle-icon" id="icon-resources">&#9660;</span>
+    </div>
+    <div class="section-body" id="body-resources">
+      <div class="resource-grid" id="resource-grid">
+        {% set res_map = {} %}
+        {% for r in resources %}
+          {% set _ = res_map.update({r.discipline: r}) %}
+        {% endfor %}
+        {% for disc in disciplines %}
+          {% set r = res_map.get(disc, {}) %}
+          <div class="resource-cell" data-discipline="{{ disc }}">
+            <div class="resource-cell-label" title="{{ disc }}">{{ disc }}</div>
+            <button
+              class="cov-badge cov-{{ (r.coverage or 'NA')|replace('/', '') }}"
+              data-coverage="{{ r.coverage or 'N/A' }}"
+              onclick="cycleCoverage(this)"
+              title="Click to cycle coverage">{{ r.coverage or 'N/A' }}</button>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="number" class="demand-input" value="{{ r.demand_days or 0 }}"
+                min="0" step="0.5" title="Demand days" style="flex:1">
+              <span style="font-size:11px;color:var(--grey-text)">days</span>
+            </div>
+            {% if r.is_manual_override %}
+            <span class="override-chip">Manual</span>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" onclick="saveResources()">&#10003; Save Resources</button>
+        <span class="text-muted" id="res-save-msg"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       F. UPDATES LOG
+  ═════════════════════════════════════════════════════════ -->
+  <div class="section-card" id="sec-updates">
+    <div class="section-header" onclick="toggleSection('updates')">
+      <div class="section-header-left">
+        <span>&#128221;</span> UPDATES LOG
+        <span class="info-chip" id="updates-count">{{ updates|length }}</span>
+      </div>
+      <span class="section-toggle-icon" id="icon-updates">&#9660;</span>
+    </div>
+    <div class="section-body" id="body-updates">
+      <!-- New update form -->
+      <div class="update-new-form">
+        <div class="form-row" style="margin-bottom:0">
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" id="update-author" placeholder="e.g. Olga M." autocomplete="name">
+          </div>
+          <div class="form-group" style="grid-column:1 / -1">
+            <label>Update / Comment</label>
+            <textarea id="update-content" rows="3" placeholder="Enter update text…"></textarea>
+          </div>
+        </div>
+        <div>
+          <button class="btn btn-primary btn-sm" onclick="addUpdate()">+ Add Update</button>
+        </div>
+      </div>
+
+      <!-- Feed -->
+      <div class="updates-feed" id="updates-feed">
+        {% for u in updates %}
+        <div class="update-entry" data-uid="{{ u.id }}">
+          <div class="update-entry-body">
+            <div class="update-meta">{{ u.created_at | truncate(16, True, '') }} &nbsp;|&nbsp; {{ u.author }}</div>
+            <div class="update-content">{{ u.content }}</div>
+          </div>
+          <button class="del-btn" onclick="deleteUpdate(this)" title="Delete update" style="flex-shrink:0">&#215;</button>
+        </div>
+        {% endfor %}
+        {% if not updates %}
+        <div class="empty-state" id="updates-empty">No updates yet.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-body -->
+
+<!-- ── Toast container ───────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════════════ -->
+<script>
+const PROJECT_ID = {{ pp.id }};
+
+/* ── Toast ─────────────────────────────────────────────────────── */
+function toast(msg, type='success') {
+  const tc = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  tc.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 3000);
+}
+
+/* ── API helpers ────────────────────────────────────────────────── */
+async function api(method, url, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+  };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+/* ── Section toggle ─────────────────────────────────────────────── */
+function toggleSection(name) {
+  const body = document.getElementById('body-' + name);
+  const icon = document.getElementById('icon-' + name);
+  const collapsed = body.classList.toggle('hidden');
+  icon.classList.toggle('collapsed', collapsed);
+}
+
+/* ── Gantt Import Modal ─────────────────────────────────────────── */
+let _ganttFile = null;
+
+function openGanttImport() {
+  _ganttFile = null;
+  document.getElementById('ganttFileName').textContent = '';
+  document.getElementById('ganttImportStatus').style.display = 'none';
+  document.getElementById('ganttImportBtn').disabled = true;
+  document.getElementById('ganttImportBtn').style.opacity = '.5';
+  document.getElementById('ganttImportModal').style.display = 'flex';
+}
+function closeGanttImport() {
+  document.getElementById('ganttImportModal').style.display = 'none';
+}
+function handleGanttFileSelect(input) {
+  if (input.files[0]) _setGanttFile(input.files[0]);
+}
+function handleGanttDrop(e) {
+  e.preventDefault();
+  document.getElementById('ganttDropZone').style.background = '#f0f6ff';
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.xlsx')) _setGanttFile(f);
+  else toast('Please drop an .xlsx file', 'error');
+}
+function _setGanttFile(f) {
+  _ganttFile = f;
+  document.getElementById('ganttFileName').textContent = '📎 ' + f.name;
+  document.getElementById('ganttImportBtn').disabled = false;
+  document.getElementById('ganttImportBtn').style.opacity = '1';
+}
+
+async function doGanttImport() {
+  if (!_ganttFile) return;
+  const btn    = document.getElementById('ganttImportBtn');
+  const status = document.getElementById('ganttImportStatus');
+  btn.disabled = true;
+  btn.textContent = 'Importing…';
+  status.style.display = 'block';
+  status.style.background = '#f0f6ff';
+  status.style.color = '#0070C0';
+  status.textContent = 'Uploading and parsing Excel file…';
+
+  const fd = new FormData();
+  fd.append('file', _ganttFile);
+  fd.append('portfolio_project_id', PROJECT_ID);
+
+  try {
+    const res  = await fetch('/api/gantt/import', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Import failed');
+    status.style.background = '#e8f7e8';
+    status.style.color = '#276027';
+    status.textContent = `✓ Imported ${data.task_count} tasks for "${data.project_name}". Switching to Gantt view…`;
+    setTimeout(() => { window.location.href = `/portal/project/${PROJECT_ID}`; }, 1200);
+  } catch(e) {
+    status.style.background = '#fdecea';
+    status.style.color = '#c62828';
+    status.textContent = '✗ Error: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Import & Switch to Gantt';
+    btn.style.opacity = '1';
+  }
+}
+
+/* ── Switch to Gantt (mode only, no Excel) ──────────────────────── */
+async function switchToGantt() {
+  if (!confirm('Switch management type to Gantt without importing an Excel file? Use "Import Gantt Excel" to import data first.')) return;
+  try {
+    await api('POST', `/api/portfolio/projects/${PROJECT_ID}/set-type`, { management_type: 'gantt' });
+    toast('Switched to Gantt mode. Redirecting…');
+    setTimeout(() => window.location.href = `/portal/project/${PROJECT_ID}`, 800);
+  } catch(e) {
+    toast('Failed to switch mode: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   A. STATUS
+═══════════════════════════════════════════════════════════════════ */
+async function saveStatus() {
+  const msg = document.getElementById('status-save-msg');
+  msg.textContent = 'Saving…';
+  try {
+    await api('PATCH', `/api/portfolio/projects/${PROJECT_ID}`, {
+      status_text: document.getElementById('status-text').value,
+      next_steps:  document.getElementById('next-steps').value,
+      priority:    parseInt(document.getElementById('card-priority').value) || null,
+    });
+    await api('PUT', `/api/portfolio/projects/${PROJECT_ID}/card`, {
+      start_date: document.getElementById('card-start').value,
+      end_date:   document.getElementById('card-end').value,
+      owner:      document.getElementById('card-owner').value,
+    });
+    msg.textContent = '';
+    toast('Status saved');
+  } catch(e) {
+    msg.textContent = 'Error saving';
+    toast('Save failed: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   B. ACTION ITEMS
+═══════════════════════════════════════════════════════════════════ */
+function getActionData(row) {
+  return {
+    description: row.querySelector('.act-desc')?.value   || '',
+    owner:       row.querySelector('.act-owner')?.value  || '',
+    start_date:  row.querySelector('.act-start')?.value  || '',
+    due_date:    row.querySelector('.act-due')?.value    || '',
+    status:      row.querySelector('.act-status')?.value || 'Not Started',
+  };
+}
+
+function getActionNotes(row) {
+  // notes row is the next sibling
+  const notesRow = row.nextElementSibling;
+  if (notesRow && notesRow.classList.contains('notes-row')) {
+    return notesRow.querySelector('.act-notes')?.value || '';
+  }
+  return '';
+}
+
+async function saveAction(el) {
+  const row = el.closest('tr');
+  const aid = row.dataset.aid;
+  const data = getActionData(row);
+  data.notes = getActionNotes(row);
+  if (!aid || aid === 'new') {
+    // Will be created when user leaves the row; skip
+    return;
+  }
+  try {
+    await api('PATCH', `/api/portfolio/projects/${PROJECT_ID}/actions/${aid}`, data);
+    toast('Action saved', 'success');
+  } catch(e) {
+    toast('Failed to save action: ' + e.message, 'error');
+  }
+}
+
+function toggleNotes(btn) {
+  const row = btn.closest('tr');
+  const notesRow = row.nextElementSibling;
+  if (notesRow && notesRow.classList.contains('notes-row')) {
+    const hidden = notesRow.style.display === 'none';
+    notesRow.style.display = hidden ? '' : 'none';
+    btn.style.color = hidden ? 'var(--blue)' : '';
+  }
+}
+
+function buildActionRow(a) {
+  const aid = a.id || 'new';
+  const row = document.createElement('tr');
+  row.dataset.aid = aid;
+  row.innerHTML = `
+    <td>
+      <div style="display:flex;flex-direction:column;gap:3px">
+        <input type="text" class="act-desc" value="${_esc(a.description||'')}" placeholder="Description" onchange="saveAction(this)">
+        <div style="display:flex;align-items:center;gap:4px">
+          <button class="notes-toggle-btn" onclick="toggleNotes(this)" title="Toggle notes">&#128196; notes</button>
+        </div>
+      </div>
+    </td>
+    <td><input type="text" class="act-owner" value="${_esc(a.owner||'')}" placeholder="Owner" onchange="saveAction(this)"></td>
+    <td><input type="date" class="act-start" value="${a.start_date||''}" onchange="saveAction(this)"></td>
+    <td><input type="date" class="act-due"   value="${a.due_date||''}"   onchange="saveAction(this)"></td>
+    <td>
+      <select class="act-status" onchange="saveAction(this)">
+        <option value="Not Started" ${a.status==='Not Started'?'selected':''}>Not Started</option>
+        <option value="In Progress" ${a.status==='In Progress'?'selected':''}>In Progress</option>
+        <option value="Done"        ${a.status==='Done'       ?'selected':''}>Done</option>
+        <option value="Blocked"     ${a.status==='Blocked'    ?'selected':''}>Blocked</option>
+      </select>
+    </td>
+    <td class="col-del"><button class="del-btn" onclick="deleteAction(this)" title="Delete">&#215;</button></td>
+  `;
+  const notesRow = document.createElement('tr');
+  notesRow.dataset.aid = aid;
+  notesRow.classList.add('notes-row');
+  notesRow.style.display = 'none';
+  notesRow.innerHTML = `<td colspan="6" class="notes-cell">
+    <textarea class="act-notes" placeholder="Notes…" onchange="saveAction(this)">${_esc(a.notes||'')}</textarea>
+  </td>`;
+  return [row, notesRow];
+}
+
+async function addAction() {
+  try {
+    const res = await api('POST', `/api/portfolio/projects/${PROJECT_ID}/actions`, {
+      description: '', owner: '', status: 'Not Started'
+    });
+    const tbody = document.getElementById('actions-tbody');
+    const [row, notesRow] = buildActionRow({ id: res.id, status: 'Not Started' });
+    tbody.appendChild(row);
+    tbody.appendChild(notesRow);
+    row.querySelector('.act-desc').focus();
+    updateCount('actions');
+    hideEmpty('actions-empty');
+  } catch(e) {
+    toast('Failed to add action: ' + e.message, 'error');
+  }
+}
+
+async function deleteAction(btn) {
+  const row = btn.closest('tr');
+  const aid = row.dataset.aid;
+  if (!confirm('Delete this action item?')) return;
+  try {
+    await api('DELETE', `/api/portfolio/projects/${PROJECT_ID}/actions/${aid}`);
+    const notesRow = row.nextElementSibling;
+    if (notesRow?.classList.contains('notes-row')) notesRow.remove();
+    row.remove();
+    updateCount('actions');
+    toast('Action deleted');
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   C. RISKS
+═══════════════════════════════════════════════════════════════════ */
+function getRiskData(row) {
+  return {
+    description: row.querySelector('.risk-desc')?.value   || '',
+    impact:      row.querySelector('.risk-impact')?.value || 'Medium',
+    probability: row.querySelector('.risk-prob')?.value   || 'Medium',
+    mitigation:  row.querySelector('.risk-mit')?.value    || '',
+    status:      row.querySelector('.risk-status')?.value || 'Open',
+  };
+}
+
+async function saveRisk(el) {
+  const row = el.closest('tr');
+  const rid = row.dataset.rid;
+  if (!rid) return;
+  try {
+    await api('PATCH', `/api/portfolio/projects/${PROJECT_ID}/risks/${rid}`, getRiskData(row));
+    toast('Risk saved');
+  } catch(e) {
+    toast('Failed to save risk: ' + e.message, 'error');
+  }
+}
+
+function buildRiskRow(r) {
+  const row = document.createElement('tr');
+  row.dataset.rid = r.id;
+  row.innerHTML = `
+    <td><textarea class="risk-desc" onchange="saveRisk(this)">${_esc(r.description||'')}</textarea></td>
+    <td>
+      <select class="risk-impact" onchange="saveRisk(this)">
+        <option value="High"   ${r.impact==='High'  ?'selected':''}>High</option>
+        <option value="Medium" ${r.impact==='Medium'?'selected':''}>Medium</option>
+        <option value="Low"    ${r.impact==='Low'   ?'selected':''}>Low</option>
+      </select>
+    </td>
+    <td>
+      <select class="risk-prob" onchange="saveRisk(this)">
+        <option value="High"   ${r.probability==='High'  ?'selected':''}>High</option>
+        <option value="Medium" ${r.probability==='Medium'?'selected':''}>Medium</option>
+        <option value="Low"    ${r.probability==='Low'   ?'selected':''}>Low</option>
+      </select>
+    </td>
+    <td><textarea class="risk-mit" onchange="saveRisk(this)">${_esc(r.mitigation||'')}</textarea></td>
+    <td>
+      <select class="risk-status" onchange="saveRisk(this)">
+        <option value="Open"      ${r.status==='Open'     ?'selected':''}>Open</option>
+        <option value="Mitigated" ${r.status==='Mitigated'?'selected':''}>Mitigated</option>
+        <option value="Closed"    ${r.status==='Closed'   ?'selected':''}>Closed</option>
+      </select>
+    </td>
+    <td class="col-del"><button class="del-btn" onclick="deleteRisk(this)" title="Delete">&#215;</button></td>
+  `;
+  return row;
+}
+
+async function addRisk() {
+  try {
+    const res = await api('POST', `/api/portfolio/projects/${PROJECT_ID}/risks`, {
+      description: '', impact: 'Medium', probability: 'Medium', status: 'Open'
+    });
+    const tbody = document.getElementById('risks-tbody');
+    tbody.appendChild(buildRiskRow({ id: res.id, impact: 'Medium', probability: 'Medium', status: 'Open' }));
+    updateCount('risks');
+    hideEmpty('risks-empty');
+  } catch(e) {
+    toast('Failed to add risk: ' + e.message, 'error');
+  }
+}
+
+async function deleteRisk(btn) {
+  const row = btn.closest('tr');
+  const rid = row.dataset.rid;
+  if (!confirm('Delete this risk?')) return;
+  try {
+    await api('DELETE', `/api/portfolio/projects/${PROJECT_ID}/risks/${rid}`);
+    row.remove();
+    updateCount('risks');
+    toast('Risk deleted');
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   D. CERTIFICATIONS
+═══════════════════════════════════════════════════════════════════ */
+function getCertData(row) {
+  return {
+    cert_name:     row.querySelector('.cert-name')?.value   || '',
+    agency:        row.querySelector('.cert-agency')?.value || '',
+    cert_type:     row.querySelector('.cert-type')?.value   || '',
+    status:        row.querySelector('.cert-status')?.value || 'Planned',
+    expected_date: row.querySelector('.cert-exp')?.value    || '',
+    actual_date:   row.querySelector('.cert-act')?.value    || '',
+    notes:         row.querySelector('.cert-notes')?.value  || '',
+  };
+}
+
+async function saveCert(el) {
+  const row = el.closest('tr');
+  const cid = row.dataset.cid;
+  if (!cid) return;
+  try {
+    await api('PATCH', `/api/portfolio/projects/${PROJECT_ID}/certs/${cid}`, getCertData(row));
+    toast('Cert saved');
+  } catch(e) {
+    toast('Failed to save cert: ' + e.message, 'error');
+  }
+}
+
+function buildCertRow(c) {
+  const row = document.createElement('tr');
+  row.dataset.cid = c.id;
+  row.innerHTML = `
+    <td><input type="text" class="cert-name"   value="${_esc(c.cert_name||'')}"   placeholder="Cert name" onchange="saveCert(this)"></td>
+    <td><input type="text" class="cert-agency" value="${_esc(c.agency||'')}"      placeholder="Agency"    onchange="saveCert(this)"></td>
+    <td><input type="text" class="cert-type"   value="${_esc(c.cert_type||'')}"   placeholder="Type"      onchange="saveCert(this)"></td>
+    <td>
+      <select class="cert-status" onchange="saveCert(this)">
+        <option value="Planned"     ${c.status==='Planned'    ?'selected':''}>Planned</option>
+        <option value="In Progress" ${c.status==='In Progress'?'selected':''}>In Progress</option>
+        <option value="Submitted"   ${c.status==='Submitted'  ?'selected':''}>Submitted</option>
+        <option value="Approved"    ${c.status==='Approved'   ?'selected':''}>Approved</option>
+        <option value="Failed"      ${c.status==='Failed'     ?'selected':''}>Failed</option>
+      </select>
+    </td>
+    <td><input type="date" class="cert-exp" value="${c.expected_date||''}" onchange="saveCert(this)"></td>
+    <td><input type="date" class="cert-act" value="${c.actual_date||''}"   onchange="saveCert(this)"></td>
+    <td><textarea class="cert-notes" onchange="saveCert(this)">${_esc(c.notes||'')}</textarea></td>
+    <td class="col-del"><button class="del-btn" onclick="deleteCert(this)" title="Delete">&#215;</button></td>
+  `;
+  return row;
+}
+
+async function addCert() {
+  try {
+    const res = await api('POST', `/api/portfolio/projects/${PROJECT_ID}/certs`, {
+      cert_name: '', status: 'Planned'
+    });
+    const tbody = document.getElementById('certs-tbody');
+    tbody.appendChild(buildCertRow({ id: res.id, status: 'Planned' }));
+    updateCount('certs');
+    hideEmpty('certs-empty');
+  } catch(e) {
+    toast('Failed to add cert: ' + e.message, 'error');
+  }
+}
+
+async function deleteCert(btn) {
+  const row = btn.closest('tr');
+  const cid = row.dataset.cid;
+  if (!confirm('Delete this certification?')) return;
+  try {
+    await api('DELETE', `/api/portfolio/projects/${PROJECT_ID}/certs/${cid}`);
+    row.remove();
+    updateCount('certs');
+    toast('Cert deleted');
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   E. RESOURCE GRID
+═══════════════════════════════════════════════════════════════════ */
+const COVERAGE_CYCLE = ['Fully', 'Partially', 'No', 'N/A'];
+
+function cycleCoverage(btn) {
+  const cur = btn.dataset.coverage || 'N/A';
+  const idx = COVERAGE_CYCLE.indexOf(cur);
+  const next = COVERAGE_CYCLE[(idx + 1) % COVERAGE_CYCLE.length];
+  btn.dataset.coverage = next;
+  btn.textContent = next;
+  // Update badge class
+  btn.className = 'cov-badge cov-' + next.replace('/', '');
+}
+
+async function saveResources() {
+  const cells = document.querySelectorAll('#resource-grid .resource-cell');
+  const items = [];
+  cells.forEach(cell => {
+    const discipline = cell.dataset.discipline;
+    const covBtn = cell.querySelector('.cov-badge');
+    const demandInput = cell.querySelector('.demand-input');
+    items.push({
+      discipline,
+      coverage:    covBtn ? covBtn.dataset.coverage : 'N/A',
+      demand_days: demandInput ? parseFloat(demandInput.value) || 0 : 0,
+    });
+  });
+  const msg = document.getElementById('res-save-msg');
+  msg.textContent = 'Saving…';
+  try {
+    await api('PUT', `/api/portfolio/projects/${PROJECT_ID}/resources`, items);
+    msg.textContent = '';
+    toast('Resources saved');
+  } catch(e) {
+    msg.textContent = 'Error saving';
+    toast('Failed to save resources: ' + e.message, 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   F. UPDATES LOG
+═══════════════════════════════════════════════════════════════════ */
+function buildUpdateEntry(u) {
+  const div = document.createElement('div');
+  div.className = 'update-entry';
+  div.dataset.uid = u.id;
+  const ts = (u.created_at || '').substring(0, 16);
+  div.innerHTML = `
+    <div class="update-entry-body">
+      <div class="update-meta">${_esc(ts)} &nbsp;|&nbsp; ${_esc(u.author || '')}</div>
+      <div class="update-content">${_esc(u.content || '')}</div>
+    </div>
+    <button class="del-btn" onclick="deleteUpdate(this)" title="Delete update" style="flex-shrink:0">&#215;</button>
+  `;
+  return div;
+}
+
+async function addUpdate() {
+  const author  = document.getElementById('update-author').value.trim();
+  const content = document.getElementById('update-content').value.trim();
+  if (!content) { toast('Please enter update text', 'error'); return; }
+  try {
+    const res = await api('POST', `/api/portfolio/projects/${PROJECT_ID}/updates`, { author, content });
+    const feed = document.getElementById('updates-feed');
+    const now  = new Date().toISOString().substring(0, 16).replace('T', ' ');
+    const entry = buildUpdateEntry({ id: res.id || Date.now(), author, content, created_at: now });
+    feed.insertBefore(entry, feed.firstChild);
+    document.getElementById('update-content').value = '';
+    hideEmpty('updates-empty');
+    updateCount('updates');
+    toast('Update added');
+  } catch(e) {
+    toast('Failed to add update: ' + e.message, 'error');
+  }
+}
+
+async function deleteUpdate(btn) {
+  const entry = btn.closest('.update-entry');
+  const uid = entry.dataset.uid;
+  if (!confirm('Delete this update?')) return;
+  try {
+    await api('DELETE', `/api/portfolio/projects/${PROJECT_ID}/updates/${uid}`);
+    entry.remove();
+    updateCount('updates');
+    toast('Update deleted');
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+/* ── Helpers ────────────────────────────────────────────────────── */
+function _esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function updateCount(section) {
+  const countEl = document.getElementById(section + '-count');
+  if (!countEl) return;
+  let count = 0;
+  if (section === 'actions') {
+    count = document.querySelectorAll('#actions-tbody tr:not(.notes-row)').length;
+  } else if (section === 'risks') {
+    count = document.querySelectorAll('#risks-tbody tr').length;
+  } else if (section === 'certs') {
+    count = document.querySelectorAll('#certs-tbody tr').length;
+  } else if (section === 'updates') {
+    count = document.querySelectorAll('#updates-feed .update-entry').length;
+  }
+  countEl.textContent = count;
+}
+
+function hideEmpty(id) {
+  const el = document.getElementById(id);
+  if (el) el.style.display = 'none';
+}
+
+/* ── Init: restore last saved author name ──────────────────────── */
+(function() {
+  const saved = localStorage.getItem('pp_update_author');
+  if (saved) document.getElementById('update-author').value = saved;
+  document.getElementById('update-author').addEventListener('change', function() {
+    localStorage.setItem('pp_update_author', this.value);
+  });
+})();
+</script>
+</body>
+</html>

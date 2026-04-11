@@ -1,0 +1,4345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Overall Programs Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 8px;
+        }
+        
+        .container {
+            width: min(100%, calc(100vw - 24px));
+            max-width: none;
+            margin: 0 auto;
+        }
+
+        body.schedule-tab-active {
+            overflow: hidden;
+        }
+
+        body.schedule-tab-active .container {
+            min-height: calc(100vh - 16px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: white;
+            padding: 18px 24px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-copy {
+            flex: 1 1 320px;
+        }
+
+        .header-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .header-action-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 18px;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+            transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+        }
+
+        .header-action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        }
+
+        .header-status {
+            min-height: 18px;
+            font-size: 12px;
+            color: #64748b;
+            text-align: right;
+        }
+
+        .header-status.success {
+            color: #166534;
+        }
+
+        .header-status.error {
+            color: #b91c1c;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .project-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        
+        .project-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            line-height: 1.25;
+            min-height: calc(1.25em * 2);
+            margin-bottom: 10px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .project-manager {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .project-status-list {
+            list-style: none;
+            margin: 0 0 18px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .project-status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+
+        .project-status-ball {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex: 0 0 12px;
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.06);
+        }
+
+        .project-status-item.on-track .project-status-ball {
+            background: #16a34a;
+        }
+
+        .project-status-item.delayed .project-status-ball {
+            background: #dc2626;
+        }
+        
+        .project-stats {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .project-stat {
+            text-align: center;
+        }
+        
+        .project-stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .project-stat-label {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .project-updated {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+
+        .project-card-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+
+        .project-card-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+        }
+
+        .project-card-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.12);
+        }
+
+        .project-card-btn.primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .project-card-btn.primary:hover {
+            background: #1d4ed8;
+        }
+
+        .project-card-btn.secondary {
+            background: #eef4ff;
+            color: #214b8f;
+            border: 1px solid #c8dafb;
+        }
+
+        .project-card-btn.secondary:hover {
+            background: #e1edff;
+        }
+
+        .project-card-delete-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .project-card-delete-btn:hover {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .project-card-confirm {
+            position: absolute;
+            inset: 0;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.97);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 20px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .project-card-confirm p {
+            font-size: 14px;
+            color: #374151;
+            margin: 0;
+        }
+
+        .project-card-confirm strong {
+            color: #dc2626;
+        }
+
+        .project-card-confirm-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .project-card-confirm-actions button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-confirm-delete {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-confirm-delete:hover {
+            background: #b91c1c;
+        }
+
+        .btn-cancel-delete {
+            background: #f1f5f9;
+            color: #374151;
+            border: 1px solid #cbd5e1 !important;
+        }
+
+        .btn-cancel-delete:hover {
+            background: #e2e8f0;
+        }
+        
+        .empty-state {
+            background: white;
+            padding: 60px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .empty-state h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .empty-state p {
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .reload-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.2s;
+        }
+        
+        .reload-btn:hover {
+            background: #5568d3;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .import-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .dashboard-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .dashboard-tab {
+            border: none;
+            border-radius: 999px;
+            padding: 12px 18px;
+            background: rgba(255, 255, 255, 0.18);
+            color: #eef3ff;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            cursor: pointer;
+            transition: transform 0.18s, background 0.18s, box-shadow 0.18s;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+
+        .dashboard-tab:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.26);
+        }
+
+        .dashboard-tab.active {
+            background: #f8fbff;
+            color: #1a2340;
+            box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        body.schedule-tab-active .tab-pane[data-pane="schedule"].active {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .timeline-section {
+            background: #171c31;
+            padding: 18px 20px 16px;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+            margin-bottom: 18px;
+            color: #eef3ff;
+        }
+
+        body.schedule-tab-active .timeline-section {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            margin-bottom: 0;
+        }
+
+        .timeline-section h2 {
+            color: #f8fbff;
+            margin-bottom: 4px;
+            font-size: 28px;
+        }
+
+        .timeline-section p {
+            color: #96a6cf;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.35em;
+            font-size: 11px;
+        }
+
+        .schedule-shell {
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: 210px repeat(var(--month-count), minmax(44px, 1fr));
+            width: max(100%, 1120px);
+            min-width: 0;
+            border-top: 1px solid #2a3258;
+            border-left: 1px solid #2a3258;
+            background: #1d233c;
+            position: relative;
+        }
+
+        .schedule-cell {
+            border-right: 1px solid #2a3258;
+            border-bottom: 1px solid #2a3258;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12px;
+            color: #d6def7;
+        }
+
+        .schedule-label {
+            justify-content: flex-start;
+            padding: 0 16px;
+            background: #1d2440;
+            color: #f4f7ff;
+            font-weight: 700;
+        }
+
+        .schedule-label.sub {
+            color: #9fb1dd;
+            font-weight: 600;
+        }
+
+        .year-header,
+        .quarter-header,
+        .fiscal-header {
+            background: #1456aa;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .quarter-header,
+        .fiscal-header {
+            background: #1d73d2;
+            font-size: 11px;
+        }
+
+        .project-name-cell {
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding: 12px 14px;
+            line-height: 1.35;
+            font-size: 14px;
+            color: #f8fbff;
+            background: #1b2138;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .project-name-meta {
+            font-size: 10px;
+            color: #a8b8df;
+            line-height: 1.35;
+        }
+
+        .lane-cell {
+            grid-column: 2 / -1;
+            position: relative;
+            min-height: 54px;
+            background-color: #1b2138;
+            background-image: linear-gradient(to right, rgba(63, 80, 123, 0.65) 1px, transparent 1px);
+            background-size: calc(100% / var(--month-count)) 100%;
+        }
+
+        .gate-chip {
+            position: absolute;
+            top: 7px;
+            min-width: 48px;
+            min-height: 28px;
+            padding: 4px 8px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+            transform: translateX(-50%);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        .gate-chip::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -8px;
+            width: 2px;
+            height: 8px;
+            background: currentColor;
+        }
+
+        .gate-chip.done {
+            background: #57c253;
+            color: #f4fff3;
+        }
+
+        .gate-chip.planned {
+            background: #ff9f1a;
+            color: #fff9f0;
+        }
+
+        .gate-chip.rework {
+            background: #d94b57;
+            color: #fff2f3;
+        }
+
+        .lane-cell .critical-bar {
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .lane-cell .critical-bar:hover {
+            transform: translateY(-1px);
+        }
+
+        .gate-date {
+            font-size: 9px;
+            font-weight: 600;
+            line-height: 1.1;
+            margin-top: 1px;
+            opacity: 0.95;
+        }
+
+        .gate-fiscal {
+            font-size: 8px;
+            font-weight: 700;
+            line-height: 1.1;
+            margin-top: 1px;
+            opacity: 0.92;
+            letter-spacing: 0.03em;
+        }
+
+        .today-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: repeating-linear-gradient(to bottom, #ff616d 0, #ff616d 6px, transparent 6px, transparent 12px);
+            pointer-events: none;
+        }
+
+        .today-label {
+            position: absolute;
+            top: -18px;
+            transform: translateX(-50%);
+            color: #ff616d;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+        }
+
+        .timeline-legend {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            color: #a9b6dc;
+            font-size: 12px;
+        }
+
+        .timeline-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-box {
+            width: 16px;
+            height: 12px;
+            display: inline-block;
+        }
+
+        .legend-done { background: #57c253; }
+        .legend-planned { background: #ff9f1a; }
+        .legend-rework { background: #d94b57; }
+        .legend-driver { background: linear-gradient(135deg, #b32939 0%, #ef6670 100%); }
+        .legend-line {
+            width: 14px;
+            height: 12px;
+            border-left: 2px dashed #ff616d;
+        }
+
+        .resource-section {
+            background: #11192d;
+            padding: 28px;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+            margin-bottom: 30px;
+            color: #eef3ff;
+        }
+
+        .resource-section h2 {
+            color: #f8fbff;
+            margin-bottom: 6px;
+            font-size: 32px;
+        }
+
+        .resource-section p {
+            color: #96a6cf;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+            letter-spacing: 0.35em;
+            font-size: 11px;
+        }
+
+        .sticky-summary-header {
+            position: sticky;
+            top: 12px;
+            z-index: 30;
+            padding: 10px 0 14px;
+            margin-bottom: 18px;
+            background: #11192d;
+            border-bottom: 1px solid rgba(55, 78, 131, 0.8);
+            box-shadow: 0 14px 26px rgba(8, 14, 26, 0.48);
+        }
+
+        /* ── Command Center: hero card + chip strip ── */
+        .resource-command-center {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 0;
+        }
+        .resource-hero-card {
+            background: rgba(22, 34, 62, 0.97);
+            border: 2px solid #24355f;
+            border-radius: 12px;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            flex-wrap: wrap;
+            width: 100%;
+            cursor: pointer;
+            text-align: left;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+        .resource-hero-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.25); }
+        .resource-hero-card.active { box-shadow: 0 0 0 2px rgba(126,200,255,0.4); }
+        .resource-hero-rag { display: flex; flex-direction: column; align-items: center; min-width: 110px; }
+        .resource-hero-rag-emoji { font-size: 2.6em; line-height: 1; }
+        .resource-hero-rag-label { font-size: 1em; font-weight: 800; margin-top: 4px; letter-spacing: 0.06em; }
+        .resource-hero-rag-sub   { font-size: 0.72em; color: #8899aa; margin-top: 3px; }
+        .resource-hero-rag-reason { font-size: 0.68em; font-weight: 600; margin-top: 5px; opacity: 0.9; }
+        .resource-hero-divider   { width: 1px; align-self: stretch; background: #24355f; min-height: 60px; }
+        .resource-hero-tiles {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            flex: 1;
+            min-width: 0;
+        }
+        .resource-hero-tile {
+            background: #162030;
+            border: 1px solid #24355f;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            text-align: left;
+            transition: border-color 0.18s, transform 0.15s;
+            color: inherit;
+        }
+        .resource-hero-tile:hover { transform: translateY(-2px); }
+        .resource-hero-tile-value { font-size: 1.55em; font-weight: 700; line-height: 1.1; }
+        .resource-hero-tile-label { font-size: 0.72em; color: #8899aa; margin-top: 3px; }
+        .resource-chip-strip {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .resource-chip-label {
+            font-size: 0.72em;
+            color: #556688;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            white-space: nowrap;
+        }
+        .resource-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(22, 34, 62, 0.7);
+            border: 1px solid #24355f;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 0.8em;
+            color: #a8c0e8;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+        .resource-chip:hover { background: rgba(78,115,184,0.25); border-color: #4e73b8; color: #cde0ff; }
+        .resource-chip.active { background: rgba(126,200,255,0.15); border-color: #7ec8ff; color: #7ec8ff; }
+        .resource-chip-count { font-weight: 700; font-size: 1.05em; }
+        /* keep grid for other .resource-summary uses */
+        .resource-summary {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 0;
+        }
+        @media (max-width: 1100px) {
+            .resource-summary { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+            .resource-hero-tiles { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .sticky-summary-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+            min-height: 0;
+        }
+
+        .resource-summary-card {
+            background: rgba(22, 34, 62, 0.95);
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: left;
+            min-width: 0;
+        }
+
+        .resource-summary-card.clickable {
+            width: 100%;
+            cursor: pointer;
+            color: inherit;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .resource-summary-card.clickable:hover {
+            transform: translateY(-2px);
+            border-color: #4e73b8;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+        }
+
+        .resource-summary-card.active {
+            border-color: #7ec8ff;
+            box-shadow: 0 0 0 1px rgba(126, 200, 255, 0.35);
+        }
+
+        .resource-summary-value {
+            font-size: 30px;
+            font-weight: 700;
+            color: #7ec8ff;
+            margin-bottom: 4px;
+        }
+
+        .resource-summary-label {
+            font-size: 12px;
+            color: #a8b8df;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .resource-summary-hint {
+            margin-top: 10px;
+            font-size: 11px;
+            color: #9fb1dd;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .resource-detail-panel {
+            margin-bottom: 18px;
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            background: rgba(18, 28, 50, 0.96);
+            padding: 18px;
+        }
+
+        .resource-detail-panel h3 {
+            color: #f8fbff;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        .resource-detail-panel p {
+            color: #9fb1dd;
+            margin-bottom: 14px;
+            letter-spacing: normal;
+            text-transform: none;
+            font-size: 13px;
+        }
+
+        .resource-detail-empty {
+            color: #9fb1dd;
+            font-size: 13px;
+        }
+
+        .delay-chart-panel {
+            margin-bottom: 18px;
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            background: rgba(18, 28, 50, 0.96);
+            padding: 18px;
+        }
+
+        .delay-chart-panel h3 {
+            color: #f8fbff;
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+
+        .delay-chart-panel p {
+            color: #9fb1dd;
+            margin-bottom: 14px;
+            letter-spacing: normal;
+            text-transform: none;
+            font-size: 13px;
+        }
+
+        .delay-chart-layout {
+            display: grid;
+            grid-template-columns: minmax(180px, 220px) 1fr;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .delay-donut-button {
+            background: transparent;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            justify-self: center;
+        }
+
+        .delay-donut {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+        }
+
+        .delay-donut-center {
+            width: 108px;
+            height: 108px;
+            border-radius: 50%;
+            background: #15203a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #eef3ff;
+            text-align: center;
+            padding: 12px;
+        }
+
+        .delay-donut-center strong {
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        .delay-donut-center span {
+            font-size: 11px;
+            color: #9fb1dd;
+            margin-top: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .delay-chart-legend {
+            display: grid;
+            gap: 12px;
+        }
+
+        .delay-legend-btn {
+            width: 100%;
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            background: #17223d;
+            color: #eef3ff;
+            padding: 12px 14px;
+            text-align: left;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .delay-legend-btn:hover {
+            border-color: #4e73b8;
+            background: #1d2c4f;
+        }
+
+        .delay-legend-btn.active {
+            border-color: #7ec8ff;
+            box-shadow: 0 0 0 1px rgba(126, 200, 255, 0.35);
+        }
+
+        .delay-legend-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .delay-legend-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .delay-legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .delay-legend-dot.delayed {
+            background: #d94b57;
+        }
+
+        .delay-legend-dot.clear {
+            background: #57c253;
+        }
+
+        .delay-legend-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #f8fbff;
+        }
+
+        .delay-legend-meta {
+            color: #9fb1dd;
+            font-size: 12px;
+        }
+
+        .resource-table-wrap {
+            margin-bottom: 18px;
+            border: 1px solid #24355f;
+            border-radius: 10px;
+            overflow: visible;
+            background: rgba(18, 28, 50, 0.96);
+        }
+
+        .resource-table-scroll {
+            overflow-x: auto;
+            overflow-y: visible;
+            border-radius: 10px;
+        }
+
+        .resource-table {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+        }
+
+        .resource-table th,
+        .resource-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #24355f;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .resource-table th {
+            background: #17223d;
+            color: #f3f7ff;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+        }
+
+        .resource-filter-cell {
+            position: relative;
+        }
+
+        .resource-header-filter {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 2px;
+        }
+
+        .resource-header-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .resource-filter-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 12px;
+            height: 12px;
+            border: none;
+            border-radius: 2px;
+            background: transparent;
+            color: #9fb1dd;
+            padding: 0;
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            flex-shrink: 0;
+            line-height: 1;
+            margin-left: -1px;
+        }
+
+        .resource-filter-trigger:hover,
+        .resource-filter-trigger.active {
+            background: rgba(126, 200, 255, 0.16);
+            color: #7ec8ff;
+        }
+
+        .resource-filter-trigger-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 12px;
+            height: 12px;
+            padding: 0 2px;
+            border-radius: 999px;
+            background: #7ec8ff;
+            color: #10203b;
+            font-size: 8px;
+            font-weight: 800;
+        }
+
+        .resource-filter-menu {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            min-width: 280px;
+            max-width: 360px;
+            max-height: 340px;
+            overflow-y: auto;
+            padding: 14px;
+            border: 1px solid #365183;
+            border-radius: 10px;
+            background: #0f1728;
+            box-shadow: 0 16px 28px rgba(0,0,0,0.36);
+            z-index: 1200;
+            overscroll-behavior: contain;
+        }
+
+        .resource-filter-menu.open {
+            display: block;
+        }
+
+        .resource-filter-menu-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .resource-filter-menu-link {
+            border: none;
+            background: transparent;
+            color: #7ec8ff;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .resource-filter-menu-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .resource-filter-option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            color: #d6def7;
+            font-size: 12px;
+            line-height: 1.3;
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .resource-filter-option:hover {
+            background: rgba(38, 57, 97, 0.52);
+        }
+
+        .resource-filter-option input {
+            margin-top: 2px;
+            flex-shrink: 0;
+            transform: scale(1.1);
+        }
+
+        .resource-filter-empty {
+            color: #91a5d6;
+            font-size: 12px;
+        }
+
+        .resource-table td {
+            color: #d6def7;
+        }
+
+        .resource-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .resource-table tr:hover td {
+            background: rgba(38, 57, 97, 0.42);
+        }
+
+        .resource-table-owner {
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .resource-table-projects {
+            color: #9fb1dd;
+        }
+
+        .resource-matrix-cell {
+            min-width: 88px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .resource-matrix-primary {
+            font-weight: 700;
+            color: #f8fbff;
+        }
+
+        .resource-matrix-subline {
+            margin-top: 3px;
+            font-size: 11px;
+            color: #9fb1dd;
+        }
+
+        .resource-matrix-zero {
+            color: #6f84b8;
+        }
+
+        .resource-table-actions {
+            display: flex;
+            justify-content: flex-end;
+            padding: 12px 14px 0;
+        }
+
+        .resource-toggle-btn {
+            background: #223256;
+            color: #eef3ff;
+            border: 1px solid #365183;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .resource-toggle-btn:hover {
+            background: #2b4170;
+            border-color: #4e73b8;
+        }
+
+        .resource-detail-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 12px;
+        }
+
+        .overview-link {
+            color: #7ec8ff;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .overview-link:hover {
+            text-decoration: underline;
+        }
+
+        .overview-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .overview-pill.delayed {
+            background: rgba(217, 75, 87, 0.2);
+            color: #ffb4bb;
+        }
+
+        .overview-pill.active {
+            background: rgba(78, 141, 245, 0.2);
+            color: #b8d5ff;
+        }
+
+        .overview-pill.clear {
+            background: rgba(87, 194, 83, 0.18);
+            color: #9cf79a;
+        }
+
+        .critical-path-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 320px;
+        }
+
+        .critical-path-item {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+            line-height: 1.35;
+        }
+
+        .critical-path-item strong {
+            color: #f8fbff;
+            font-size: 12px;
+        }
+
+        .critical-path-item span {
+            color: #b7c6ea;
+            font-size: 12px;
+        }
+
+        .critical-board-shell {
+            overflow-x: auto;
+        }
+
+        .critical-board-grid {
+            display: grid;
+            grid-template-columns: 240px repeat(var(--month-count), minmax(42px, 1fr));
+            width: max(100%, 1080px);
+            min-width: 0;
+            border-top: 1px solid #24355f;
+            border-left: 1px solid #24355f;
+            background: #172039;
+            position: relative;
+        }
+
+        .critical-board-cell {
+            border-right: 1px solid #24355f;
+            border-bottom: 1px solid #24355f;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12px;
+            color: #d6def7;
+        }
+
+        .critical-board-label {
+            justify-content: flex-start;
+            padding: 0 16px;
+            background: #17223d;
+            color: #f4f7ff;
+            font-weight: 700;
+        }
+
+        .critical-board-label.sub {
+            color: #9fb1dd;
+            font-weight: 600;
+        }
+
+        .critical-year-header,
+        .critical-quarter-header,
+        .critical-fiscal-header {
+            background: #0f5db8;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .critical-quarter-header,
+        .critical-fiscal-header {
+            background: #2184e5;
+            font-size: 11px;
+        }
+
+        .critical-task-label {
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding: 12px 16px;
+            background: #151d33;
+            flex-direction: column;
+            gap: 6px;
+            text-align: left;
+        }
+
+        .critical-task-project {
+            font-size: 11px;
+            color: #9fb1dd;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .critical-task-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: #f8fbff;
+            line-height: 1.35;
+        }
+
+        .critical-task-meta {
+            font-size: 11px;
+            color: #c4d1f3;
+            line-height: 1.35;
+        }
+
+        .critical-lane-cell {
+            grid-column: 2 / -1;
+            position: relative;
+            min-height: 60px;
+            background-color: #151d33;
+            background-image: linear-gradient(to right, rgba(63, 80, 123, 0.65) 1px, transparent 1px);
+            background-size: calc(100% / var(--month-count)) 100%;
+        }
+
+        .critical-bar {
+            position: absolute;
+            top: 12px;
+            min-height: 32px;
+            border-radius: 8px;
+            padding: 6px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.24);
+            border: 1px solid rgba(255,255,255,0.14);
+            overflow: hidden;
+            z-index: 2;
+        }
+
+        .critical-bar.path {
+            background: linear-gradient(135deg, #b32939 0%, #ef6670 100%);
+            border-color: rgba(255, 132, 144, 0.42);
+            box-shadow: 0 10px 20px rgba(179, 41, 57, 0.28);
+        }
+
+        .critical-bar.delayed {
+            background: linear-gradient(135deg, #c83d4a 0%, #ef6670 100%);
+        }
+
+        .critical-bar.active {
+            background: linear-gradient(135deg, #2766d8 0%, #59a7ff 100%);
+        }
+
+        .critical-bar.clear {
+            background: linear-gradient(135deg, #238c59 0%, #57c253 100%);
+        }
+
+        .critical-bar-title {
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .critical-bar-meta {
+            font-size: 9px;
+            opacity: 0.92;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .critical-bar.compact {
+            overflow: visible;
+            min-width: 10px;
+            padding: 0;
+            justify-content: flex-start;
+        }
+
+        .critical-bar.compact .critical-bar-title {
+            position: absolute;
+            left: calc(100% + 6px);
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(12, 18, 31, 0.96);
+            border: 1px solid rgba(255, 132, 144, 0.36);
+            border-radius: 6px;
+            padding: 4px 8px;
+            max-width: 210px;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+            line-height: 1.2;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+            z-index: 4;
+        }
+
+        .critical-bar.compact .critical-bar-meta {
+            display: none;
+        }
+
+        .resource-row-hidden {
+            display: none;
+        }
+
+        .resource-load-good,
+        .resource-load-medium,
+        .resource-load-high {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .resource-load-good {
+            background: rgba(87, 194, 83, 0.18);
+            color: #9cf79a;
+        }
+
+        .resource-load-medium {
+            background: rgba(255, 159, 26, 0.18);
+            color: #ffd18d;
+        }
+
+        .resource-load-high {
+            background: rgba(217, 75, 87, 0.2);
+            color: #ffb4bb;
+        }
+
+        .resource-shell {
+            overflow-x: auto;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: 200px repeat(var(--month-count), minmax(42px, 1fr));
+            width: max(100%, 980px);
+            min-width: 0;
+            border-top: 1px solid #233255;
+            border-left: 1px solid #233255;
+            background: #172039;
+            position: relative;
+        }
+
+        .resource-cell {
+            border-right: 1px solid #233255;
+            border-bottom: 1px solid #233255;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12px;
+            color: #d6def7;
+        }
+
+        .resource-label {
+            justify-content: flex-start;
+            padding: 0 16px;
+            background: #17223d;
+            color: #f4f7ff;
+            font-weight: 700;
+        }
+
+        .resource-label.sub {
+            color: #9fb1dd;
+            font-weight: 600;
+        }
+
+        .resource-year-header,
+        .resource-quarter-header,
+        .resource-fiscal-header {
+            background: #0f5db8;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .resource-quarter-header,
+        .resource-fiscal-header {
+            background: #2184e5;
+            font-size: 11px;
+        }
+
+        .owner-name-cell {
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding: 12px 16px;
+            line-height: 1.35;
+            font-size: 14px;
+            color: #f8fbff;
+            background: #151d33;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .owner-title {
+            font-weight: 700;
+        }
+
+        .owner-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .owner-pill {
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #223256;
+            color: #bfd0f5;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .resource-lane-cell {
+            grid-column: 2 / -1;
+            position: relative;
+            min-height: 72px;
+            background-color: #151d33;
+            background-image: linear-gradient(to right, rgba(63, 80, 123, 0.65) 1px, transparent 1px);
+            background-size: calc(100% / var(--month-count)) 100%;
+        }
+
+        .task-chip {
+            position: absolute;
+            min-height: 22px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            display: inline-flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #f8fbff;
+            font-size: 10px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.24);
+            border: 1px solid rgba(255,255,255,0.18);
+            overflow: hidden;
+        }
+
+        .task-chip.active {
+            box-shadow: 0 0 0 1px rgba(126, 200, 255, 0.55), 0 10px 20px rgba(0,0,0,0.28);
+        }
+
+        .task-chip.critical {
+            border-color: rgba(255, 214, 10, 0.85);
+        }
+
+        .task-chip-label {
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .task-chip-meta {
+            font-size: 9px;
+            opacity: 0.92;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .resource-legend {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin-top: 16px;
+            color: #a9b6dc;
+            font-size: 12px;
+        }
+
+        .resource-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend-chip {
+            width: 16px;
+            height: 12px;
+            border-radius: 4px;
+            background: #4e8df5;
+            display: inline-block;
+        }
+
+        .legend-chip-active {
+            box-shadow: 0 0 0 2px rgba(126, 200, 255, 0.55);
+        }
+
+        .legend-chip-critical {
+            border: 2px solid rgba(255, 214, 10, 0.85);
+            background: #4e8df5;
+        }
+
+        .import-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 10px rgba(245, 87, 108, 0.3);
+        }
+        
+        .import-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(245, 87, 108, 0.4);
+        }
+        
+        .import-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .progress-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .progress-overlay.show {
+            display: flex;
+        }
+        
+        .progress-content {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .message {
+            padding: 15px 25px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+            display: none;
+        }
+        
+        .message.show {
+            display: block;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 900px) {
+            header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .header-actions {
+                align-items: stretch;
+            }
+
+            .header-status {
+                text-align: left;
+            }
+
+            .timeline-section h2 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+    <body>
+        <div class="container">
+            <header>
+                <div class="header-copy">
+                    <h1>📊 Overall Programs Dashboard</h1>
+                    <p class="subtitle">Web-based project dashboard management system</p>
+                </div>
+                <div class="header-actions">
+                    <button type="button" class="header-action-btn" onclick="exportOverallDashboardHTML()">📤 Export Overall Dashboard HTML</button>
+                    <div class="header-status" id="headerStatus" aria-live="polite"></div>
+                </div>
+            </header>
+
+        <div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
+            <button class="dashboard-tab active" data-tab="schedule" onclick="setActiveDashboardTab('schedule')">Portfolio Schedule Overview</button>
+            <button class="dashboard-tab" data-tab="resources" onclick="setActiveDashboardTab('resources')">Overall Resource Load</button>
+            <button class="dashboard-tab" data-tab="projects" onclick="setActiveDashboardTab('projects')">Projects</button>
+            <button class="dashboard-tab" data-tab="critical" onclick="setActiveDashboardTab('critical')">Critical Path</button>
+        </div>
+
+        <div class="tab-pane active" data-pane="schedule">
+            <div class="timeline-section">
+                <h2>Portfolio Schedule Overview</h2>
+                <p>Planned milestones & gates</p>
+                <div id="timelineContainer">
+                    <div class="loading">Loading overall gate timeline...</div>
+                </div>
+                <div class="timeline-legend">
+                    <span><i class="legend-box legend-done"></i> Done gate</span>
+                    <span><i class="legend-box legend-planned"></i> Planned gate</span>
+                    <span><i class="legend-box legend-rework"></i> Rework sign-off</span>
+                    <span><i class="legend-line"></i> Today</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane" data-pane="resources">
+            <div class="resource-section">
+                <h2>Overall Resource Load</h2>
+                <p>Owners, active work & cross-project load</p>
+                <div class="sticky-summary-header">
+                    <div class="resource-command-center" id="resourceSummary">
+                        <div class="resource-summary-card">
+                            <div class="resource-summary-value">-</div>
+                            <div class="resource-summary-label">Loading resource summary</div>
+                        </div>
+                    </div>
+                    <div id="pmOverheadPanel"></div>
+                    <div class="sticky-summary-actions" id="resourceSummaryActions"></div>
+                </div>
+                <div id="resourceDetailPanel" style="min-height:0;transition:min-height 0.15s;"></div>
+                <div id="resourceSummaryTable">
+                    <div class="loading">Loading resource summary table...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane" data-pane="projects">
+            <div class="resource-section">
+                <h2>Projects</h2>
+                <p>Project cards & import</p>
+                <div class="import-section">
+                    <button class="import-btn" id="importBtn" onclick="document.getElementById('fileInput').click()">
+                        📁 Import New Project from Excel
+                    </button>
+                    <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileSelect(event)">
+                    <div class="message" id="message"></div>
+                </div>
+                <div id="projectsContainer">
+                    <div class="loading">Loading projects...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane" data-pane="critical">
+            <div class="resource-section">
+                <h2>Critical Path Until Gate 5</h2>
+                <p>Simple project view from detailed gantts</p>
+                <div class="sticky-summary-header">
+                    <div class="resource-summary" id="criticalPathSummary">
+                        <div class="resource-summary-card">
+                            <div class="resource-summary-value">-</div>
+                            <div class="resource-summary-label">Loading critical summary</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="criticalPathContainer">
+                    <div class="loading">Loading critical path overview...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="progress-overlay" id="progressOverlay">
+        <div class="progress-content">
+            <div class="spinner"></div>
+            <div id="progressText">Uploading and processing Excel file...</div>
+        </div>
+    </div>
+    
+    <script>
+        const embeddedOverallDashboardPayload = null;
+        let currentStatsPayload = null;
+        let currentProjectsPayload = null;
+        let currentTimelinePayload = null;
+        let currentResourcePayload = null;
+        let currentResourceDrilldown = 'discipline';
+        let currentOwnerFilter = null;
+        let prevResourceDrilldown = 'summary';
+        let currentCriticalPayload = null;
+        let currentCriticalExpanded = false;
+        let disciplineDataCache = null;
+        let currentDashboardTab = 'schedule';
+        const dashboardTabStorageKey = 'overall-dashboard-active-tab';
+
+        function fetchFresh(url, options = {}) {
+            const separator = url.includes('?') ? '&' : '?';
+            return fetch(`${url}${separator}_ts=${Date.now()}`, {
+                ...options,
+                cache: 'no-store'
+            });
+        }
+
+        function setActiveDashboardTab(tabName) {
+            currentDashboardTab = tabName;
+            document.body.classList.toggle('schedule-tab-active', tabName === 'schedule');
+            document.querySelectorAll('.dashboard-tab').forEach((button) => {
+                button.classList.toggle('active', button.dataset.tab === tabName);
+            });
+            document.querySelectorAll('.tab-pane').forEach((pane) => {
+                pane.classList.toggle('active', pane.dataset.pane === tabName);
+            });
+            try {
+                localStorage.setItem(dashboardTabStorageKey, tabName);
+            } catch (error) {
+                console.warn('Unable to persist active dashboard tab:', error);
+            }
+        }
+
+        function restoreActiveDashboardTab() {
+            try {
+                const savedTab = localStorage.getItem(dashboardTabStorageKey);
+                const hasSavedTab = savedTab && document.querySelector(`.dashboard-tab[data-tab="${savedTab}"]`);
+                setActiveDashboardTab(hasSavedTab ? savedTab : currentDashboardTab);
+            } catch (error) {
+                console.warn('Unable to restore active dashboard tab:', error);
+                setActiveDashboardTab(currentDashboardTab);
+            }
+        }
+
+        async function loadStats(statsData = null) {
+            try {
+                const totalProjectsEl = document.getElementById('totalProjects');
+                const totalTasksEl = document.getElementById('totalTasks');
+                const totalOwnersEl = document.getElementById('totalOwners');
+                const stats = statsData ?? await (await fetchFresh('/api/stats')).json();
+                currentStatsPayload = stats;
+                if (!totalProjectsEl && !totalTasksEl && !totalOwnersEl) {
+                    return;
+                }
+
+                if (totalProjectsEl) totalProjectsEl.textContent = stats.total_projects;
+                if (totalTasksEl) totalTasksEl.textContent = stats.total_tasks;
+                if (totalOwnersEl) totalOwnersEl.textContent = stats.total_owners ?? '-';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        async function loadProjects(projectsData = null) {
+            try {
+                const projects = projectsData ?? await (await fetchFresh('/api/projects')).json();
+                currentProjectsPayload = projects;
+                
+                const container = document.getElementById('projectsContainer');
+                
+                if (projects.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <h2>No Projects Found</h2>
+                            <p>Place Excel files in the watched folder to automatically import projects.</p>
+                            <p><strong>Watched folder:</strong> ${await getWatchedFolder()}</p>
+                            <button class="reload-btn" onclick="reloadExcel()">Reload Now</button>
+                        </div>
+                    `;
+                } else {
+                    const projectsHTML = projects.map(project => `
+                        <div class="project-card" id="pcard-${CSS.escape(project.name)}">
+                            <button class="project-card-delete-btn" title="Delete project" data-project="${escapeHtml(project.name)}" data-taskcount="${project.task_count}" onclick="confirmDeleteProject(this)">🗑️</button>
+                            <div class="project-name">${escapeHtml(project.name)}</div>
+                            <div class="project-manager">👤 ${escapeHtml(project.manager || 'No manager')}</div>
+                            <ul class="project-status-list">
+                                <li class="project-status-item ${project.is_delayed ? 'delayed' : 'on-track'}">
+                                    <span class="project-status-ball" aria-hidden="true"></span>
+                                    <span>${project.is_delayed ? 'PROJECTS IN DELAY' : 'PROJECT ON TRACK'}</span>
+                                </li>
+                            </ul>
+                            <div class="project-stats">
+                                <div class="project-stat">
+                                    <div class="project-stat-value">${project.task_count}</div>
+                                    <div class="project-stat-label">Tasks</div>
+                                </div>
+                            </div>
+                            <div class="project-updated">
+                                Last updated: ${formatDate(project.updated_at)}
+                            </div>
+                            <div class="project-card-actions">
+                                <a href="/dashboard/project/${encodeURIComponent(project.name)}" class="project-card-btn primary">Detailed Gantt</a>
+                                <a href="/dashboard/project/${encodeURIComponent(project.name)}/schematic" class="project-card-btn secondary">Schematic Schedule</a>
+                            </div>
+                        </div>
+                    `).join('');
+                     
+                    container.innerHTML = `<div class="projects-grid">${projectsHTML}</div>`;
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                document.getElementById('projectsContainer').innerHTML = `
+                    <div class="empty-state">
+                        <h2>Error Loading Projects</h2>
+                        <p>Failed to load projects from server.</p>
+                        <button class="reload-btn" onclick="location.reload()">Retry</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadOverallGateTimeline(timelineData = null) {
+            try {
+                const timeline = timelineData ?? await (await fetchFresh('/api/overall-gate-timeline')).json();
+                currentTimelinePayload = timeline;
+                const container = document.getElementById('timelineContainer');
+
+                if (!timeline.length) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <h2>No Gate Dates Found</h2>
+                            <p>Import projects with gate milestones to populate the overall timeline.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const parsedDates = timeline.map((item) => parseIsoDate(item.display_date));
+                const minDate = parsedDates.reduce((min, date) => date < min ? date : min, parsedDates[0]);
+                const maxDate = parsedDates.reduce((max, date) => date > max ? date : max, parsedDates[0]);
+                const rangeStart = new Date(minDate.getFullYear(), 0, 1);
+                const rangeEnd = new Date(maxDate.getFullYear(), 11, 1);
+                const renderedRangeEnd = endOfMonth(rangeEnd);
+                const months = buildMonthRange(rangeStart, rangeEnd);
+                const monthCount = months.length;
+                const projects = [...new Set(timeline.map((item) => item.project_name))];
+
+                let boardHtml = `<div class="schedule-shell"><div class="schedule-grid" style="--month-count:${monthCount};">`;
+
+                boardHtml += `<div class="schedule-cell schedule-label"></div>`;
+                const years = [...new Set(months.map(month => month.getFullYear()))];
+                years.forEach((year) => {
+                    const span = months.filter(month => month.getFullYear() === year).length;
+                    boardHtml += `<div class="schedule-cell year-header" style="grid-column: span ${span};">${year}</div>`;
+                });
+
+                boardHtml += `<div class="schedule-cell schedule-label sub">Calendar</div>`;
+                for (let i = 0; i < monthCount; i += 3) {
+                    const month = months[i];
+                    boardHtml += `<div class="schedule-cell quarter-header" style="grid-column: span 3;">Q${Math.floor(month.getMonth() / 3) + 1}</div>`;
+                }
+
+                boardHtml += `<div class="schedule-cell schedule-label sub">Fiscal</div>`;
+                for (let i = 0; i < monthCount; i += 3) {
+                    const month = months[i];
+                    boardHtml += `<div class="schedule-cell fiscal-header" style="grid-column: span 3;">FQ${getFiscalQuarter(month)} FY${getFiscalYear(month)}</div>`;
+                }
+
+                projects.forEach((projectName) => {
+                    boardHtml += `<div class="schedule-cell project-name-cell"><div><a class="overview-link" href="/dashboard/project/${encodeURIComponent(projectName)}">${escapeHtml(projectName)}</a></div></div>`;
+                    boardHtml += `<div class="schedule-cell lane-cell">`;
+                    timeline
+                        .filter(item => item.project_name === projectName)
+                        .forEach((item) => {
+                            const itemDate = parseIsoDate(item.display_date);
+                            const leftPercent = getAdjustedTimelinePercent(item, itemDate, rangeStart, renderedRangeEnd);
+                            boardHtml += `
+                                <div
+                                    class="gate-chip ${getMarkerClass(item)}"
+                                    style="left:${leftPercent}%;"
+                                    title="${escapeHtml(getMarkerTitle(item))}"
+                                >
+                                    <span>${escapeHtml(getMarkerLabel(item))}</span>
+                                    <span class="gate-fiscal">${escapeHtml(getMarkerFiscalLabel(item))}</span>
+                                    <span class="gate-date">${escapeHtml(formatIsoDate(item.display_date))}</span>
+                                </div>
+                            `;
+                        });
+
+                    boardHtml += `</div>`;
+                });
+
+                const today = new Date();
+                if (today >= rangeStart && today <= renderedRangeEnd) {
+                    const leftPercent = getTimelinePercent(today, rangeStart, renderedRangeEnd);
+                    boardHtml += `
+                        <div class="today-line" style="left: calc(200px + ((100% - 200px) * ${leftPercent / 100}));">
+                            <div class="today-label">TODAY</div>
+                        </div>
+                    `;
+                }
+
+                boardHtml += `</div></div>`;
+
+                container.innerHTML = boardHtml;
+            } catch (error) {
+                console.error('Error loading gate timeline:', error);
+                document.getElementById('timelineContainer').innerHTML = `
+                    <div class="empty-state">
+                        <h2>Error Loading Timeline</h2>
+                        <p>Failed to load the interactive portfolio schedule.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadOverallResourceLoad(resourceData = null) {
+            try {
+                // Fetch resource load and discipline data in parallel
+                const [payload, discData] = await Promise.all([
+                    resourceData
+                        ? Promise.resolve(resourceData)
+                        : fetchFresh('/api/overall-resource-load').then(r => r.json()),
+                    disciplineDataCache
+                        ? Promise.resolve(disciplineDataCache)
+                        : fetchFresh('/api/discipline-resource-load').then(r => r.json()).catch(() => null),
+                ]);
+                if (discData) disciplineDataCache = discData;
+                currentResourcePayload = payload;
+                const summaryContainer = document.getElementById('resourceSummary');
+                const detailContainer = document.getElementById('resourceDetailPanel');
+                const tableContainer = document.getElementById('resourceSummaryTable');
+
+                if (!payload.owners || !payload.owners.length || !payload.summary.range_start || !payload.summary.range_end) {
+                    summaryContainer.innerHTML = `
+                        <div class="resource-summary-card">
+                            <div class="resource-summary-value">0</div>
+                            <div class="resource-summary-label">Resource owners found</div>
+                        </div>
+                    `;
+                    detailContainer.innerHTML = '';
+                    tableContainer.innerHTML = `<div class="empty-state"><h2>No Resource Tasks Found</h2><p>Import project tasks with owners and dates to see overall loading.</p></div>`;
+                    return;
+                }
+
+                renderResourceSummaryCards();
+                renderPMOverheadPanel();
+                renderResourceDrilldown();
+                renderResourceSummaryTable();
+            } catch (error) {
+                console.error('Error loading resource load:', error);
+                document.getElementById('resourceDetailPanel').innerHTML = '';
+                document.getElementById('resourceSummaryTable').innerHTML = `
+                    <div class="empty-state">
+                        <h2>Error Loading Resource View</h2>
+                        <p>Failed to load the overall owner workload dashboard.</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadOverallCriticalPathOverview(criticalData = null) {
+            try {
+                const payload = criticalData ?? await (await fetchFresh('/api/overall-critical-path-overview')).json();
+                currentCriticalPayload = payload;
+                renderOverallCriticalPathOverview();
+            } catch (error) {
+                console.error('Error loading critical path overview:', error);
+                document.getElementById('criticalPathContainer').innerHTML = `
+                    <div class="empty-state">
+                        <h2>Error Loading Critical Path Overview</h2>
+                        <p>Failed to load the portfolio critical path table.</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderOverallCriticalPathOverview() {
+            const payload = currentCriticalPayload;
+            const summaryContainer = document.getElementById('criticalPathSummary');
+            const tableContainer = document.getElementById('criticalPathContainer');
+            if (!payload) return;
+
+            summaryContainer.innerHTML = `
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.critical_task_count ?? 0}</div>
+                    <div class="resource-summary-label">Critical tasks until Gate 5</div>
+                </div>
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.project_count ?? 0}</div>
+                    <div class="resource-summary-label">Projects in overview</div>
+                </div>
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.delayed_critical_count ?? 0}</div>
+                    <div class="resource-summary-label">Delayed critical tasks</div>
+                </div>
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.active_critical_count ?? 0}</div>
+                    <div class="resource-summary-label">Active critical tasks</div>
+                </div>
+                <div class="resource-summary-card">
+                    <div class="resource-summary-value">${payload.summary?.milestone_critical_count ?? 0}</div>
+                    <div class="resource-summary-label">Critical milestones</div>
+                </div>
+            `;
+
+            if (!payload.projects || !payload.projects.length) {
+                tableContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No Critical Path Found</h2>
+                        <p>Import project gantts with gate milestones to populate the overall Gate 5 path board.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const visibleProjects = currentCriticalExpanded ? payload.projects : payload.projects.slice(0, 5);
+            const hiddenCount = Math.max(0, payload.projects.length - visibleProjects.length);
+            const actionHtml = payload.projects.length > 5
+                ? `<div class="resource-table-actions"><button class="resource-toggle-btn" onclick="toggleCriticalProjects()">${currentCriticalExpanded ? 'Show less projects' : `${hiddenCount} more projects`}</button></div>`
+                : '';
+
+            const allDatedTasks = visibleProjects
+                .flatMap((project) => project.critical_path_tasks || [])
+                .filter((task) => task.start_date && task.end_date);
+
+            if (!allDatedTasks.length) {
+                tableContainer.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No Dated Path Tasks Found</h2>
+                        <p>The projected Gate 5 chains exist, but they need dates to render on the gantt board.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const parsedStarts = allDatedTasks.map((task) => parseIsoDate(task.start_date));
+            const parsedEnds = allDatedTasks.map((task) => parseIsoDate(task.end_date));
+            const minDate = parsedStarts.reduce((min, date) => date < min ? date : min, parsedStarts[0]);
+            const maxDate = parsedEnds.reduce((max, date) => date > max ? date : max, parsedEnds[0]);
+            const rangeStart = new Date(minDate.getFullYear(), 0, 1);
+            const rangeEnd = new Date(maxDate.getFullYear(), 11, 1);
+            const renderedRangeEnd = endOfMonth(rangeEnd);
+            const months = buildMonthRange(rangeStart, rangeEnd);
+            const monthCount = months.length;
+
+            let boardHtml = `${actionHtml}<div class="critical-board-shell"><div class="critical-board-grid" style="--month-count:${monthCount};">`;
+
+            boardHtml += `<div class="critical-board-cell critical-board-label"></div>`;
+            const years = [...new Set(months.map((month) => month.getFullYear()))];
+            years.forEach((year) => {
+                const span = months.filter((month) => month.getFullYear() === year).length;
+                boardHtml += `<div class="critical-board-cell critical-year-header" style="grid-column: span ${span};">${year}</div>`;
+            });
+
+            boardHtml += `<div class="critical-board-cell critical-board-label sub">Calendar</div>`;
+            for (let i = 0; i < monthCount; i += 3) {
+                const month = months[i];
+                boardHtml += `<div class="critical-board-cell critical-quarter-header" style="grid-column: span 3;">Q${Math.floor(month.getMonth() / 3) + 1}</div>`;
+            }
+
+            boardHtml += `<div class="critical-board-cell critical-board-label sub">Fiscal</div>`;
+            for (let i = 0; i < monthCount; i += 3) {
+                const month = months[i];
+                boardHtml += `<div class="critical-board-cell critical-fiscal-header" style="grid-column: span 3;">FQ${getFiscalQuarter(month)} FY${getFiscalYear(month)}</div>`;
+            }
+
+            visibleProjects.forEach((project) => {
+                const chainTasks = assignTaskLanes((project.critical_path_tasks || []).filter((task) => task.start_date && task.end_date));
+                const laneCount = Math.max(1, ...chainTasks.map((task) => task.lane_index + 1));
+                const laneHeight = Math.max(72, 20 + (laneCount * 40));
+                const nextGateText = project.gate_5_date
+                    ? `Gate 5 · ${formatIsoDate(project.gate_5_date)}`
+                    : `${project.next_gate_name || 'Nearest Gate'} · ${formatIsoDate(project.next_gate_date) || '-'}`;
+
+                boardHtml += `
+                    <div class="critical-board-cell critical-task-label">
+                        <div class="critical-task-project"><a class="overview-link" href="/dashboard/project/${encodeURIComponent(project.project_name)}">${escapeHtml(project.project_name)}</a></div>
+                        <div class="critical-task-name">${escapeHtml(nextGateText)}</div>
+                        <div class="critical-task-meta">${escapeHtml(project.project_manager || 'No manager')} · ${project.critical_task_count} path tasks · ${project.delayed_critical_count} delayed</div>
+                    </div>
+                `;
+
+                boardHtml += `<div class="critical-board-cell critical-lane-cell" style="min-height:${laneHeight}px;">`;
+                chainTasks.forEach((task) => {
+                    const startDate = parseIsoDate(task.start_date);
+                    const endDate = parseIsoDate(task.end_date);
+                    const leftPercent = getTimelinePercent(startDate, rangeStart, renderedRangeEnd);
+                    const widthPercent = getTimelineSpanPercent(startDate, endDate, rangeStart, renderedRangeEnd);
+                    const topOffset = 12 + (task.lane_index * 40);
+                    const compactClass = widthPercent < 8 ? ' compact' : '';
+
+                    boardHtml += `
+                        <div
+                            class="critical-bar path${compactClass}"
+                            style="left:${leftPercent}%; width:${widthPercent}%; top:${topOffset}px;"
+                            title="${escapeHtml(getCriticalBarTitle(task))}"
+                        >
+                            <span class="critical-bar-title">${escapeHtml(task.task_name)}</span>
+                            <span class="critical-bar-meta">${escapeHtml(task.owner || 'Unassigned')} · ${escapeHtml(formatIsoDate(task.end_date) || '-')}</span>
+                        </div>
+                    `;
+                });
+                boardHtml += `</div>`;
+            });
+
+            const today = new Date();
+            if (today >= rangeStart && today <= renderedRangeEnd) {
+                const leftPercent = getTimelinePercent(today, rangeStart, renderedRangeEnd);
+                boardHtml += `
+                    <div class="today-line" style="left: calc(240px + ((100% - 240px) * ${leftPercent / 100}));">
+                        <div class="today-label">TODAY</div>
+                    </div>
+                `;
+            }
+
+            boardHtml += `</div></div>`;
+            tableContainer.innerHTML = boardHtml;
+        }
+        
+        async function getWatchedFolder() {
+            try {
+                const response = await fetchFresh('/api/stats');
+                const stats = await response.json();
+                return stats.watched_folder;
+            } catch {
+                return 'Unknown';
+            }
+        }
+        
+        async function reloadExcel() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = 'Reloading...';
+            
+            try {
+                await fetchFresh('/api/reload');
+                location.reload();
+            } catch (error) {
+                console.error('Error reloading:', error);
+                btn.disabled = false;
+                btn.textContent = 'Reload Now';
+                alert('Failed to reload. Please try again.');
+            }
+        }
+
+        function confirmDeleteProject(btn) {
+            const projectName = btn.dataset.project;
+            const taskCount = btn.dataset.taskcount;
+            const card = btn.closest('.project-card');
+            // Remove any existing confirm overlay first
+            const existing = card.querySelector('.project-card-confirm');
+            if (existing) { existing.remove(); return; }
+
+            const overlay = document.createElement('div');
+            overlay.className = 'project-card-confirm';
+            overlay.innerHTML = `
+                <div style="font-size:28px">⚠️</div>
+                <p>Delete <strong>${escapeHtml(projectName)}</strong>?<br>
+                This will permanently remove <strong>${taskCount} tasks</strong> and all related data.</p>
+                <div class="project-card-confirm-actions">
+                    <button class="btn-cancel-delete" onclick="this.closest('.project-card-confirm').remove()">Cancel</button>
+                    <button class="btn-confirm-delete" data-project="${escapeHtml(projectName)}" onclick="executeDeleteProject(this)">🗑️ Delete Forever</button>
+                </div>
+            `;
+            card.appendChild(overlay);
+        }
+
+        async function executeDeleteProject(btn) {
+            const projectName = btn.dataset.project;
+            btn.disabled = true;
+            btn.textContent = 'Deleting...';
+            try {
+                const res = await fetch(`/api/project/${encodeURIComponent(projectName)}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    const card = btn.closest('.project-card');
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95)';
+                    setTimeout(() => card.remove(), 320);
+                } else {
+                    alert('Delete failed: ' + (data.error || 'Unknown error'));
+                    btn.closest('.project-card-confirm').remove();
+                }
+            } catch (e) {
+                alert('Network error: ' + e.message);
+                btn.disabled = false;
+                btn.textContent = '🗑️ Delete Forever';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return 'Never';
+            const date = new Date(dateStr);
+            return date.toLocaleString();
+        }
+
+        function parseIsoDate(value) {
+            const [year, month, day] = (value || '').split('-').map(Number);
+            return new Date(year || 2000, (month || 1) - 1, day || 1);
+        }
+
+        function startOfMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth(), 1);
+        }
+
+        function endOfMonth(date) {
+            return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        }
+
+        function daysBetween(start, end) {
+            const millisPerDay = 24 * 60 * 60 * 1000;
+            return Math.round((end - start) / millisPerDay);
+        }
+
+        function getTimelinePercent(date, rangeStart, rangeEnd) {
+            const totalDays = Math.max(1, daysBetween(rangeStart, rangeEnd));
+            const offsetDays = Math.max(0, Math.min(totalDays, daysBetween(rangeStart, date)));
+            return (offsetDays / totalDays) * 100;
+        }
+
+        function getTimelineSpanPercent(startDate, endDate, rangeStart, rangeEnd) {
+            const totalDays = Math.max(1, daysBetween(rangeStart, rangeEnd) + 1);
+            const taskDuration = Math.max(1, daysBetween(startDate, endDate) + 1);
+            return Math.max((taskDuration / totalDays) * 100, 1.2);
+        }
+
+        function buildMonthRange(start, end) {
+            const months = [];
+            const cursor = new Date(start);
+            while (cursor <= end) {
+                months.push(new Date(cursor));
+                cursor.setMonth(cursor.getMonth() + 1);
+            }
+            return months;
+        }
+
+        function getFiscalYear(date) {
+            return date.getMonth() >= 9 ? date.getFullYear() + 1 : date.getFullYear();
+        }
+
+        function getFiscalQuarter(date) {
+            const shiftedMonth = (date.getMonth() + 3) % 12;
+            return Math.floor(shiftedMonth / 3) + 1;
+        }
+
+        function getFiscalPeriod(date) {
+            return ((date.getMonth() + 3) % 12) + 1;
+        }
+
+        function getMarkerClass(item) {
+            if (item.date_source === 'Rework Due') return 'rework';
+            if (item.date_source === 'Signed Off') return 'done';
+            return 'planned';
+        }
+
+        function getMarkerLabel(item) {
+            if (item.date_source === 'Rework Due') return `${item.gate_name} RW`;
+            if ((item.sign_off_status || '') === 'Passed with Rework' && item.date_source === 'Signed Off') {
+                return `${item.gate_name} PWR`;
+            }
+            return item.gate_name;
+        }
+
+        function getMarkerTitle(item) {
+            const parts = [item.project_name, item.gate_name, item.date_source, item.display_date];
+            if (item.sign_off_status) {
+                parts.push(item.sign_off_status);
+            }
+            return parts.filter(Boolean).join(' · ');
+        }
+
+        function getMarkerFiscalLabel(item) {
+            const markerDate = parseIsoDate(item.display_date);
+            return `P${getFiscalPeriod(markerDate)} FY${getFiscalYear(markerDate)}`;
+        }
+
+        function assignTaskLanes(tasks) {
+            const sortedTasks = [...tasks].sort((left, right) => {
+                return parseIsoDate(left.start_date) - parseIsoDate(right.start_date)
+                    || parseIsoDate(left.end_date) - parseIsoDate(right.end_date)
+                    || left.project_name.localeCompare(right.project_name)
+                    || left.task_name.localeCompare(right.task_name);
+            });
+
+            const laneEndDates = [];
+            return sortedTasks.map((task) => {
+                const startDate = parseIsoDate(task.start_date);
+                const endDate = parseIsoDate(task.end_date);
+                let laneIndex = laneEndDates.findIndex((laneEndDate) => startDate > laneEndDate);
+
+                if (laneIndex === -1) {
+                    laneIndex = laneEndDates.length;
+                    laneEndDates.push(endDate);
+                } else {
+                    laneEndDates[laneIndex] = endDate;
+                }
+
+                return { ...task, lane_index: laneIndex };
+            });
+        }
+
+        function getProjectColor(projectName) {
+            let hash = 0;
+            for (let i = 0; i < projectName.length; i += 1) {
+                hash = projectName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = Math.abs(hash) % 360;
+            return `hsl(${hue}, 62%, 46%)`;
+        }
+
+        function getTaskTitle(ownerName, task) {
+            const parts = [
+                ownerName,
+                task.project_name,
+                task.task_name,
+                task.phase,
+                `${task.start_date} → ${task.end_date}`,
+                task.status
+            ];
+
+            if (task.critical) {
+                parts.push('Critical');
+            }
+
+            if (task.is_active_today) {
+                parts.push('Active today');
+            }
+
+            return parts.filter(Boolean).join(' · ');
+        }
+
+        function getResourceLoadLabel(owner) {
+            const ecl = owner.effective_concurrent_load ?? owner.concurrent_load;
+            if (ecl >= 5 || owner.active_today_count >= 4) return 'High';
+            if (ecl >= 3 || owner.active_today_count >= 2) return 'Medium';
+            return 'Good';
+        }
+
+        function getResourceLoadClass(owner) {
+            const label = getResourceLoadLabel(owner);
+            if (label === 'High') return 'resource-load-high';
+            if (label === 'Medium') return 'resource-load-medium';
+            return 'resource-load-good';
+        }
+
+        function renderLoadBar(owner, maxDays) {
+            const days = (owner.planned_working_days || 0) + (owner.in_process_working_days || 0);
+            const pct = maxDays > 0 ? Math.min(100, Math.round((days / maxDays) * 100)) : 0;
+            const label = getResourceLoadLabel(owner);
+            const barColor = label === 'High' ? '#ff6b6b' : label === 'Medium' ? '#ffa94d' : '#69db7c';
+            const trackColor = 'rgba(255,255,255,0.07)';
+            return `<div style="display:flex;align-items:center;gap:7px;min-width:110px;">
+                <div style="flex:1;background:${trackColor};border-radius:4px;height:8px;min-width:60px;overflow:hidden;">
+                    <div style="width:${pct}%;background:${barColor};border-radius:4px;height:8px;transition:width 0.4s;"></div>
+                </div>
+                <span style="color:${barColor};font-size:0.82em;font-weight:600;white-space:nowrap;">${days}d</span>
+            </div>`;
+        }
+
+        // ── HEATMAP ──────────────────────────────────────────────────────────
+        function buildDisciplineView(data) {
+            const { months, month_labels, today_month, disciplines } = data;
+            if (!disciplines || !disciplines.length) {
+                return `<div class="resource-detail-empty">No discipline mappings found. <a href="/dashboard/disciplines" target="_blank" style="color:#4a9eff;">Set up discipline mapping →</a></div>`;
+            }
+
+            const todayIdx = months.indexOf(today_month);
+
+            // ── Color logic (ratio = tasks / owners) ──────────────────────
+            function cellColor(count, owners) {
+                if (!count) return { bg: '#0d1b2e', text: '#2a3f5a', cls: '' };
+                const r = count / Math.max(owners, 1);
+                if (r <= 1)   return { bg: '#0d3320', text: '#4ade80', cls: 'disc-cell-ok' };
+                if (r <= 2)   return { bg: '#3a2d00', text: '#fbbf24', cls: 'disc-cell-warn' };
+                if (r <= 3.5) return { bg: '#3a1500', text: '#fb923c', cls: 'disc-cell-heavy' };
+                return           { bg: '#3a0000', text: '#f87171', cls: 'disc-cell-over' };
+            }
+
+            // ── Summary bar ───────────────────────────────────────────────
+            const overloadedNow = disciplines.filter(d => {
+                const i = todayIdx >= 0 ? todayIdx : 0;
+                return d.combined[i] / Math.max(d.owner_count, 1) > 2;
+            });
+            const peakDisc = disciplines[0];
+
+            const summaryHtml = `
+            <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;">
+                <div style="background:#0f1d35;border:1px solid #24355f;border-radius:8px;padding:10px 16px;min-width:140px;">
+                    <div style="font-size:0.72em;color:#6b7fa3;margin-bottom:2px;">DISCIPLINES</div>
+                    <div style="font-size:1.4em;font-weight:700;color:#7ec8ff;">${disciplines.length}</div>
+                </div>
+                <div style="background:#0f1d35;border:1px solid #f8717144;border-radius:8px;padding:10px 16px;min-width:140px;">
+                    <div style="font-size:0.72em;color:#6b7fa3;margin-bottom:2px;">OVERLOADED NOW</div>
+                    <div style="font-size:1.4em;font-weight:700;color:#f87171;">${overloadedNow.length}</div>
+                    <div style="font-size:0.72em;color:#6b7fa3;">${overloadedNow.map(d=>d.name).join(', ') || '—'}</div>
+                </div>
+                <div style="background:#0f1d35;border:1px solid #fb923c44;border-radius:8px;padding:10px 16px;min-width:140px;">
+                    <div style="font-size:0.72em;color:#6b7fa3;margin-bottom:2px;">PEAK DISCIPLINE</div>
+                    <div style="font-size:1.1em;font-weight:700;color:#fb923c;">${peakDisc.name}</div>
+                    <div style="font-size:0.72em;color:#6b7fa3;">${peakDisc.peak_count} tasks · ${peakDisc.peak_month}</div>
+                </div>
+                <div style="background:#0f1d35;border:1px solid #24355f;border-radius:8px;padding:10px 16px;font-size:0.75em;color:#6b7fa3;line-height:1.7em;">
+                    <span style="color:#4ade80;">■</span> Normal (&lt;1 task/person) &nbsp;
+                    <span style="color:#fbbf24;">■</span> Busy (1–2) &nbsp;
+                    <span style="color:#fb923c;">■</span> Heavy (2–3.5) &nbsp;
+                    <span style="color:#f87171;">■</span> Overloaded (&gt;3.5)
+                </div>
+            </div>`;
+
+            // ── Heatmap table ─────────────────────────────────────────────
+            const headerCells = month_labels.map((lbl, i) => {
+                const isNow = months[i] === today_month;
+                return `<th style="padding:4px 6px;font-size:0.72em;font-weight:500;white-space:nowrap;
+                    color:${isNow ? '#7ec8ff' : '#6b7fa3'};
+                    border-bottom:${isNow ? '2px solid #4a9eff' : '1px solid #1a2740'};
+                    min-width:52px;text-align:center;">${lbl}${isNow ? '<br><span style="font-size:0.85em;color:#4a9eff;">▼now</span>' : ''}</th>`;
+            }).join('');
+
+            const discRows = disciplines.map(d => {
+                const cells = d.combined.map((count, i) => {
+                    const c = cellColor(count, d.owner_count);
+                    const isNow = months[i] === today_month;
+                    const ip = d.in_process[i], pl = d.planned[i];
+                    const tip = count ? `${ip} In Process + ${pl} Planned` : '';
+                    return `<td title="${tip}" style="
+                        text-align:center;padding:5px 4px;font-size:0.82em;font-weight:600;
+                        background:${c.bg};color:${c.text};
+                        border:1px solid #0d1b2e;
+                        border-left:${isNow ? '2px solid #4a9eff44' : '1px solid #0d1b2e'};
+                        border-right:${isNow ? '2px solid #4a9eff44' : '1px solid #0d1b2e'};
+                    ">${count || ''}</td>`;
+                }).join('');
+
+                const ratio = d.peak_count / Math.max(d.owner_count, 1);
+                const tag = ratio > 3.5 ? `<span style="color:#f87171;font-size:0.72em;font-weight:700;"> 🔴</span>`
+                          : ratio > 2   ? `<span style="color:#fb923c;font-size:0.72em;"> 🟠</span>`
+                          : ratio > 1   ? `<span style="color:#fbbf24;font-size:0.72em;"> 🟡</span>`
+                          : `<span style="color:#4ade80;font-size:0.72em;"> 🟢</span>`;
+
+                return `<tr>
+                    <td style="padding:5px 10px;white-space:nowrap;font-size:0.83em;color:#cdd9e5;font-weight:500;border-right:1px solid #24355f;">
+                        ${d.name}${tag}
+                    </td>
+                    <td style="padding:5px 8px;text-align:center;font-size:0.75em;color:#445566;border-right:1px solid #1a2740;">${d.owner_count}</td>
+                    ${cells}
+                </tr>`;
+            }).join('');
+
+            const heatmapHtml = `
+            <div style="overflow-x:auto;margin-bottom:24px;">
+                <table style="border-collapse:collapse;width:100%;">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;padding:4px 10px;font-size:0.72em;color:#6b7fa3;font-weight:500;white-space:nowrap;border-bottom:1px solid #1a2740;min-width:130px;">Discipline</th>
+                            <th style="text-align:center;padding:4px 8px;font-size:0.72em;color:#6b7fa3;font-weight:500;border-bottom:1px solid #1a2740;border-right:1px solid #1a2740;" title="Number of mapped owners">👥</th>
+                            ${headerCells}
+                        </tr>
+                    </thead>
+                    <tbody>${discRows}</tbody>
+                </table>
+            </div>`;
+
+            // ── Peak load bar chart ───────────────────────────────────────
+            const maxPeak = Math.max(...disciplines.map(d => d.peak_count), 1);
+            const barRows = disciplines.map(d => {
+                const capLine = d.owner_count;
+                const barPct = Math.round((d.peak_count / maxPeak) * 100);
+                const capPct = Math.min(Math.round((capLine / maxPeak) * 100), 100);
+                const c = cellColor(d.peak_count, d.owner_count);
+                return `
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <div style="min-width:120px;font-size:0.8em;color:#cdd9e5;text-align:right;white-space:nowrap;">${d.name}</div>
+                    <div style="flex:1;position:relative;height:20px;background:#0f1d35;border-radius:3px;overflow:visible;">
+                        <div style="height:100%;width:${barPct}%;background:${c.text};opacity:0.85;border-radius:3px;transition:width 0.4s;"></div>
+                        <!-- capacity marker -->
+                        <div title="Capacity: ${capLine} owners" style="position:absolute;top:-3px;left:${capPct}%;width:2px;height:26px;background:#ffffff55;border-radius:1px;"></div>
+                    </div>
+                    <div style="min-width:80px;font-size:0.75em;color:${c.text};">${d.peak_count} tasks · ${d.peak_month}</div>
+                </div>`;
+            }).join('');
+
+            const barChartHtml = `
+            <div style="margin-top:4px;">
+                <div style="font-size:0.78em;color:#6b7fa3;margin-bottom:10px;">
+                    📊 Peak concurrent tasks per discipline &nbsp;|&nbsp; <span style="color:#ffffff55;">│</span> = capacity threshold (owner count)
+                </div>
+                ${barRows}
+            </div>`;
+
+            return `
+            <div style="padding:4px 0;">
+                <div style="font-size:0.75em;color:#6b7fa3;margin-bottom:12px;">
+                    Resource load by discipline — In Process + Planned tasks · cell color = tasks per owner ratio
+                </div>
+                ${summaryHtml}
+                <div style="font-size:0.8em;color:#7ec8ff;font-weight:600;margin-bottom:8px;">📅 Monthly Load Heatmap</div>
+                ${heatmapHtml}
+                <div style="font-size:0.8em;color:#7ec8ff;font-weight:600;margin-bottom:8px;">📊 Peak Load vs Capacity</div>
+                ${barChartHtml}
+            </div>`;
+        }
+
+        function buildMonthHeatmap(owners) {
+            // Collect all months spanned by any task
+            const monthSet = new Set();
+            owners.forEach(owner => owner.tasks.forEach(task => {
+                if (!task.start_date || !task.end_date) return;
+                if ((task.status || '').toLowerCase() === 'completed') return;
+                const s = new Date(task.start_date);
+                const e = new Date(task.end_date);
+                let d = new Date(s.getFullYear(), s.getMonth(), 1);
+                while (d <= e) {
+                    monthSet.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+                    d.setMonth(d.getMonth() + 1);
+                }
+            }));
+            const months = Array.from(monthSet).sort();
+            if (!months.length) return '<div class="resource-detail-empty">No date data for heatmap.</div>';
+
+            // For each owner × month: count overlapping tasks (PM overhead tasks count by pm_weight)
+            const ownerRows = owners.map(owner => {
+                const cells = months.map(ym => {
+                    const [yr, mo] = ym.split('-').map(Number);
+                    const mStart = new Date(yr, mo-1, 1);
+                    const mEnd   = new Date(yr, mo, 0); // last day of month
+                    const count = owner.tasks.reduce((sum, t) => {
+                        if (!t.start_date || !t.end_date) return sum;
+                        if ((t.status || '').toLowerCase() === 'completed') return sum;
+                        if (new Date(t.start_date) <= mEnd && new Date(t.end_date) >= mStart) {
+                            return sum + (t.pm_weight || 1);
+                        }
+                        return sum;
+                    }, 0);
+                    return count;
+                });
+                return { owner: owner.owner, cells };
+            });
+
+            // Max count for intensity scaling
+            const allCounts = ownerRows.flatMap(r => r.cells);
+            const maxCount = Math.max(1, ...allCounts);
+
+            function heatColor(n) {
+                if (n === 0) return { bg: 'rgba(255,255,255,0.03)', txt: '#444', label: '—' };
+                const ratio = n / maxCount;
+                if (ratio >= 0.75) return { bg: 'rgba(217,75,87,0.55)', txt: '#ffb4bb', label: n };
+                if (ratio >= 0.40) return { bg: 'rgba(255,159,26,0.45)', txt: '#ffd18d', label: n };
+                return { bg: 'rgba(87,194,83,0.30)', txt: '#9cf79a', label: n };
+            }
+
+            const today = new Date();
+            const currentYM = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+
+            const headerCells = months.map(ym => {
+                const [yr, mo] = ym.split('-').map(Number);
+                const label = new Date(yr, mo-1, 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+                const isNow = ym === currentYM;
+                return `<th style="font-size:0.72em;padding:5px 6px;white-space:nowrap;${isNow ? 'color:#f9ca24;border-bottom:2px solid #f9ca24;' : ''}">${label}${isNow ? ' ◀' : ''}</th>`;
+            }).join('');
+
+            const bodyRows = ownerRows.map(({ owner, cells }) => {
+                const tds = cells.map((n, i) => {
+                    const { bg, txt, label } = heatColor(n);
+                    const isNow = months[i] === currentYM;
+                    return `<td style="text-align:center;padding:5px 8px;background:${bg};color:${txt};font-weight:${n>0?'600':'400'};font-size:0.85em;border-radius:3px;${isNow ? 'outline:1px solid #f9ca24;' : ''}" title="${owner} — ${months[i]}: ${n} task(s)">${label}</td>`;
+                }).join('');
+                return `<tr><td style="padding:5px 10px;font-weight:600;white-space:nowrap;color:#c8d8f0;">${escapeHtml(owner)}</td>${tds}</tr>`;
+            }).join('');
+
+            return `
+                <div style="margin-bottom:10px;font-size:0.82em;color:#8899aa;">
+                    Cell = number of tasks active during that month &nbsp;·&nbsp;
+                    <span style="color:#9cf79a;">■</span> Low &nbsp;
+                    <span style="color:#ffd18d;">■</span> Medium &nbsp;
+                    <span style="color:#ffb4bb;">■</span> High &nbsp;·&nbsp;
+                    <span style="color:#f9ca24;">◀ current month</span>
+                </div>
+                <div class="resource-table-wrap"><div class="resource-table-scroll">
+                <table class="resource-table" style="border-collapse:separate;border-spacing:2px;">
+                    <thead><tr>
+                        <th style="padding:5px 10px;text-align:left;">Owner</th>
+                        ${headerCells}
+                    </tr></thead>
+                    <tbody>${bodyRows}</tbody>
+                </table>
+                </div></div>`;
+        }
+
+        function getCriticalStateLabel(task) {
+            if (task.is_delayed) return task.delay_reason || 'Delayed';
+            if (task.is_active_today) return 'Active';
+            return 'On track';
+        }
+
+        function getCriticalBarClass(task) {
+            if (task.is_delayed) return 'delayed';
+            if (task.is_active_today) return 'active';
+            return 'clear';
+        }
+
+        function getCriticalBarTitle(task) {
+            return [
+                task.project_name,
+                task.task_name,
+                task.owner || 'Unassigned',
+                task.phase || 'No phase',
+                `${task.start_date || '-'} → ${task.end_date || '-'}`,
+                task.status || 'No status',
+                getCriticalStateLabel(task),
+                `Pred ${task.predecessor_count}`,
+                `Succ ${task.successor_count}`
+            ].join(' · ');
+        }
+
+        function toggleCriticalProjects() {
+            currentCriticalExpanded = !currentCriticalExpanded;
+            renderOverallCriticalPathOverview();
+        }
+
+        function renderPMOverheadPanel() {
+            const panel = document.getElementById('pmOverheadPanel');
+            if (!panel || !currentResourcePayload) return;
+
+            const pms = currentResourcePayload.owners.filter(o => o.managed_projects && o.managed_projects.length > 0);
+            if (!pms.length) { panel.innerHTML = ''; return; }
+
+            const rows = pms.map(o => {
+                const ecl = o.effective_concurrent_load ?? o.concurrent_load;
+                const loadColor = ecl >= 5 ? '#ff6b6b' : ecl >= 3 ? '#ffd18d' : '#9cf79a';
+                const projectPills = o.managed_projects.map(p =>
+                    `<span style="background:#1a2a3a;border:1px solid #24355f;border-radius:5px;padding:2px 8px;font-size:0.76em;color:#a0b0c0;white-space:nowrap;">
+                        ${escapeHtml(p.name)} <span style="color:#ffd18d;font-weight:600;">${p.active_tasks}</span><span style="color:#6b7fa3;"> tasks</span>
+                    </span>`
+                ).join('');
+                return `
+                <div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid #152030;flex-wrap:wrap;">
+                    <div style="min-width:110px;font-size:0.84em;font-weight:700;color:#cdd9e5;cursor:pointer;"
+                         onclick="filterResourceByOwner('${o.owner.replace(/'/g,"\\'")}')">
+                        🗂️ ${escapeHtml(o.owner)}
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;flex:1;">${projectPills}</div>
+                    <div style="min-width:90px;text-align:right;font-size:0.78em;white-space:nowrap;">
+                        <span style="color:#8899aa;">direct </span><span style="color:#cdd9e5;font-weight:600;">${o.concurrent_load}</span>
+                        <span style="color:#6b7fa3;margin:0 4px;">+</span>
+                        <span style="color:#ffd18d;">${o.managed_projects.length}×5 PM</span>
+                        <span style="color:#6b7fa3;margin:0 4px;">=</span>
+                        <span style="color:${loadColor};font-weight:700;">${ecl} eff.</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            panel.innerHTML = `
+                <div style="background:#0d1b2e;border:1px solid #1e3a5f;border-radius:10px;padding:10px 18px;margin:8px 0 6px 0;">
+                    <div style="font-size:0.75em;font-weight:700;color:#5a7fa3;letter-spacing:0.08em;margin-bottom:8px;text-transform:uppercase;">
+                        🗂️ Project Management Overhead
+                        <span style="font-weight:400;color:#4a6a83;margin-left:8px;">· each managed project = +5 load/month (peak effective)</span>
+                    </div>
+                    ${rows}
+                </div>`;
+        }
+
+        function renderResourceSummaryCards() {
+            const payload = currentResourcePayload;
+            const summaryContainer = document.getElementById('resourceSummary');
+            if (!payload || !payload.summary) return;
+
+            const ownerCount     = payload.summary.owner_count || 1;
+            const delayedCount   = payload.summary.owners_with_delays || 0;
+            const delayedPct     = Math.round((delayedCount / ownerCount) * 100);
+            const onTrackCount   = ownerCount - delayedCount;
+            const overloadedCount = payload.owners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= 5 || o.active_today_count >= 4).length;
+            const jugglingCount  = payload.owners.filter(o => o.active_today_count >= 2).length;
+            const today_str = new Date().toISOString().slice(0, 10);
+            const statusLagCount = payload.owners.flatMap(o => o.tasks).filter(t =>
+                (t.status || '').toLowerCase() === 'planned' &&
+                t.start_date && t.start_date <= today_str &&
+                (t.status || '').toLowerCase() !== 'completed'
+            ).length;
+            const mostLoadedOwner = payload.owners.reduce((best, o) => (!best || o.task_count > best.task_count) ? o : best, null);
+            const mostLoadedName  = mostLoadedOwner ? mostLoadedOwner.owner : '—';
+            const mostLoadedTasks = mostLoadedOwner ? mostLoadedOwner.task_count : 0;
+            const allEndDates    = payload.owners.flatMap(o => o.tasks.map(t => t.end_date)).filter(Boolean);
+            const latestEndDate  = allEndDates.length ? allEndDates.reduce((max, d) => d > max ? d : max) : null;
+            const horizonLabel   = latestEndDate ? new Date(latestEndDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '—';
+
+            const ragStatus = (delayedPct > 30 || overloadedCount >= 3) ? 'CRITICAL'
+                            : (delayedPct > 10 || overloadedCount > 0)  ? 'AT RISK'
+                            : 'HEALTHY';
+            const ragEmoji  = ragStatus === 'CRITICAL' ? '🔴' : ragStatus === 'AT RISK' ? '🟡' : '🟢';
+            const ragColor  = ragStatus === 'CRITICAL' ? '#ff6b6b' : ragStatus === 'AT RISK' ? '#ffd18d' : '#9cf79a';
+            const ragBorder = ragStatus === 'CRITICAL' ? '#ff6b6b' : ragStatus === 'AT RISK' ? '#ffa94d' : '#4caf50';
+
+            const ragReasons = [];
+            if (overloadedCount > 0) ragReasons.push(`${overloadedCount} overloaded owner${overloadedCount > 1 ? 's' : ''}`);
+            if (delayedCount > 0)    ragReasons.push(`${delayedCount} delayed (${delayedPct}%)`);
+            const ragReason = ragReasons.length ? ragReasons.join(' · ') : 'All clear';
+
+            const chipActive = mode => currentResourceDrilldown === mode ? 'active' : '';
+
+            summaryContainer.innerHTML = `
+                <!-- Hero card: div not button to allow nested buttons -->
+                <div class="resource-hero-card ${currentResourceDrilldown === 'rag' ? 'active' : ''}"
+                     onclick="setResourceDrilldown('rag')" style="border-color:${ragBorder};">
+                    <div class="resource-hero-rag">
+                        <div class="resource-hero-rag-emoji">${ragEmoji}</div>
+                        <div class="resource-hero-rag-label" style="color:${ragColor};">${ragStatus}</div>
+                        <div class="resource-hero-rag-sub">Portfolio health</div>
+                        <div class="resource-hero-rag-reason" style="color:${ragColor};">${ragReason}</div>
+                    </div>
+                    <div class="resource-hero-divider"></div>
+                    <div class="resource-hero-tiles">
+                        <button class="resource-hero-tile" onclick="event.stopPropagation();setResourceDrilldown('clear')"
+                                style="${currentResourceDrilldown==='clear'?'border-color:#9cf79a;':''}"
+                                onmouseover="this.style.borderColor='#9cf79a'" onmouseout="this.style.borderColor='${currentResourceDrilldown==='clear'?'#9cf79a':'#24355f'}'">
+                            <div class="resource-hero-tile-value" style="color:#9cf79a;">${onTrackCount}</div>
+                            <div class="resource-hero-tile-label">✅ On track · view owners</div>
+                        </button>
+                        <button class="resource-hero-tile" onclick="event.stopPropagation();setResourceDrilldown('delayed')"
+                                style="${currentResourceDrilldown==='delayed'?'border-color:#ff6b6b;':''}"
+                                onmouseover="this.style.borderColor='#ff6b6b'" onmouseout="this.style.borderColor='${currentResourceDrilldown==='delayed'?'#ff6b6b':'#24355f'}'">
+                            <div class="resource-hero-tile-value" style="color:#ff6b6b;">${delayedCount}</div>
+                            <div class="resource-hero-tile-label">⚠ Delayed (${delayedPct}%) · view tasks</div>
+                        </button>
+                        <button class="resource-hero-tile" onclick="event.stopPropagation();setResourceDrilldown('overloaded')"
+                                style="${currentResourceDrilldown==='overloaded'?'border-color:#ffd18d;':''}"
+                                onmouseover="this.style.borderColor='#ffd18d'" onmouseout="this.style.borderColor='${currentResourceDrilldown==='overloaded'?'#ffd18d':'#24355f'}'">
+                            <div class="resource-hero-tile-value" style="color:#ffd18d;">${overloadedCount}</div>
+                            <div class="resource-hero-tile-label">🔴 Overloaded · view owners</div>
+                        </button>
+                        <button class="resource-hero-tile" onclick="event.stopPropagation();setResourceDrilldown('owners')"
+                                style="${currentResourceDrilldown==='owners'?'border-color:#7ec8ff;':''}"
+                                onmouseover="this.style.borderColor='#7ec8ff'" onmouseout="this.style.borderColor='${currentResourceDrilldown==='owners'?'#7ec8ff':'#24355f'}'">
+                            <div class="resource-hero-tile-value" style="color:#cdd9e5;">${ownerCount}</div>
+                            <div class="resource-hero-tile-label">👥 All owners · view table</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chip strip -->
+                <div class="resource-chip-strip">
+                    <span class="resource-chip-label">Quick access →</span>
+                    <button class="resource-chip ${chipActive('overloaded')}" onclick="setResourceDrilldown('overloaded')">
+                        📊 Load chart
+                    </button>
+                    <button class="resource-chip ${chipActive('parallel')}" onclick="setResourceDrilldown('parallel')">
+                        <span class="resource-chip-count" style="color:#ffa94d;">${jugglingCount}</span> Juggling 2+ today
+                    </button>
+                    <button class="resource-chip ${chipActive('delayed')}" onclick="setResourceDrilldown('delayed')">
+                        <span class="resource-chip-count" style="color:#ff6b6b;">${delayedCount}</span> Delayed owners
+                    </button>
+                    <button class="resource-chip ${chipActive('active')}" onclick="setResourceDrilldown('active')">
+                        <span class="resource-chip-count" style="color:#9cf79a;">${payload.summary.owners_active_today || 0}</span> Active today
+                    </button>
+                    <button class="resource-chip ${chipActive('statuslag')}" onclick="setResourceDrilldown('statuslag')">
+                        <span class="resource-chip-count" style="color:#ffd18d;">${statusLagCount}</span> ⚠ Status lag
+                    </button>
+                    <button class="resource-chip ${chipActive('tasks')}" onclick="setResourceDrilldown('tasks')">
+                        📋 Effort matrix
+                    </button>
+                    <button class="resource-chip ${chipActive('heatmap')}" onclick="setResourceDrilldown('heatmap')">
+                        🌡️ Load heatmap
+                    </button>
+                    <button class="resource-chip ${chipActive('discipline')}" onclick="setResourceDrilldown('discipline')" style="font-weight:700;">
+                        🏢 By Discipline
+                    </button>
+                    <a href="/dashboard/disciplines" target="_blank" class="resource-chip" style="text-decoration:none;padding:5px 10px;">
+                        🏷️ Discipline map
+                    </a>
+                </div>
+            `;
+        }
+
+        function renderResourceSummaryTable() {
+            const payload = currentResourcePayload;
+            const tableContainer = document.getElementById('resourceSummaryTable');
+            if (!payload || !payload.owners || !payload.owners.length) {
+                tableContainer.innerHTML = '';
+                return;
+            }
+
+            const isOwnersTableMode = currentResourceDrilldown === 'summary' || currentResourceDrilldown === 'owners';
+            if (!isOwnersTableMode) {
+                tableContainer.innerHTML = '';
+                return;
+            }
+
+            const visibleOwners = currentResourceDrilldown === 'owners'
+                ? payload.owners
+                : payload.owners.slice(0, 10);
+
+            // Max working days across all owners for bar scaling
+            const maxDays = Math.max(1, ...payload.owners.map(o =>
+                (o.planned_working_days || 0) + (o.in_process_working_days || 0)));
+
+            const visibleRows = visibleOwners.map((owner) => `
+                <tr>
+                    <td class="resource-table-owner">${escapeHtml(owner.owner)}${owner.managed_projects && owner.managed_projects.length ? ` <span title="Managing: ${owner.managed_projects.map(p=>p.name).join(', ')}" style="font-size:0.8em;color:#ffd18d;">🗂️ ×${owner.managed_projects.length}</span>` : ''}</td>
+                    <td>${owner.project_count}</td>
+                    <td>${owner.task_count}</td>
+                    <td>${owner.active_today_count}</td>
+                    <td title="Direct: ${owner.concurrent_load}${owner.managed_projects && owner.managed_projects.length ? ` + ${owner.managed_projects.length} managed` : ''}">${owner.effective_concurrent_load ?? owner.concurrent_load}</td>
+                    <td>${owner.critical_task_count}</td>
+                    <td>${owner.tailed_out_count || 0}</td>
+                    <td>${renderLoadBar(owner, maxDays)}</td>
+                    <td class="resource-table-projects">${escapeHtml(owner.project_names.join(', '))}</td>
+                </tr>
+            `).join('');
+
+            const hiddenRows = currentResourceDrilldown === 'owners'
+                ? ''
+                : payload.owners.slice(10).map((owner) => `
+                    <tr class="resource-row-hidden" data-default-hidden="true">
+                        <td class="resource-table-owner">${escapeHtml(owner.owner)}${owner.managed_projects && owner.managed_projects.length ? ` <span title="Managing: ${owner.managed_projects.map(p=>p.name).join(', ')}" style="font-size:0.8em;color:#ffd18d;">🗂️ ×${owner.managed_projects.length}</span>` : ''}</td>
+                        <td>${owner.project_count}</td>
+                        <td>${owner.task_count}</td>
+                        <td>${owner.active_today_count}</td>
+                        <td title="Direct: ${owner.concurrent_load}${owner.managed_projects && owner.managed_projects.length ? ` + ${owner.managed_projects.length} managed` : ''}">${owner.effective_concurrent_load ?? owner.concurrent_load}</td>
+                        <td>${owner.critical_task_count}</td>
+                        <td>${owner.tailed_out_count || 0}</td>
+                        <td>${renderLoadBar(owner, maxDays)}</td>
+                        <td class="resource-table-projects">${escapeHtml(owner.project_names.join(', '))}</td>
+                    </tr>
+                `).join('');
+
+            const hiddenCount = Math.max(0, payload.owners.length - 10);
+            const actionHtml = hiddenCount > 0 && currentResourceDrilldown !== 'owners'
+                ? `<div class="resource-table-actions"><button class="resource-toggle-btn" id="resourceTableToggle" data-expanded="false" onclick="toggleResourceTableRows()">${hiddenCount} more owners</button></div>`
+                : '';
+
+            tableContainer.innerHTML = renderFilterableTable(
+                'resourceSummaryOwnersTable',
+                ['Owner', 'Projects', 'Total Tasks', 'Active Now', 'Concurrent Load', 'Critical', 'Tailed Out', 'Effort (days)', 'Project List'],
+                `${visibleRows}${hiddenRows}`,
+                actionHtml
+            );
+            applyTableFilters('resourceSummaryOwnersTable');
+        }
+
+        function renderResourceDrilldown() {
+            const payload = currentResourcePayload;
+            const detailContainer = document.getElementById('resourceDetailPanel');
+            const actionsContainer = document.getElementById('resourceSummaryActions');
+            if (!payload || !payload.owners || !payload.owners.length) {
+                if (actionsContainer) actionsContainer.innerHTML = '';
+                detailContainer.innerHTML = '';
+                return;
+            }
+
+            const backButtonHtml = `
+                <div class="resource-detail-actions">
+                    <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('summary')">Back to default</button>
+                </div>
+            `;
+
+            if (currentResourceDrilldown === 'summary') {
+                if (actionsContainer) actionsContainer.innerHTML = '';
+                detailContainer.innerHTML = '';
+                return;
+            }
+
+            if (currentResourceDrilldown === 'rag') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                const ownerCount   = payload.summary.owner_count || 1;
+                const delayedCount = payload.summary.owners_with_delays || 0;
+                const delayedPct   = Math.round((delayedCount / ownerCount) * 100);
+                const overloaded   = payload.owners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= 5 || o.active_today_count >= 4);
+                const onTrack      = ownerCount - delayedCount;
+                const ragStatus    = (delayedPct > 30 || overloaded.length >= 3) ? 'CRITICAL'
+                                   : (delayedPct > 10 || overloaded.length > 0) ? 'AT RISK'
+                                   : 'HEALTHY';
+                const ragColor     = ragStatus === 'CRITICAL' ? '#ff6b6b' : ragStatus === 'AT RISK' ? '#ffd18d' : '#9cf79a';
+
+                const overloadedRows = overloaded.length ? overloaded
+                    .sort((a, b) => (b.effective_concurrent_load ?? b.concurrent_load) - (a.effective_concurrent_load ?? a.concurrent_load))
+                    .map(o => {
+                        const ecl = o.effective_concurrent_load ?? o.concurrent_load;
+                        const mgBadge = o.managed_projects && o.managed_projects.length
+                            ? ` <span style="color:#ffd18d;font-size:0.85em;">🗂️ manages ${o.managed_projects.map(p=>p.name).join(', ')}</span>` : '';
+                        return `<li style="margin:2px 0;"><strong style="color:#7ec8ff;cursor:pointer;" onclick="filterResourceByOwner('${o.owner.replace(/'/g,"\\'")}')">🔍 ${escapeHtml(o.owner)}</strong>${mgBadge} — eff. load ${ecl}, ${o.active_today_count} active today</li>`;
+                    })
+                    .join('') : '<li style="color:#9cf79a;">None — all within capacity ✅</li>';
+
+                detailContainer.innerHTML = `
+                    <div style="display:flex;gap:24px;flex-wrap:wrap;padding:12px 4px;">
+                        <div style="flex:0 0 auto;min-width:180px;background:#1a2a3a;border-radius:10px;padding:18px 24px;text-align:center;border:2px solid ${ragColor};">
+                            <div style="font-size:2.4em;line-height:1.2;">${ragStatus === 'CRITICAL' ? '🔴' : ragStatus === 'AT RISK' ? '🟡' : '🟢'}</div>
+                            <div style="font-size:1.1em;font-weight:800;color:${ragColor};margin-top:6px;">${ragStatus}</div>
+                            <div style="font-size:0.75em;color:#8899aa;margin-top:6px;">Overall portfolio status</div>
+                        </div>
+                        <div style="flex:1;min-width:220px;background:#1a2a3a;border-radius:10px;padding:14px 20px;">
+                            <div style="font-size:0.82em;color:#8899aa;font-weight:600;text-transform:uppercase;margin-bottom:10px;">Owner breakdown</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                <button onclick="setResourceDrilldown('clear')" style="background:#162030;border:1px solid #24355f;border-radius:6px;padding:10px 14px;cursor:pointer;text-align:left;transition:border-color 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='#9cf79a';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#24355f';this.style.transform=''">
+                                    <div style="font-size:1.6em;font-weight:700;color:#9cf79a;">${onTrack}</div>
+                                    <div style="font-size:0.75em;color:#8899aa;">✅ On track · click to view</div>
+                                </button>
+                                <button onclick="setResourceDrilldown('delayed')" style="background:#162030;border:1px solid #24355f;border-radius:6px;padding:10px 14px;cursor:pointer;text-align:left;transition:border-color 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='#ff6b6b';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#24355f';this.style.transform=''">
+                                    <div style="font-size:1.6em;font-weight:700;color:#ff6b6b;">${delayedCount}</div>
+                                    <div style="font-size:0.75em;color:#8899aa;">⚠ With delays (${delayedPct}%) · click</div>
+                                </button>
+                                <button onclick="setResourceDrilldown('overloaded')" style="background:#162030;border:1px solid #24355f;border-radius:6px;padding:10px 14px;cursor:pointer;text-align:left;transition:border-color 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='#ffd18d';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#24355f';this.style.transform=''">
+                                    <div style="font-size:1.6em;font-weight:700;color:#ffd18d;">${overloaded.length}</div>
+                                    <div style="font-size:0.75em;color:#8899aa;">🔴 Overloaded · click to view</div>
+                                </button>
+                                <button onclick="setResourceDrilldown('owners')" style="background:#162030;border:1px solid #24355f;border-radius:6px;padding:10px 14px;cursor:pointer;text-align:left;transition:border-color 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='#7ec8ff';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#24355f';this.style.transform=''">
+                                    <div style="font-size:1.6em;font-weight:700;color:#cdd9e5;">${ownerCount}</div>
+                                    <div style="font-size:0.75em;color:#8899aa;">👥 Total owners · click to view</div>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="flex:1;min-width:220px;background:#1a2a3a;border-radius:10px;padding:14px 20px;">
+                            <div style="font-size:0.82em;color:#8899aa;font-weight:600;text-transform:uppercase;margin-bottom:10px;">Overloaded owners</div>
+                            <ul style="margin:0;padding-left:16px;font-size:0.85em;color:#cdd9e5;line-height:1.7;">${overloadedRows}</ul>
+                        </div>
+                        <div style="flex:0 0 auto;min-width:180px;background:#1a2a3a;border-radius:10px;padding:14px 20px;">
+                            <div style="font-size:0.82em;color:#8899aa;font-weight:600;text-transform:uppercase;margin-bottom:10px;">Thresholds</div>
+                            <ul style="margin:0;padding-left:16px;font-size:0.8em;color:#cdd9e5;line-height:2;">
+                                <li>🟢 <strong>Healthy</strong> — ≤10% delayed, 0 overloaded</li>
+                                <li>🟡 <strong>At Risk</strong> — 10–30% delayed or any overloaded</li>
+                                <li>🔴 <strong>Critical</strong> — >30% delayed or 3+ overloaded</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'owners') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                detailContainer.innerHTML = '';
+                return;
+            }
+
+            if (currentResourceDrilldown === 'owner-detail') {
+                const prevLabel = prevResourceDrilldown && prevResourceDrilldown !== 'summary' ? prevResourceDrilldown : null;
+                const backHtml = `
+                    <div class="resource-detail-actions">
+                        ${prevLabel ? `<button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('${prevLabel}')">← Back to ${prevLabel}</button>` : ''}
+                        <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('summary')" style="margin-left:8px;">Back to default</button>
+                    </div>`;
+                if (actionsContainer) actionsContainer.innerHTML = backHtml;
+
+                const owner = payload.owners.find(o => o.owner === currentOwnerFilter);
+                if (!owner) { detailContainer.innerHTML = `<div class="resource-detail-empty">Owner not found.</div>`; return; }
+
+                const tasks = owner.tasks
+                    .map(t => ({ ...t, owner: owner.owner }))
+                    .sort((a, b) => (a.start_date || '').localeCompare(b.start_date || '') || a.project_name.localeCompare(b.project_name));
+
+                const statusColor = s => ({ 'completed': '#9cf79a', 'in process': '#7ec8ff', 'planned': '#ffd18d' }[(s||'').toLowerCase()] || '#cdd9e5');
+                const delayFlag = t => t.is_delayed ? `<span style="color:#ff6b6b;font-size:0.8em;margin-left:4px;">⚠ delayed</span>` : '';
+
+                const rows = tasks.map(t => `
+                    <tr>
+                        <td>${escapeHtml(t.project_name || '')}</td>
+                        <td>${escapeHtml(t.phase || '—')}</td>
+                        <td>${escapeHtml(t.task_name || '')}</td>
+                        <td>${escapeHtml(t.start_date || '—')}</td>
+                        <td>${escapeHtml(t.end_date || '—')}</td>
+                        <td><span style="color:${statusColor(t.status)}">${escapeHtml(t.status || '')}</span>${delayFlag(t)}</td>
+                        <td>${(t.working_days || 0)}d</td>
+                    </tr>`).join('');
+
+                const wdTotal = tasks.reduce((s, t) => s + (t.working_days || 0), 0);
+                const delayedCount = tasks.filter(t => t.is_delayed).length;
+
+                detailContainer.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;padding:10px 4px;border-bottom:1px solid #24355f;">
+                        <div style="font-size:1.3em;font-weight:700;color:#7ec8ff;">👤 ${escapeHtml(owner.owner)}</div>
+                        <div style="font-size:0.82em;color:#8899aa;">${owner.project_count} project${owner.project_count!==1?'s':''} · ${tasks.length} task${tasks.length!==1?'s':''} · ${wdTotal}d working · ${owner.active_today_count} active today${delayedCount > 0 ? ` · <span style="color:#ff6b6b;">${delayedCount} delayed</span>` : ' · <span style="color:#9cf79a;">no delays</span>'}</div>
+                    </div>
+                    ${renderFilterableTable('resourceOwnerDetailTable', ['Project', 'Phase', 'Task', 'Start', 'End', 'Status', 'Work Days'], rows)}
+                `;
+                applyTableFilters('resourceOwnerDetailTable');
+                return;
+            }
+
+            if (currentResourceDrilldown === 'active') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                const activeTasks = payload.owners
+                    .flatMap(owner => owner.tasks
+                        .filter(task => task.is_active_today)
+                        .map(task => ({ owner: owner.owner, ...task })))
+                    .sort((left, right) => left.owner.localeCompare(right.owner) || left.project_name.localeCompare(right.project_name) || left.task_name.localeCompare(right.task_name));
+
+                detailContainer.innerHTML = renderResourceTaskTable(activeTasks, 'No active tasks found for today.');
+                applyTableFilters('resourceTaskTable');
+                return;
+            }
+
+            if (currentResourceDrilldown === 'delayed') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                const delayedTasks = payload.owners
+                    .flatMap(owner => owner.tasks
+                        .filter(task => task.is_delayed)
+                        .map(task => ({ owner: owner.owner, ...task })))
+                    .sort((a, b) => a.owner.localeCompare(b.owner) || a.project_name.localeCompare(b.project_name));
+
+                if (!delayedTasks.length) {
+                    detailContainer.innerHTML = `<div class="resource-detail-empty">No delayed tasks found.</div>`;
+                    return;
+                }
+
+                const rows = delayedTasks.map(task => `
+                    <tr>
+                        <td class="resource-table-owner" style="cursor:pointer;color:#7ec8ff;" onclick="filterResourceByOwner('${task.owner.replace(/'/g,"\\'")}')">🔍 ${escapeHtml(task.owner)}</td>
+                        <td>${escapeHtml(task.project_name)}</td>
+                        <td>${escapeHtml(task.task_name)}</td>
+                        <td>${escapeHtml(task.end_date || '')}</td>
+                        <td>${escapeHtml(task.status || '')}</td>
+                        <td><span style="color:${task.delay_reason === 'Open overdue' ? '#ff6b6b' : '#ffa94d'};font-weight:600;">${escapeHtml(task.delay_reason || 'Delayed')}</span></td>
+                    </tr>
+                `).join('');
+
+                detailContainer.innerHTML = renderFilterableTable(
+                    'resourceDelayedTable',
+                    ['Owner', 'Project', 'Task', 'Due Date', 'Status', 'Delay Type'],
+                    rows
+                );
+                applyTableFilters('resourceDelayedTable');
+                return;
+            }
+
+            if (currentResourceDrilldown === 'clear') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                const clearOwners = payload.owners
+                    .filter(owner => !owner.has_delayed_tasks)
+                    .sort((left, right) => left.owner.localeCompare(right.owner));
+
+                const rows = clearOwners.map((owner) => `
+                    <tr>
+                        <td class="resource-table-owner" style="cursor:pointer;color:#7ec8ff;" onclick="filterResourceByOwner('${owner.owner.replace(/'/g,"\\'")}')">🔍 ${escapeHtml(owner.owner)}${owner.managed_projects && owner.managed_projects.length ? ` <span title="Managing: ${owner.managed_projects.map(p=>p.name).join(', ')}" style="font-size:0.8em;color:#ffd18d;">🗂️ ×${owner.managed_projects.length}</span>` : ''}</td>
+                        <td>${owner.project_count}</td>
+                        <td>${owner.task_count}</td>
+                        <td>${owner.active_today_count}</td>
+                        <td>${owner.effective_concurrent_load ?? owner.concurrent_load}</td>
+                        <td class="resource-table-projects">${escapeHtml(owner.project_names.join(', '))}</td>
+                    </tr>
+                `).join('');
+
+                detailContainer.innerHTML = clearOwners.length ? `
+                    ${renderFilterableTable(
+                        'resourceClearOwnersTable',
+                        ['Owner', 'Projects', 'Total Tasks', 'Active Now', 'Concurrent Load', 'Project List'],
+                        rows
+                    )}
+                ` : `<div class="resource-detail-empty">No clear owners found.</div>`;
+                if (clearOwners.length) applyTableFilters('resourceClearOwnersTable');
+                return;
+            }
+
+            if (currentResourceDrilldown === 'overloaded') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+
+                // Include all owners with any parallel work or overload risk
+                const chartOwners = payload.owners
+                    .filter(o => o.active_today_count >= 2 || (o.effective_concurrent_load ?? o.concurrent_load) >= 3)
+                    .sort((a, b) => (b.effective_concurrent_load ?? b.concurrent_load) - (a.effective_concurrent_load ?? a.concurrent_load) || b.active_today_count - a.active_today_count);
+
+                if (!chartOwners.length) {
+                    detailContainer.innerHTML = `<div class="resource-detail-empty">✅ No overloaded owners — all within capacity.</div>`;
+                    return;
+                }
+
+                const maxVal = Math.max(...chartOwners.map(o => o.effective_concurrent_load ?? o.concurrent_load), 1);
+
+                const severityColor = o => {
+                    const ecl = o.effective_concurrent_load ?? o.concurrent_load;
+                    if (ecl >= 5 || o.active_today_count >= 4) return { bar: '#ff6b6b', dot: '#ff2442', label: '🔴', text: '#ff6b6b' };
+                    if (o.active_today_count >= 2 || ecl >= 3)  return { bar: '#ffa94d', dot: '#ff7c00', label: '🟠', text: '#ffa94d' };
+                    return { bar: '#4a9eff', dot: '#1a7aff', label: '🔵', text: '#4a9eff' };
+                };
+
+                const chartRows = chartOwners.map(o => {
+                    const c = severityColor(o);
+                    const ecl = o.effective_concurrent_load ?? o.concurrent_load;
+                    const activePct  = Math.max(2, o.active_today_count  / maxVal * 100);
+                    const concurPct  = Math.max(2, ecl / maxVal * 100);
+                    const gapExists  = concurPct > activePct + 2;
+                    const managedBadge = (o.managed_projects && o.managed_projects.length)
+                        ? `<span title="Managing: ${o.managed_projects.map(p=>p.name).join(', ')}" style="font-size:0.72em;color:#ffd18d;margin-left:4px;">🗂️ ×${o.managed_projects.length}</span>`
+                        : '';
+                    return `
+                    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #1a2740;cursor:pointer;"
+                         onclick="filterResourceByOwner('${o.owner.replace(/'/g,"\\'")}')">
+                        <div style="width:130px;min-width:130px;font-size:0.82em;color:#cdd9e5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                             title="${escapeHtml(o.owner)}">${c.label} ${escapeHtml(o.owner)}${managedBadge}</div>
+                        <div style="flex:1;position:relative;height:20px;">
+                            <!-- track -->
+                            <div style="position:absolute;top:50%;transform:translateY(-50%);left:0;right:0;height:4px;background:#1a2740;border-radius:2px;"></div>
+                            <!-- active today bar -->
+                            <div style="position:absolute;top:50%;transform:translateY(-50%);left:0;width:${activePct}%;height:12px;background:${c.bar};border-radius:3px;opacity:0.9;"></div>
+                            <!-- concurrent load dot (future risk) -->
+                            <div style="position:absolute;top:50%;transform:translate(-50%,-50%);left:${concurPct}%;width:14px;height:14px;background:${c.dot};border-radius:50%;border:2px solid #0d1b2e;z-index:2;"></div>
+                            ${gapExists ? `<div style="position:absolute;top:50%;transform:translateY(-50%);left:${activePct}%;width:${concurPct - activePct}%;height:3px;background:${c.dot};opacity:0.35;border-radius:1px;"></div>` : ''}
+                        </div>
+                        <div style="width:90px;min-width:90px;font-size:0.78em;color:#8899aa;text-align:right;white-space:nowrap;">
+                            <span style="color:${c.text};font-weight:600;">${o.active_today_count}</span> active
+                            &nbsp;<span style="color:#6b7fa3;">◆</span>
+                            <span style="color:${c.dot};font-weight:600;">${ecl}</span> eff.load
+                        </div>
+                    </div>`;
+                }).join('');
+
+                const overloadedCount = chartOwners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= 5 || o.active_today_count >= 4).length;
+                const jugglingCount   = chartOwners.filter(o => o.active_today_count >= 2 && (o.effective_concurrent_load ?? o.concurrent_load) < 5 && o.active_today_count < 4).length;
+
+                detailContainer.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:20px;margin-bottom:14px;font-size:0.8em;color:#6b7fa3;">
+                        <span><span style="color:#cdd9e5;font-weight:600;">${chartOwners.length}</span> owners with parallel work</span>
+                        <span>🔴 <span style="color:#ff6b6b;">${overloadedCount}</span> overloaded</span>
+                        <span>🟠 <span style="color:#ffa94d;">${jugglingCount}</span> juggling</span>
+                        <span style="margin-left:auto;">
+                            <span style="color:#ff6b6b;">■</span> Active today &nbsp;
+                            <span style="color:#ff2442;">●</span> Concurrent load (peak)
+                        </span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;padding:3px 0 8px 0;font-size:0.72em;color:#6b7fa3;">
+                        <div style="width:130px;min-width:130px;">Owner</div>
+                        <div style="flex:1;">
+                            0 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            <span style="float:right;">${maxVal} max</span>
+                        </div>
+                        <div style="width:90px;min-width:90px;text-align:right;">Active ◆ Peak</div>
+                    </div>
+                    ${chartRows}
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'parallel') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                const parallelOwners = payload.owners
+                    .filter(owner => owner.active_today_count >= 2)
+                    .sort((a, b) => b.active_today_count - a.active_today_count || b.concurrent_load - a.concurrent_load || a.owner.localeCompare(b.owner));
+
+                if (!parallelOwners.length) {
+                    detailContainer.innerHTML = `<div class="resource-detail-empty">No owners juggling 2+ tasks today.</div>`;
+                    return;
+                }
+
+                // Global date window: min start to max end across all juggling owners' tasks
+                const today = new Date(); today.setHours(0,0,0,0);
+                const allDatedTasks = parallelOwners.flatMap(o => o.tasks.filter(t => t.start_date && t.end_date));
+                const minDate = new Date(Math.min(...allDatedTasks.map(t => new Date(t.start_date))));
+                const maxDate = new Date(Math.max(...allDatedTasks.map(t => new Date(t.end_date))));
+                const totalMs = (maxDate - minDate) || 1;
+                const todayPct = Math.max(0, Math.min(100, (today - minDate) / totalMs * 100));
+
+                const barColor = s => ({ 'completed': '#4caf7d', 'in process': '#4a9eff', 'planned': '#ffa94d' }[(s||'').toLowerCase()] || '#8899aa');
+                const toPct = d => d ? Math.max(0, Math.min(100, (new Date(d) - minDate) / totalMs * 100)) : null;
+
+                // Build ONE table with owner header rows interspersed — ensures perfect column alignment
+                const allRows = parallelOwners.flatMap(owner => {
+                    const activeTasks = owner.tasks
+                        .filter(t => t.is_active_today)
+                        .sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
+
+                    const ownerRow = `
+                        <tr style="background:#0f1d35;cursor:pointer;" onclick="filterResourceByOwner('${owner.owner.replace(/'/g,"\\'")}')">
+                            <td colspan="4" style="padding:8px 8px 4px 8px;border-top:2px solid #24355f;">
+                                <span style="color:#7ec8ff;font-weight:700;font-size:0.92em;">🔍 ${escapeHtml(owner.owner)}${owner.managed_projects && owner.managed_projects.length ? ` <span title="Managing: ${owner.managed_projects.map(p=>p.name).join(', ')}" style="font-size:0.8em;color:#ffd18d;">🗂️ ×${owner.managed_projects.length}</span>` : ''}</span>
+                                <span style="font-size:0.76em;color:#8899aa;margin-left:10px;">
+                                    ${owner.active_today_count} active today &nbsp;·&nbsp; eff. load ${owner.effective_concurrent_load ?? owner.concurrent_load} &nbsp;·&nbsp; ${owner.project_count} project${owner.project_count!==1?'s':''}
+                                </span>
+                            </td>
+                        </tr>`;
+
+                    const taskRows = activeTasks.map(t => {
+                        const s = toPct(t.start_date), e = toPct(t.end_date);
+                        const w = (s !== null && e !== null) ? Math.max(1, e - s) : 0;
+                        const col = barColor(t.status);
+                        const delayStyle = t.is_delayed ? 'border:1.5px solid #ff6b6b;' : '';
+                        return `
+                        <tr>
+                            <td style="padding:4px 8px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${escapeHtml(t.task_name || '')}${t.is_delayed ? ' <span style="color:#ff6b6b;font-size:0.8em;">⚠</span>' : ''}
+                            </td>
+                            <td style="padding:4px 8px;color:#8899aa;font-size:0.82em;white-space:nowrap;">${escapeHtml(t.project_name || '')}</td>
+                            <td style="padding:4px 8px;font-size:0.8em;white-space:nowrap;color:#cdd9e5;">${escapeHtml(t.start_date || '—')} → ${escapeHtml(t.end_date || '—')}</td>
+                            <td style="padding:4px 8px;">
+                                <div style="position:relative;height:14px;background:#1a2740;border-radius:3px;">
+                                    ${s !== null ? `<div style="position:absolute;left:${s}%;width:${w}%;height:100%;background:${col};border-radius:3px;opacity:0.85;${delayStyle}"></div>` : ''}
+                                    <div style="position:absolute;left:calc(${todayPct}% - 1px);top:-3px;width:2px;height:20px;background:#ff4757;z-index:2;border-radius:1px;"></div>
+                                </div>
+                            </td>
+                        </tr>`;
+                    }).join('');
+
+                    return ownerRow + taskRows;
+                }).join('');
+
+                detailContainer.innerHTML = `
+                    <div style="margin-bottom:10px;font-size:0.8em;color:#6b7fa3;">
+                        <strong style="color:#cdd9e5;">${parallelOwners.length}</strong> owner${parallelOwners.length!==1?'s':''} juggling 3+ tasks today
+                        &nbsp;·&nbsp; timeline: ${minDate.toLocaleDateString()} – ${maxDate.toLocaleDateString()}
+                        &nbsp;·&nbsp; <span style="color:#ff4757;">│</span> = today
+                        &nbsp;·&nbsp; <span style="color:#4a9eff;">■</span> In Process &nbsp;<span style="color:#ffa94d;">■</span> Planned
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.83em;">
+                        <colgroup>
+                            <col style="width:22%">
+                            <col style="width:20%">
+                            <col style="width:18%">
+                            <col style="width:40%">
+                        </colgroup>
+                        <thead>
+                            <tr style="color:#6b7fa3;border-bottom:1px solid #24355f;">
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">Task</th>
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">Project</th>
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;white-space:nowrap;">Dates</th>
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">Timeline</th>
+                            </tr>
+                        </thead>
+                        <tbody>${allRows}</tbody>
+                    </table>
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'statuslag') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                const today_s = new Date().toISOString().slice(0, 10);
+
+                const lagTasks = payload.owners
+                    .flatMap(o => o.tasks.map(t => ({ ...t, owner: o.owner })))
+                    .filter(t =>
+                        (t.status || '').toLowerCase() === 'planned' &&
+                        t.start_date && t.start_date <= today_s
+                    )
+                    .sort((a, b) => a.project_name.localeCompare(b.project_name) || a.start_date.localeCompare(b.start_date));
+
+                if (!lagTasks.length) {
+                    detailContainer.innerHTML = `<div class="resource-detail-empty">✅ All active tasks are correctly set to In Process.</div>`;
+                    return;
+                }
+
+                const byProject = {};
+                lagTasks.forEach(t => {
+                    if (!byProject[t.project_name]) byProject[t.project_name] = [];
+                    byProject[t.project_name].push(t);
+                });
+
+                const today_d = new Date(); today_d.setHours(0,0,0,0);
+                const daysSince = d => Math.floor((today_d - new Date(d)) / 86400000);
+
+                // ONE table — project header rows span all columns
+                const allRows = Object.entries(byProject).flatMap(([proj, tasks]) => {
+                    const projRow = `
+                        <tr style="background:#0f1d35;">
+                            <td colspan="6" style="padding:8px 8px 4px 10px;border-top:2px solid #24355f;border-left:3px solid #ffd18d;">
+                                <span style="color:#ffd18d;font-weight:700;font-size:0.88em;">📁 ${escapeHtml(proj)}</span>
+                                <span style="font-size:0.75em;color:#6b7fa3;margin-left:10px;">${tasks.length} task${tasks.length!==1?'s':''} need status update</span>
+                            </td>
+                        </tr>`;
+
+                    const taskRows = tasks.map(t => {
+                        const lag = daysSince(t.start_date);
+                        const lagColor = lag >= 14 ? '#ff6b6b' : lag >= 7 ? '#ffa94d' : '#ffd18d';
+                        return `
+                        <tr>
+                            <td style="padding:4px 8px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(t.task_name || '')}</td>
+                            <td style="padding:4px 8px;color:#8899aa;font-size:0.82em;white-space:nowrap;">${escapeHtml(t.phase || '—')}</td>
+                            <td style="padding:4px 8px;color:#7ec8ff;white-space:nowrap;">${escapeHtml(t.owner || '—')}</td>
+                            <td style="padding:4px 8px;font-size:0.82em;white-space:nowrap;">${escapeHtml(t.start_date)}</td>
+                            <td style="padding:4px 8px;font-size:0.82em;white-space:nowrap;">${escapeHtml(t.end_date || '—')}</td>
+                            <td style="padding:4px 8px;font-weight:600;color:${lagColor};white-space:nowrap;">${lag}d ago</td>
+                        </tr>`;
+                    }).join('');
+
+                    return projRow + taskRows;
+                }).join('');
+
+                detailContainer.innerHTML = `
+                    <div style="margin-bottom:12px;font-size:0.8em;color:#6b7fa3;">
+                        <strong style="color:#ffd18d;">${lagTasks.length}</strong> tasks still <span style="color:#ffd18d;">Planned</span> but should be <span style="color:#4a9eff;">In Process</span>
+                        &nbsp;·&nbsp; ${Object.keys(byProject).length} project${Object.keys(byProject).length!==1?'s':''}
+                        &nbsp;·&nbsp; <span style="color:#ffd18d;">■</span> &lt;7d &nbsp;<span style="color:#ffa94d;">■</span> 7–14d &nbsp;<span style="color:#ff6b6b;">■</span> 14d+
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.83em;">
+                        <colgroup>
+                            <col style="width:30%">
+                            <col style="width:15%">
+                            <col style="width:15%">
+                            <col style="width:12%">
+                            <col style="width:12%">
+                            <col style="width:10%">
+                        </colgroup>
+                        <thead>
+                            <tr style="color:#6b7fa3;border-bottom:1px solid #24355f;">
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">Task</th>
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">Phase</th>
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">Owner</th>
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">Start Date</th>
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">End Date</th>
+                                <th style="text-align:left;padding:4px 8px;font-weight:500;">Started</th>
+                            </tr>
+                        </thead>
+                        <tbody>${allRows}</tbody>
+                    </table>
+                `;
+                return;
+            }
+
+            if (currentResourceDrilldown === 'heatmap') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                detailContainer.innerHTML = buildMonthHeatmap(payload.owners);
+                return;
+            }
+
+            if (currentResourceDrilldown === 'discipline') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                if (disciplineDataCache) {
+                    // Instant render — no fetch, no jump
+                    detailContainer.innerHTML = buildDisciplineView(disciplineDataCache);
+                } else {
+                    // First load fallback (shouldn't happen — pre-fetched in parallel)
+                    detailContainer.style.minHeight = detailContainer.offsetHeight + 'px';
+                    detailContainer.innerHTML = `<div style="color:#6b7fa3;padding:20px;">⏳ Loading discipline data...</div>`;
+                    fetch('/api/discipline-resource-load')
+                        .then(r => r.json())
+                        .then(data => {
+                            disciplineDataCache = data;
+                            if (currentResourceDrilldown === 'discipline') {
+                                detailContainer.innerHTML = buildDisciplineView(data);
+                                detailContainer.style.minHeight = '';
+                            }
+                        })
+                        .catch(e => {
+                            detailContainer.innerHTML = `<div style="color:#ff6b6b;">Error: ${e.message}</div>`;
+                            detailContainer.style.minHeight = '';
+                        });
+                }
+                return;
+            }
+
+            if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+            const allTasks = payload.owners
+                .flatMap(owner => owner.tasks.map(task => ({ owner: owner.owner, ...task })))
+                .sort((left, right) => left.owner.localeCompare(right.owner) || left.start_date.localeCompare(right.start_date) || left.project_name.localeCompare(right.project_name));
+            const scheduledSections = renderScheduledOwnerProjectSections(allTasks);
+
+            detailContainer.innerHTML = currentResourceDrilldown === 'task-matrix'
+                ? scheduledSections.taskMatrixHtml
+                : scheduledSections.workingDayHtml;
+            scheduledSections.tableIds.forEach((tableId) => applyTableFilters(tableId));
+        }
+
+        function renderResourceTaskTable(tasks, emptyMessage) {
+            if (!tasks.length) {
+                return `<div class="resource-detail-empty">${escapeHtml(emptyMessage)}</div>`;
+            }
+
+            const rows = tasks.map((task) => `
+                <tr>
+                    <td class="resource-table-owner">${escapeHtml(task.owner)}</td>
+                    <td>${escapeHtml(task.project_name)}</td>
+                    <td>${escapeHtml(task.task_name)}</td>
+                    <td>${escapeHtml(task.start_date)}</td>
+                    <td>${escapeHtml(task.end_date)}</td>
+                    <td>${task.working_days ?? '-'}</td>
+                    <td>${escapeHtml(task.status || '')}</td>
+                </tr>
+            `).join('');
+
+            return renderFilterableTable(
+                'resourceTaskTable',
+                ['Owner', 'Project', 'Task', 'Start', 'End', 'Working Days', 'Status'],
+                rows
+            );
+        }
+
+        function renderSimpleResourceTable(headers, rowsHtml) {
+            const headerRow = headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('');
+            return `
+                <div class="resource-table-wrap">
+                    <div class="resource-table-scroll">
+                        <table class="resource-table">
+                            <thead>
+                                <tr>${headerRow}</tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderScheduledOwnerProjectSections(tasks) {
+            const relevantTasks = tasks.filter((task) => {
+                const normalizedStatus = (task.status || '').trim().toLowerCase();
+                return normalizedStatus === 'planned' || normalizedStatus === 'in process';
+            });
+
+            if (!relevantTasks.length) {
+                return {
+                    html: `<div class="resource-detail-empty">No Planned or In Process tasks found.</div>`,
+                    tableIds: []
+                };
+            }
+
+            const ownerProjectMap = new Map();
+            relevantTasks.forEach((task) => {
+                const mapKey = `${task.owner}||${task.project_name}`;
+                const existing = ownerProjectMap.get(mapKey) || {
+                    owner: task.owner,
+                    project_name: task.project_name,
+                    task_count: 0,
+                    planned_working_days: 0,
+                    in_process_working_days: 0,
+                    planned_task_count: 0,
+                    in_process_task_count: 0
+                };
+
+                existing.task_count += 1;
+
+                if ((task.status || '').trim().toLowerCase() === 'planned') {
+                    existing.planned_task_count += 1;
+                    existing.planned_working_days += Number(task.working_days || 0);
+                }
+
+                if ((task.status || '').trim().toLowerCase() === 'in process') {
+                    existing.in_process_task_count += 1;
+                    existing.in_process_working_days += Number(task.working_days || 0);
+                }
+
+                ownerProjectMap.set(mapKey, existing);
+            });
+
+            const ownerProjects = Array.from(ownerProjectMap.values())
+                .map((entry) => ({
+                    ...entry,
+                    total_working_days: entry.planned_working_days + entry.in_process_working_days
+                }));
+
+            const projectNames = Array.from(new Set(ownerProjects.map((entry) => entry.project_name)))
+                .sort((left, right) => {
+                    const leftTotal = ownerProjects.reduce((sum, entry) => sum + (entry.project_name === left ? entry.task_count : 0), 0);
+                    const rightTotal = ownerProjects.reduce((sum, entry) => sum + (entry.project_name === right ? entry.task_count : 0), 0);
+                    return rightTotal - leftTotal || left.localeCompare(right);
+                });
+
+            const ownerMap = new Map();
+            ownerProjects.forEach((entry) => {
+                const existing = ownerMap.get(entry.owner) || {
+                    owner: entry.owner,
+                    total_task_count: 0,
+                    total_planned_task_count: 0,
+                    total_in_process_task_count: 0,
+                    total_planned_working_days: 0,
+                    total_in_process_working_days: 0,
+                    projects: new Map()
+                };
+
+                existing.total_task_count += entry.task_count;
+                existing.total_planned_task_count += entry.planned_task_count;
+                existing.total_in_process_task_count += entry.in_process_task_count;
+                existing.total_planned_working_days += entry.planned_working_days;
+                existing.total_in_process_working_days += entry.in_process_working_days;
+                existing.projects.set(entry.project_name, entry);
+                ownerMap.set(entry.owner, existing);
+            });
+
+            const ownerRows = Array.from(ownerMap.values())
+                .map((owner) => ({
+                    ...owner,
+                    total_working_days: owner.total_planned_working_days + owner.total_in_process_working_days
+                }));
+
+            const taskQuantityRows = ownerRows
+                .slice()
+                .sort((left, right) =>
+                    right.total_task_count - left.total_task_count
+                    || left.owner.localeCompare(right.owner)
+                )
+                .map((owner) => {
+                    const projectCells = projectNames.map((projectName) => {
+                        const project = owner.projects.get(projectName);
+                        if (!project) {
+                            return `<td class="resource-matrix-cell resource-matrix-zero">0</td>`;
+                        }
+
+                        return `
+                            <td class="resource-matrix-cell">
+                                <div class="resource-matrix-primary">${project.task_count}</div>
+                                <div class="resource-matrix-subline">Planned ${project.planned_task_count} · In Process ${project.in_process_task_count}</div>
+                            </td>
+                        `;
+                    }).join('');
+
+                    return `
+                        <tr>
+                            <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
+                            ${projectCells}
+                            <td class="resource-matrix-cell">
+                                <div class="resource-matrix-primary">${owner.total_task_count}</div>
+                                <div class="resource-matrix-subline">Planned ${owner.total_planned_task_count} · In Process ${owner.total_in_process_task_count}</div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            const workingDayRows = ownerRows
+                .slice()
+                .sort((left, right) =>
+                    right.total_working_days - left.total_working_days
+                    || left.owner.localeCompare(right.owner)
+                )
+                .map((owner) => {
+                    const projectCells = projectNames.map((projectName) => {
+                        const project = owner.projects.get(projectName);
+                        if (!project || (!project.planned_working_days && !project.in_process_working_days)) {
+                            return `<td class="resource-matrix-cell resource-matrix-zero">0</td>`;
+                        }
+
+                        return `
+                            <td class="resource-matrix-cell">
+                                <div class="resource-matrix-primary">${project.total_working_days}</div>
+                                <div class="resource-matrix-subline">Planned ${project.planned_working_days} · In Process ${project.in_process_working_days}</div>
+                            </td>
+                        `;
+                    }).join('');
+
+                    return `
+                        <tr>
+                            <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
+                            ${projectCells}
+                            <td class="resource-matrix-cell">
+                                <div class="resource-matrix-primary">${owner.total_working_days}</div>
+                                <div class="resource-matrix-subline">Planned ${owner.total_planned_working_days} · In Process ${owner.total_in_process_working_days}</div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+            return {
+                taskMatrixHtml: `
+                    <div class="resource-detail-panel" style="margin-bottom: 14px;">
+                        <h3>Overall tasks per project per owner</h3>
+                        <p>Owners are shown in rows, with all projects across the columns so you can see the full task distribution in one shot.</p>
+                        ${renderSimpleResourceTable(
+                            ['Owner', ...projectNames, 'Total Tasks'],
+                            taskQuantityRows
+                        )}
+                    </div>
+                `,
+                workingDayHtml: `
+                    <div class="resource-detail-panel" style="margin-bottom: 14px;">
+                        <h3>Overall working days per owner per project</h3>
+                        <p>Owners are shown in rows, with all projects across the columns. Each cell shows total working days, plus <strong>Planned</strong> and <strong>In Process</strong> splits.</p>
+                        ${renderSimpleResourceTable(
+                            ['Owner', ...projectNames, 'Total WD'],
+                            workingDayRows
+                        )}
+                    </div>
+                `,
+                tableIds: []
+            };
+        }
+
+        function renderDelayedTaskTable(tasks, emptyMessage) {
+            if (!tasks.length) {
+                return `<div class="resource-detail-empty">${escapeHtml(emptyMessage)}</div>`;
+            }
+
+            const rows = tasks.map((task) => `
+                <tr>
+                    <td class="resource-table-owner">${escapeHtml(task.owner)}</td>
+                    <td>${escapeHtml(task.project_name)}</td>
+                    <td>${escapeHtml(task.task_name)}</td>
+                    <td>${escapeHtml(task.end_date)}</td>
+                    <td>${escapeHtml(task.date_closed || '-')}</td>
+                    <td>${escapeHtml(task.delay_reason || 'Delayed')}</td>
+                </tr>
+            `).join('');
+
+            return renderFilterableTable(
+                'resourceDelayedTable',
+                ['Owner', 'Project', 'Task', 'Planned End', 'Closed', 'Delay Type'],
+                rows
+            );
+        }
+
+        function isFilterExcludedColumn(header) {
+            const normalizedHeader = (header || '').toLowerCase();
+            return normalizedHeader.includes('start') || normalizedHeader.includes('end');
+        }
+
+        const tableCheckboxFilters = {};
+        let activeTableFilterMenu = null;
+
+        function getTableCheckboxFilters(tableId) {
+            if (!tableCheckboxFilters[tableId]) {
+                tableCheckboxFilters[tableId] = {};
+            }
+            return tableCheckboxFilters[tableId];
+        }
+
+        function getColumnDistinctValues(table, columnIndex) {
+            const values = Array.from(new Set(
+                Array.from(table.querySelectorAll('tbody tr'))
+                    .map((row) => (row.cells[columnIndex]?.textContent || '').trim())
+                    .filter(Boolean)
+            ));
+
+            return values.sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' }));
+        }
+
+        function closeAllTableFilterMenus() {
+            document.querySelectorAll('.resource-filter-menu.open').forEach((menu) => {
+                menu.classList.remove('open');
+            });
+            activeTableFilterMenu = null;
+        }
+
+        function ensureFloatingFilterMenu() {
+            let menu = document.getElementById('resourceFloatingFilterMenu');
+            if (!menu) {
+                menu = document.createElement('div');
+                menu.id = 'resourceFloatingFilterMenu';
+                menu.className = 'resource-filter-menu';
+                menu.addEventListener('click', (event) => event.stopPropagation());
+                document.body.appendChild(menu);
+            }
+
+            return menu;
+        }
+
+        function positionOpenFilterMenu(menu, trigger) {
+            menu.style.left = '16px';
+            menu.style.top = '16px';
+
+            const triggerRect = trigger.getBoundingClientRect();
+            const menuRect = menu.getBoundingClientRect();
+            let left = triggerRect.left;
+            let top = triggerRect.bottom + 6;
+
+            if (left + menuRect.width > window.innerWidth - 16) {
+                left = Math.max(16, window.innerWidth - menuRect.width - 16);
+            }
+
+            if (top + menuRect.height > window.innerHeight - 16) {
+                top = Math.max(16, triggerRect.top - menuRect.height - 6);
+            }
+
+            menu.style.left = `${left}px`;
+            menu.style.top = `${top}px`;
+        }
+
+        function updateFilterTriggerState(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const trigger = table.querySelector(`.resource-filter-trigger[data-column-index="${columnIndex}"]`);
+            const filters = getTableCheckboxFilters(tableId);
+            const selectedValues = filters[columnIndex];
+
+            if (!trigger) return;
+
+            const isActive = Array.isArray(selectedValues);
+            trigger.classList.toggle('active', isActive);
+            trigger.innerHTML = isActive
+                ? `&#9662;<span class="resource-filter-trigger-count">${selectedValues.length}</span>`
+                : '&#9662;';
+        }
+
+        function updateAllFilterTriggerStates(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            table.querySelectorAll('.resource-filter-trigger').forEach((trigger) => {
+                updateFilterTriggerState(tableId, Number(trigger.dataset.columnIndex));
+            });
+        }
+
+        function renderColumnFilterMenu(tableId, columnIndex) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const menu = ensureFloatingFilterMenu();
+
+            const values = getColumnDistinctValues(table, columnIndex);
+            const filters = getTableCheckboxFilters(tableId);
+            const selectedValues = filters[columnIndex];
+            const activeValues = Array.isArray(selectedValues) ? new Set(selectedValues) : new Set(values);
+
+            const optionsHtml = values.length
+                ? values.map((value) => `
+                    <label class="resource-filter-option">
+                        <input
+                            type="checkbox"
+                            ${activeValues.has(value) ? 'checked' : ''}
+                            onchange="toggleColumnFilterValue('${tableId}', ${columnIndex}, ${JSON.stringify(value).replace(/"/g, '&quot;')}, this.checked)"
+                        >
+                        <span>${escapeHtml(value)}</span>
+                    </label>
+                `).join('')
+                : `<div class="resource-filter-empty">No values available</div>`;
+
+            menu.innerHTML = `
+                <div class="resource-filter-menu-header">
+                    <button type="button" class="resource-filter-menu-link" onclick="setAllColumnFilterValues('${tableId}', ${columnIndex}, true)">Select all</button>
+                    <button type="button" class="resource-filter-menu-link" onclick="setAllColumnFilterValues('${tableId}', ${columnIndex}, false)">Unselect all</button>
+                </div>
+                <div class="resource-filter-menu-list">${optionsHtml}</div>
+            `;
+
+            return menu;
+        }
+
+        function toggleColumnFilterMenu(event, tableId, columnIndex) {
+            event.stopPropagation();
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const trigger = event.currentTarget;
+            const menu = ensureFloatingFilterMenu();
+            const isSameMenuOpen = menu.classList.contains('open')
+                && activeTableFilterMenu?.tableId === tableId
+                && activeTableFilterMenu?.columnIndex === columnIndex;
+            closeAllTableFilterMenus();
+
+            if (isSameMenuOpen) {
+                return;
+            }
+
+            renderColumnFilterMenu(tableId, columnIndex);
+            menu.classList.add('open');
+            activeTableFilterMenu = { tableId, columnIndex, trigger };
+            positionOpenFilterMenu(menu, trigger);
+        }
+
+        function refreshOpenColumnFilterMenu() {
+            if (!activeTableFilterMenu) return;
+
+            const { tableId, columnIndex, trigger } = activeTableFilterMenu;
+            if (!document.body.contains(trigger)) {
+                closeAllTableFilterMenus();
+                return;
+            }
+
+            const menu = renderColumnFilterMenu(tableId, columnIndex);
+            if (!menu) return;
+            menu.classList.add('open');
+            positionOpenFilterMenu(menu, trigger);
+        }
+
+        function setAllColumnFilterValues(tableId, columnIndex, selectAll) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const filters = getTableCheckboxFilters(tableId);
+            if (selectAll) {
+                delete filters[columnIndex];
+            } else {
+                filters[columnIndex] = [];
+            }
+
+            applyTableFilters(tableId);
+            refreshOpenColumnFilterMenu();
+            updateFilterTriggerState(tableId, columnIndex);
+        }
+
+        function toggleColumnFilterValue(tableId, columnIndex, rawValue, checked) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const value = String(rawValue);
+            const filters = getTableCheckboxFilters(tableId);
+            const hasExplicitFilter = Array.isArray(filters[columnIndex]);
+            const allValues = getColumnDistinctValues(table, columnIndex);
+            const selectedSet = Array.isArray(filters[columnIndex])
+                ? new Set(filters[columnIndex])
+                : new Set(allValues);
+
+            if (!hasExplicitFilter && !checked) {
+                filters[columnIndex] = [value];
+                applyTableFilters(tableId);
+                refreshOpenColumnFilterMenu();
+                updateFilterTriggerState(tableId, columnIndex);
+                return;
+            }
+
+            if (checked) {
+                selectedSet.add(value);
+            } else {
+                selectedSet.delete(value);
+            }
+
+            if (selectedSet.size === allValues.length) {
+                delete filters[columnIndex];
+            } else {
+                filters[columnIndex] = allValues.filter((item) => selectedSet.has(item));
+            }
+
+            applyTableFilters(tableId);
+            refreshOpenColumnFilterMenu();
+            updateFilterTriggerState(tableId, columnIndex);
+        }
+
+        function renderFilterableTable(tableId, headers, rowsHtml, actionHtml = '') {
+            const headerRow = headers.map((header, index) => `
+                <th class="${isFilterExcludedColumn(header) ? '' : 'resource-filter-cell'}">
+                    <div class="resource-header-filter">
+                        <span class="resource-header-title">${escapeHtml(header)}</span>
+                        ${isFilterExcludedColumn(header)
+                            ? ''
+                            : `
+                                <button type="button" class="resource-filter-trigger" data-column-index="${index}" onclick="toggleColumnFilterMenu(event, '${tableId}', ${index})" aria-label="Filter ${escapeHtml(header)}">&#9662;</button>
+                            `
+                        }
+                    </div>
+                </th>
+            `).join('');
+
+            return `
+                <div class="resource-table-wrap">
+                    ${actionHtml}
+                    <div class="resource-table-scroll">
+                        <table class="resource-table" id="${tableId}">
+                            <thead>
+                                <tr>${headerRow}</tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function applyTableFilters(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const filters = getTableCheckboxFilters(tableId);
+            const rows = Array.from(table.querySelectorAll('tbody tr'));
+            const activeFilterIndexes = Object.keys(filters);
+            const hasActiveFilters = activeFilterIndexes.length > 0;
+            const isSummaryTable = tableId === 'resourceSummaryOwnersTable';
+            const toggleButton = isSummaryTable ? document.getElementById('resourceTableToggle') : null;
+            const isExpanded = toggleButton?.dataset.expanded === 'true';
+
+            rows.forEach((row) => {
+                const matches = activeFilterIndexes.every((columnIndex) => {
+                    const selectedValues = filters[columnIndex];
+                    const cellText = (row.cells[Number(columnIndex)]?.textContent || '').trim();
+                    return Array.isArray(selectedValues) && selectedValues.includes(cellText);
+                });
+
+                if (hasActiveFilters) {
+                    row.style.display = matches ? 'table-row' : 'none';
+                    return;
+                }
+
+                if (row.dataset.defaultHidden === 'true') {
+                    row.style.display = isExpanded ? 'table-row' : 'none';
+                    return;
+                }
+
+                row.style.display = 'table-row';
+            });
+
+            if (toggleButton) {
+                toggleButton.style.display = hasActiveFilters ? 'none' : 'inline-flex';
+            }
+
+            updateAllFilterTriggerStates(tableId);
+        }
+
+        function setResourceDrilldown(mode) {
+            currentResourceDrilldown = mode;
+            renderResourceSummaryCards();
+            renderResourceDrilldown();
+            renderResourceSummaryTable();
+        }
+
+        function filterResourceByOwner(ownerName) {
+            prevResourceDrilldown = currentResourceDrilldown;
+            currentOwnerFilter = ownerName;
+            currentResourceDrilldown = 'owner-detail';
+            renderResourceSummaryCards();
+            renderResourceDrilldown();
+        }
+
+        function toggleResourceTableRows() {
+            const hiddenRows = document.querySelectorAll('#resourceSummaryTable .resource-row-hidden');
+            const button = document.getElementById('resourceTableToggle');
+            if (!button || !hiddenRows.length) return;
+
+            const isExpanded = button.dataset.expanded === 'true';
+            button.dataset.expanded = isExpanded ? 'false' : 'true';
+            button.textContent = isExpanded
+                ? `${hiddenRows.length} more owners`
+                : 'Show less';
+            applyTableFilters('resourceSummaryOwnersTable');
+        }
+
+        function getAdjustedTimelinePercent(item, date, rangeStart, rangeEnd) {
+            let percent = getTimelinePercent(date, rangeStart, rangeEnd);
+            const today = new Date();
+            const todayPercent = getTimelinePercent(today, rangeStart, rangeEnd);
+
+            if ((item.sign_off_status || '') === 'Passed with Rework' && item.date_source === 'Signed Off') {
+                percent -= 1.8;
+            }
+
+            if (item.date_source === 'Signed Off' && date < today && (todayPercent - percent) < 2.5) {
+                percent = todayPercent - 2.5;
+            }
+
+            return Math.max(0, Math.min(100, percent));
+        }
+
+        function formatIsoDate(value) {
+            if (!value) return '';
+            const date = parseIsoDate(value);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function showHeaderStatus(text, type = '') {
+            const headerStatus = document.getElementById('headerStatus');
+            if (!headerStatus) return;
+            headerStatus.textContent = text || '';
+            headerStatus.className = type ? `header-status ${type}` : 'header-status';
+        }
+
+        function cloneTableFilterState() {
+            return JSON.parse(JSON.stringify(tableCheckboxFilters));
+        }
+
+        function isOverallDashboardReadyForExport() {
+            return currentProjectsPayload !== null
+                && currentTimelinePayload !== null
+                && currentResourcePayload !== null
+                && currentCriticalPayload !== null;
+        }
+
+        function exportOverallDashboardHTML() {
+            if (!isOverallDashboardReadyForExport()) {
+                showHeaderStatus('Dashboard data is still loading. Please try again in a moment.', 'error');
+                return;
+            }
+
+            const exportPayload = {
+                exported_at: new Date().toISOString(),
+                activeTab: currentDashboardTab,
+                resourceDrilldown: currentResourceDrilldown,
+                criticalExpanded: currentCriticalExpanded,
+                tableFilters: cloneTableFilterState(),
+                stats: currentStatsPayload,
+                projects: currentProjectsPayload,
+                timeline: currentTimelinePayload,
+                resource: currentResourcePayload,
+                critical: currentCriticalPayload
+            };
+
+            const exportJson = JSON.stringify(exportPayload, null, 12).replace(/<\/script/gi, '<\\/script');
+            const currentHtml = document.documentElement.outerHTML;
+            const embeddedMarker = 'const embeddedOverallDashboardPayload = null;';
+            const exportedHtml = currentHtml.replace(
+                embeddedMarker,
+                `const embeddedOverallDashboardPayload = ${exportJson};`
+            );
+
+            if (exportedHtml === currentHtml) {
+                showHeaderStatus('Failed to build exported HTML file.', 'error');
+                return;
+            }
+
+            const blob = new Blob([exportedHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().split('T')[0];
+            link.href = url;
+            link.download = `Overall Programs Dashboard_${timestamp}.html`;
+            link.click();
+            URL.revokeObjectURL(url);
+            showHeaderStatus('Overall dashboard HTML exported successfully.', 'success');
+        }
+        
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.name.endsWith('.xlsx')) {
+                showMessage('Please select a valid Excel file (.xlsx)', 'error');
+                return;
+            }
+            
+            const importBtn = document.getElementById('importBtn');
+            const overlay = document.getElementById('progressOverlay');
+            const progressText = document.getElementById('progressText');
+            
+            // Disable button and show overlay
+            importBtn.disabled = true;
+            overlay.classList.add('show');
+            progressText.textContent = 'Uploading and processing Excel file...';
+            
+            try {
+                // Create FormData and append file
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Upload file
+                const response = await fetch('/api/upload-excel', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Success
+                    progressText.textContent = 'Success! Reloading page...';
+                    showMessage(`Successfully imported project: ${result.project_name || file.name}`, 'success');
+                    
+                    // Reload after a short delay
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                } else {
+                    // Error from server
+                    throw new Error(result.error || 'Upload failed');
+                }
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+                importBtn.disabled = false;
+                overlay.classList.remove('show');
+            }
+            
+            // Reset file input
+            event.target.value = '';
+        }
+        
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${type} show`;
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 5000);
+        }
+        
+        function refreshDashboardData() {
+            loadStats();
+            loadOverallGateTimeline();
+            loadOverallResourceLoad();
+            loadOverallCriticalPathOverview();
+            loadProjects();
+        }
+
+        function applyEmbeddedOverallDashboardPayload() {
+            if (!embeddedOverallDashboardPayload) {
+                return false;
+            }
+
+            currentDashboardTab = embeddedOverallDashboardPayload.activeTab || currentDashboardTab;
+            currentResourceDrilldown = embeddedOverallDashboardPayload.resourceDrilldown || currentResourceDrilldown;
+            currentCriticalExpanded = Boolean(embeddedOverallDashboardPayload.criticalExpanded);
+
+            Object.keys(tableCheckboxFilters).forEach((tableId) => {
+                delete tableCheckboxFilters[tableId];
+            });
+            Object.entries(embeddedOverallDashboardPayload.tableFilters || {}).forEach(([tableId, filters]) => {
+                tableCheckboxFilters[tableId] = filters;
+            });
+
+            setActiveDashboardTab(currentDashboardTab);
+            loadStats(embeddedOverallDashboardPayload.stats || {});
+            loadOverallGateTimeline(embeddedOverallDashboardPayload.timeline || []);
+            loadOverallResourceLoad(embeddedOverallDashboardPayload.resource || { summary: {}, owners: [] });
+            loadOverallCriticalPathOverview(embeddedOverallDashboardPayload.critical || { summary: {}, projects: [] });
+            loadProjects(embeddedOverallDashboardPayload.projects || []);
+            showHeaderStatus(`Standalone HTML export • ${formatDate(embeddedOverallDashboardPayload.exported_at)}`, 'success');
+            return true;
+        }
+
+        // Restore selected tab and load data on page load
+        if (!applyEmbeddedOverallDashboardPayload()) {
+            restoreActiveDashboardTab();
+            refreshDashboardData();
+
+            // Refresh more aggressively so gantt edits appear quickly on the dashboard
+            setInterval(refreshDashboardData, 10000);
+
+            // Refresh immediately when user returns to the dashboard tab/window
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    refreshDashboardData();
+                }
+            });
+
+            window.addEventListener('focus', refreshDashboardData);
+        }
+
+        document.addEventListener('click', closeAllTableFilterMenus);
+        window.addEventListener('resize', closeAllTableFilterMenus);
+        window.addEventListener('scroll', closeAllTableFilterMenus, true);
+    </script>
+</body>
+</html>
+

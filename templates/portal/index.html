@@ -1,0 +1,2251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Pipeline Portal</title>
+<style>
+/* ── CSS Variables ───────────────────────────────────────────────────────── */
+:root {
+  --navy:        #1F3964;
+  --navy-light:  #274d82;
+  --navy-hover:  #162a4a;
+  --blue:        #2563EB;
+  --blue-light:  #EFF6FF;
+  --blue-mid:    #BFDBFE;
+  --grey-bg:     #F3F4F6;
+  --grey-border: #D1D5DB;
+  --grey-text:   #6B7280;
+  --white:       #FFFFFF;
+  --text:        #111827;
+  --text-sub:    #374151;
+
+  --green:       #16A34A;
+  --green-bg:    #DCFCE7;
+  --green-cov:   #70AD47;
+  --orange:      #EA580C;
+  --orange-bg:   #FED7AA;
+  --orange-cov:  #FF9900;
+  --red:         #DC2626;
+  --red-bg:      #FEE2E2;
+  --red-cov:     #FF0000;
+  --grey-cov:    #D6DCE4;
+  --yellow:      #CA8A04;
+  --yellow-bg:   #FEF9C3;
+
+  --radius:      8px;
+  --radius-sm:   4px;
+  --shadow:      0 1px 4px rgba(0,0,0,0.10);
+  --shadow-md:   0 4px 12px rgba(0,0,0,0.14);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,0.18);
+
+  --tab-height:  44px;
+  --nav-height:  56px;
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--grey-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Top Navigation ──────────────────────────────────────────────────────── */
+.top-nav {
+  background: var(--navy);
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.30);
+  gap: 32px;
+}
+.nav-brand {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.nav-brand span {
+  color: #93C5FD;
+  font-weight: 400;
+  font-size: 13px;
+  margin-left: 8px;
+}
+.nav-links {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.nav-links a {
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+.nav-links a:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+.nav-date {
+  color: rgba(255,255,255,0.50);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* ── Tab Bar ─────────────────────────────────────────────────────────────── */
+.tab-bar {
+  background: var(--white);
+  border-bottom: 2px solid var(--grey-border);
+  display: flex;
+  padding: 0 24px;
+  position: sticky;
+  top: var(--nav-height);
+  z-index: 150;
+  box-shadow: var(--shadow);
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  padding: 0 20px;
+  height: var(--tab-height);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--grey-text);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  margin-bottom: -2px;
+}
+.tab-btn:hover { color: var(--navy); }
+.tab-btn.active {
+  color: var(--navy);
+  border-bottom-color: var(--navy);
+  font-weight: 600;
+}
+
+/* ── Tab Panels ──────────────────────────────────────────────────────────── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Page Content ────────────────────────────────────────────────────────── */
+.page-content {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.toolbar-title {
+  color: var(--navy);
+  font-size: 20px;
+  font-weight: 700;
+  flex: 1;
+  min-width: 200px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s, box-shadow 0.15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--navy);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--navy-hover); }
+.btn-outline {
+  background: var(--white);
+  color: var(--navy);
+  border: 1px solid var(--grey-border);
+}
+.btn-outline:hover { background: var(--grey-bg); }
+.btn-success {
+  background: var(--green);
+  color: #fff;
+}
+.btn-success:hover { background: #15803d; }
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.btn-icon {
+  padding: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--grey-text);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+  font-size: 16px;
+  line-height: 1;
+}
+.btn-icon:hover { background: var(--grey-bg); color: var(--navy); }
+
+/* ── Priority Board Table ────────────────────────────────────────────────── */
+.priority-table-wrap {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.priority-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.priority-table th {
+  background: var(--navy);
+  color: rgba(255,255,255,0.85);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 12px;
+  text-align: left;
+  white-space: nowrap;
+}
+.priority-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--grey-border);
+  vertical-align: middle;
+}
+.priority-table tr:last-child td { border-bottom: none; }
+.priority-table tbody tr {
+  transition: background 0.12s;
+  cursor: grab;
+}
+.priority-table tbody tr:hover { background: var(--blue-light); }
+.priority-table tbody tr.dragging {
+  opacity: 0.5;
+  background: var(--blue-mid);
+  cursor: grabbing;
+}
+.priority-table tbody tr.drag-over {
+  border-top: 3px solid var(--blue);
+}
+
+/* Priority badge */
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.priority-badge.updated {
+  animation: badgePop 0.4s ease;
+  background: var(--blue);
+}
+@keyframes badgePop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* Project name link */
+.project-link {
+  color: var(--navy);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+}
+.project-link:hover { text-decoration: underline; }
+
+/* Chips / badges */
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chip-npd    { background: #DBEAFE; color: #1D4ED8; }
+.chip-cert   { background: #EDE9FE; color: #6D28D9; }
+.chip-na     { background: #F3F4F6; color: #6B7280; }
+.chip-obs    { background: #FEE2E2; color: #991B1B; }
+
+.chip-growth      { background: #DBEAFE; color: #1D4ED8; }
+.chip-maintain    { background: #DCFCE7; color: #15803D; }
+.chip-discontinue { background: #F3F4F6; color: #6B7280; }
+
+.mgmt-badge-gantt { background: var(--blue); color: #fff; }
+.mgmt-badge-card  { background: #9CA3AF; color: #fff; }
+
+.status-text-cell {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--grey-text);
+  font-size: 12px;
+}
+
+/* ⋮ Context menu */
+.ctx-menu-wrap { position: relative; }
+.ctx-menu {
+  position: absolute;
+  right: 0;
+  top: 28px;
+  background: var(--white);
+  border: 1px solid var(--grey-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 300;
+  min-width: 160px;
+  display: none;
+}
+.ctx-menu.open { display: block; }
+.ctx-menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.12s;
+}
+.ctx-menu-item:hover { background: var(--grey-bg); }
+.ctx-menu-item.danger { color: var(--red); }
+.ctx-menu-item.danger:hover { background: var(--red-bg); }
+
+/* ── Resource Overview Table ─────────────────────────────────────────────── */
+.resource-wrap {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: auto;
+}
+.resource-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+.resource-table th {
+  background: var(--navy);
+  color: rgba(255,255,255,0.85);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 6px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+.resource-table th.left-align {
+  text-align: left;
+  padding: 8px 12px;
+}
+.resource-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--grey-border);
+  vertical-align: middle;
+  text-align: center;
+}
+.resource-table td.left-align {
+  text-align: left;
+  padding: 8px 12px;
+}
+.resource-table tbody tr:hover { background: var(--blue-light); }
+
+/* Rotated discipline header */
+.disc-header {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+  font-size: 11px;
+  padding: 10px 4px;
+  min-height: 90px;
+  display: inline-block;
+}
+
+/* Coverage badge */
+.cov-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  min-width: 44px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  position: relative;
+}
+.cov-badge.fully        { background: var(--green-cov); }
+.cov-badge.partially    { background: var(--orange-cov); }
+.cov-badge.no           { background: var(--red-cov); }
+.cov-badge.na           { background: var(--grey-cov); color: var(--grey-text); }
+.cov-badge .demand      { font-size: 10px; font-weight: 400; opacity: 0.9; }
+.cov-badge.contention   { box-shadow: 0 0 0 3px var(--orange-cov); }
+
+/* Legend */
+.legend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.filter-bar label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-sub);
+}
+.filter-bar select, .filter-bar input {
+  padding: 6px 10px;
+  border: 1px solid var(--grey-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  background: var(--white);
+  color: var(--text);
+}
+.resource-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.auto-refresh-label {
+  font-size: 12px;
+  color: var(--grey-text);
+}
+.auto-refresh-label.refreshing { color: var(--blue); }
+
+/* ── Portfolio Schedule (Gantt) ──────────────────────────────────────────── */
+.gantt-wrap {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: auto;
+  padding: 0;
+}
+.gantt-header-row {
+  display: flex;
+  position: sticky;
+  top: 0;
+  background: var(--white);
+  z-index: 10;
+  border-bottom: 2px solid var(--grey-border);
+}
+.gantt-label-col {
+  width: 220px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  padding: 8px 14px;
+  border-right: 2px solid var(--grey-border);
+  background: var(--white);
+}
+.gantt-right-col {
+  width: 140px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  padding: 8px 14px;
+  border-left: 2px solid var(--grey-border);
+}
+.gantt-timeline-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.gantt-years {
+  display: flex;
+  height: 24px;
+  border-bottom: 1px solid var(--grey-border);
+}
+.gantt-year {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 24px;
+  border-right: 1px solid var(--grey-border);
+}
+.gantt-quarters {
+  display: flex;
+  height: 20px;
+}
+.gantt-quarter {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: var(--grey-text);
+  line-height: 20px;
+  border-right: 1px solid #E5E7EB;
+}
+.gantt-body { }
+.gantt-row {
+  display: flex;
+  border-bottom: 1px solid #E5E7EB;
+  align-items: center;
+  min-height: 44px;
+}
+.gantt-row:hover { background: var(--blue-light); }
+.gantt-row-label {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-right: 2px solid var(--grey-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gantt-row-right {
+  width: 140px;
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-left: 2px solid var(--grey-border);
+  font-size: 11px;
+  color: var(--grey-text);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.gantt-row-timeline {
+  flex: 1;
+  position: relative;
+  height: 44px;
+  overflow: hidden;
+}
+
+/* Gate diamond */
+.gate-diamond {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg) translate(-50%, -50%);
+  top: 50%;
+  cursor: pointer;
+  z-index: 2;
+}
+.gate-diamond.past    { background: var(--green-cov); border: 2px solid #4B8B32; }
+.gate-diamond.future  { background: var(--blue); border: 2px solid #1D4ED8; }
+.gate-diamond:hover   { filter: brightness(1.15); }
+
+.gate-label {
+  position: absolute;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-sub);
+  top: calc(50% + 12px);
+  transform: translateX(-50%);
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.gate-baseline-marker {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 8px solid var(--red);
+  top: calc(50% - 20px);
+  transform: translateX(-50%);
+  z-index: 3;
+  cursor: pointer;
+}
+
+/* Today line */
+.today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--red);
+  z-index: 5;
+  pointer-events: none;
+}
+.today-label {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--red);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  background: rgba(31,57,100,0.95);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 9999;
+  display: none;
+  max-width: 240px;
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Project Cards (Tab 4) ───────────────────────────────────────────────── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+.project-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.project-card:hover { box-shadow: var(--shadow-md); }
+.card-header {
+  padding: 14px 16px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-bottom: 1px solid var(--grey-border);
+}
+.card-header.growth      { background: #DBEAFE; }
+.card-header.maintain    { background: #DCFCE7; }
+.card-header.discontinue { background: #F3F4F6; }
+.card-header .project-link { font-size: 14px; flex: 1; }
+.card-body {
+  padding: 12px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.card-field {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+}
+.card-field-label {
+  color: var(--grey-text);
+  font-weight: 600;
+  min-width: 88px;
+  flex-shrink: 0;
+}
+.card-field-value { color: var(--text-sub); }
+.card-status {
+  font-size: 12px;
+  color: var(--grey-text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.card-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--grey-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.card-footer a.mgmt-badge-gantt {
+  color: #fff;
+}
+.card-footer a {
+  color: var(--blue);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+}
+.card-footer a:hover { text-decoration: underline; }
+
+/* ── Modals ──────────────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.modal-sm  { max-width: 480px; }
+.modal-md  { max-width: 680px; }
+.modal-lg  { max-width: 900px; }
+.modal-header {
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--grey-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--grey-text);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s;
+}
+.modal-close:hover { background: var(--grey-bg); color: var(--text); }
+.modal-body {
+  padding: 20px 24px;
+  flex: 1;
+}
+.modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--grey-border);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* Form elements */
+.form-group {
+  margin-bottom: 16px;
+}
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+  margin-bottom: 5px;
+}
+.form-control {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--grey-border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--white);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-control:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.form-radio-group {
+  display: flex;
+  gap: 20px;
+  margin-top: 6px;
+}
+.form-radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Import preview table */
+.import-preview-wrap {
+  border: 1px solid var(--grey-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.import-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.import-table th {
+  background: var(--navy);
+  color: rgba(255,255,255,0.85);
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+.import-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--grey-border);
+  vertical-align: top;
+}
+.import-table tr.new-row td  { background: #F0FDF4; }
+.import-table tr.upd-row td  { background: #FEFCE8; }
+.badge-new  { display:inline-block;padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700;background:#DCFCE7;color:#15803D; }
+.badge-upd  { display:inline-block;padding:1px 6px;border-radius:10px;font-size:11px;font-weight:700;background:#FEF9C3;color:#92400E; }
+.diff-old   { color:var(--red);text-decoration:line-through;margin-right:4px; }
+.diff-new   { color:var(--green); }
+.sheet-badge {
+  display: inline-block;
+  background: var(--navy);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Priority conflict modal */
+.conflict-list { margin-top: 8px; }
+.conflict-item {
+  padding: 8px 12px;
+  background: var(--orange-bg);
+  border-left: 4px solid var(--orange-cov);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.conflict-item strong { color: var(--orange); }
+
+/* ── Toast Notifications ─────────────────────────────────────────────────── */
+.toast-container {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--white);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  padding: 12px 18px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 240px;
+  max-width: 360px;
+  pointer-events: auto;
+  animation: toastIn 0.2s ease;
+  border-left: 4px solid transparent;
+}
+.toast.success { border-left-color: var(--green); }
+.toast.error   { border-left-color: var(--red); }
+.toast-icon { font-size: 16px; }
+.toast-msg  { flex: 1; }
+.toast.out  { animation: toastOut 0.25s ease forwards; }
+@keyframes toastIn  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+@keyframes toastOut { to   { opacity:0; transform:translateY(8px); } }
+
+/* ── Loading spinner ─────────────────────────────────────────────────────── */
+.loading-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: var(--grey-text);
+  font-size: 14px;
+  gap: 10px;
+}
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--grey-border);
+  border-top-color: var(--navy);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Misc ────────────────────────────────────────────────────────────────── */
+.drag-handle {
+  cursor: grab;
+  color: var(--grey-border);
+  font-size: 16px;
+  user-select: none;
+  padding: 0 4px;
+}
+.drag-handle:hover { color: var(--grey-text); }
+
+.section-subtitle {
+  font-size: 13px;
+  color: var(--grey-text);
+  margin-bottom: 16px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--grey-text);
+}
+.empty-state-icon { font-size: 36px; margin-bottom: 10px; }
+
+.file-drop-zone {
+  border: 2px dashed var(--grey-border);
+  border-radius: var(--radius);
+  padding: 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 16px;
+}
+.file-drop-zone:hover,
+.file-drop-zone.drag-active {
+  border-color: var(--blue);
+  background: var(--blue-light);
+}
+.file-drop-zone input { display: none; }
+.file-drop-zone .drop-icon { font-size: 28px; margin-bottom: 8px; }
+.file-drop-zone .drop-text { color: var(--grey-text); font-size: 13px; }
+.file-drop-zone .drop-text strong { color: var(--blue); }
+
+.progress-bar-wrap {
+  height: 6px;
+  background: var(--grey-border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+.progress-bar-inner {
+  height: 100%;
+  background: var(--blue);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 900px) {
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .page-content { padding: 14px; }
+  .toolbar-title { font-size: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ──────────────── TOP NAV ──────────────── -->
+<nav class="top-nav">
+  <div class="nav-brand">Pipeline Portal <span>Flame &amp; Gas</span></div>
+  <div class="nav-links">
+    <a href="/portal">Home</a>
+    <a href="/portal/settings">Settings</a>
+  </div>
+  <div class="nav-date">{{ today }}</div>
+</nav>
+
+<!-- ──────────────── TAB BAR ──────────────── -->
+<div class="tab-bar" role="tablist">
+  <button class="tab-btn" role="tab" data-tab="priority"   aria-selected="false">Priority Board</button>
+  <button class="tab-btn" role="tab" data-tab="resource"   aria-selected="false">Resource Overview</button>
+  <button class="tab-btn" role="tab" data-tab="schedule"   aria-selected="false">Portfolio Schedule</button>
+  <button class="tab-btn" role="tab" data-tab="projects"   aria-selected="false">Projects</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 1 — PRIORITY BOARD                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-priority" role="tabpanel">
+  <div class="page-content">
+
+    <div class="toolbar">
+      <div class="toolbar-title">Flame &amp; Gas Product Pipeline</div>
+      <button class="btn btn-outline" id="btn-import">
+        &#8679; Import from Excel
+      </button>
+      <button class="btn btn-primary" id="btn-add-project">
+        + Add Project
+      </button>
+      <button class="btn btn-success" id="btn-save-snapshot">
+        &#128190; Save Snapshot
+      </button>
+      <a class="btn btn-outline" href="/portal/settings">&#9881; Settings</a>
+    </div>
+
+    <div class="priority-table-wrap">
+      <table class="priority-table" id="priority-table">
+        <thead>
+          <tr>
+            <th style="width:32px"></th>
+            <th style="width:36px">#</th>
+            <th>Project Name</th>
+            <th>Leader</th>
+            <th>Process</th>
+            <th>Next Gate</th>
+            <th>Launch</th>
+            <th>Mgmt</th>
+            <th>Objective</th>
+            <th>Status</th>
+            <th style="width:36px"></th>
+          </tr>
+        </thead>
+        <tbody id="priority-tbody">
+          {% for p in projects %}
+          <tr data-id="{{ p.id }}" data-priority="{{ loop.index }}">
+            <td><span class="drag-handle" title="Drag to reorder">&#8942;&#8942;</span></td>
+            <td><span class="priority-badge">{{ p.priority if p.priority else loop.index }}</span></td>
+            <td>
+              <a class="project-link" href="/portal/project/{{ p.id }}">{{ p.name }}</a>
+            </td>
+            <td style="white-space:nowrap;font-size:12px">{{ p.leader or '—' }}</td>
+            <td>
+              {% set pt = (p.process_type or 'N/A')|upper %}
+              {% if pt == 'NPD' %}
+                <span class="chip chip-npd">NPD</span>
+              {% elif pt == 'CERT' %}
+                <span class="chip chip-cert">Cert</span>
+              {% elif pt == 'OBS' %}
+                <span class="chip chip-obs">OBS</span>
+              {% else %}
+                <span class="chip chip-na">N/A</span>
+              {% endif %}
+            </td>
+            <td style="font-size:12px;white-space:nowrap">{{ p.next_gate or '—' }}</td>
+            <td style="font-size:12px;white-space:nowrap">{{ p.planned_launch or '—' }}</td>
+            <td>
+              {% if p.management_type and p.management_type|upper == 'GANTT' %}
+                <a class="chip mgmt-badge-gantt" href="/portal/project/{{ p.id }}" style="text-decoration:none;cursor:pointer;color:#fff" title="Open Gantt chart">View Gantt &#8594;</a>
+              {% else %}
+                <span class="chip mgmt-badge-card">CARD</span>
+              {% endif %}
+            </td>
+            <td>
+              {% set obj = (p.objective or '')|lower %}
+              {% if obj == 'growth' %}
+                <span class="chip chip-growth">Growth</span>
+              {% elif obj == 'maintain' %}
+                <span class="chip chip-maintain">Maintain</span>
+              {% elif obj == 'discontinue' %}
+                <span class="chip chip-discontinue">Disc.</span>
+              {% else %}
+                <span class="chip chip-na">{{ p.objective or '—' }}</span>
+              {% endif %}
+            </td>
+            <td class="status-text-cell" title="{{ p.status_text or '' }}">{{ p.status_text or '—' }}</td>
+            <td class="ctx-menu-wrap">
+              <button class="btn-icon ctx-trigger" data-id="{{ p.id }}" title="Actions">&#8942;</button>
+              <div class="ctx-menu" id="ctx-{{ p.id }}">
+                <button class="ctx-menu-item" onclick="openEditProject({{ p.id }})">Edit</button>
+                <button class="ctx-menu-item danger" onclick="deleteProject({{ p.id }}, '{{ p.name|e }}')">Delete</button>
+                <button class="ctx-menu-item" onclick="switchMgmt({{ p.id }}, 'GANTT')">Switch to Gantt</button>
+                <button class="ctx-menu-item" onclick="switchMgmt({{ p.id }}, 'CARD')">Switch to Card</button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="11">
+              <div class="empty-state">
+                <div class="empty-state-icon">&#128203;</div>
+                No projects yet. Click "Add Project" to get started.
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 2 — RESOURCE OVERVIEW                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-resource" role="tabpanel">
+  <div class="page-content">
+
+    <div class="resource-status-bar">
+      <div>
+        <div class="toolbar-title" style="font-size:17px;margin-bottom:4px">Resource Overview</div>
+        <div class="section-subtitle">Macro discipline coverage by project priority</div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green-cov)"></div>Fully</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--orange-cov)"></div>Partially</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--red-cov)"></div>No</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--grey-cov)"></div>N/A</div>
+        </div>
+        <div class="auto-refresh-label" id="resource-refresh-label">Auto-refresh: 30s</div>
+        <button class="btn btn-outline btn-sm" id="btn-refresh-resource">&#8635; Refresh</button>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <label for="filter-discipline">Filter by discipline:</label>
+      <select id="filter-discipline">
+        <option value="">All disciplines</option>
+        {% for disc in disciplines %}
+        <option value="{{ disc }}">{{ disc }}</option>
+        {% endfor %}
+      </select>
+      <label for="filter-status">Coverage:</label>
+      <select id="filter-status">
+        <option value="">Any</option>
+        <option value="No">No coverage</option>
+        <option value="Partially">Partially covered</option>
+        <option value="Fully">Fully covered</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="applyResourceFilter()">Apply</button>
+      <button class="btn btn-outline btn-sm" onclick="clearResourceFilter()">Clear</button>
+    </div>
+
+    <div class="resource-wrap" id="resource-table-wrap">
+      <div class="loading-overlay" id="resource-loading">
+        <div class="spinner"></div> Loading resource data…
+      </div>
+      <table class="resource-table" id="resource-table" style="display:none">
+        <thead>
+          <tr>
+            <th class="left-align" style="width:36px">#</th>
+            <th class="left-align" style="min-width:180px">Project Name</th>
+            <th class="left-align" style="min-width:90px">Leader</th>
+            {% for disc in disciplines %}
+            <th><div class="disc-header">{{ disc }}</div></th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody id="resource-tbody">
+          <!-- Populated via JS from /api/portfolio/overview -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 3 — PORTFOLIO SCHEDULE                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-schedule" role="tabpanel">
+  <div class="page-content">
+
+    <div class="toolbar" style="margin-bottom:14px">
+      <div class="toolbar-title" style="font-size:17px">Portfolio Schedule</div>
+      <button class="btn btn-outline btn-sm" id="btn-refresh-schedule">&#8635; Refresh</button>
+    </div>
+    <div class="section-subtitle" style="margin-bottom:16px">
+      Gate milestones across 2025–2029. Green = signed off, Blue = planned. Red triangle = baseline deviation.
+    </div>
+
+    <div class="gantt-wrap" id="gantt-wrap">
+      <div class="loading-overlay" id="schedule-loading">
+        <div class="spinner"></div> Loading schedule…
+      </div>
+      <div id="gantt-content" style="display:none">
+        <!-- header -->
+        <div class="gantt-header-row" id="gantt-header">
+          <div class="gantt-label-col">Project</div>
+          <div class="gantt-timeline-area" id="gantt-header-timeline"></div>
+          <div class="gantt-right-col">Next Gate / Launch</div>
+        </div>
+        <div id="gantt-body-rows"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB 4 — PROJECTS                                                         -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panel-projects" role="tabpanel">
+  <div class="page-content">
+
+    <div class="toolbar" style="margin-bottom:14px">
+      <div class="toolbar-title" style="font-size:17px">All Projects</div>
+      <button class="btn btn-primary" onclick="document.getElementById('btn-add-project').click()">+ Add Project</button>
+    </div>
+
+    {% if projects %}
+    <div class="cards-grid">
+      {% for p in projects %}
+      {% set obj_cls = (p.objective or '')|lower %}
+      <div class="project-card">
+        <div class="card-header {{ obj_cls if obj_cls in ['growth','maintain','discontinue'] else '' }}">
+          <span class="priority-badge">{{ p.priority if p.priority else loop.index }}</span>
+          <a class="project-link" href="/portal/project/{{ p.id }}">{{ p.name }}</a>
+        </div>
+        <div class="card-body">
+          <div class="card-field">
+            <span class="card-field-label">Leader</span>
+            <span class="card-field-value">{{ p.leader or '—' }}</span>
+          </div>
+          <div class="card-field">
+            <span class="card-field-label">Process</span>
+            <span class="card-field-value">{{ p.process_type or '—' }}</span>
+          </div>
+          <div class="card-field">
+            <span class="card-field-label">Next Gate</span>
+            <span class="card-field-value">{{ p.next_gate or '—' }}</span>
+          </div>
+          <div class="card-field">
+            <span class="card-field-label">Launch</span>
+            <span class="card-field-value">{{ p.planned_launch or '—' }}</span>
+          </div>
+          <div class="card-field">
+            <span class="card-field-label">Segment</span>
+            <span class="card-field-value">{{ p.business_segment or '—' }}</span>
+          </div>
+          {% if p.status_text %}
+          <div class="card-status" title="{{ p.status_text }}">{{ p.status_text }}</div>
+          {% endif %}
+        </div>
+        <div class="card-footer">
+          {% if p.management_type and p.management_type|upper == 'GANTT' %}
+            <a class="chip mgmt-badge-gantt" href="/portal/project/{{ p.id }}" style="text-decoration:none;cursor:pointer;color:#fff" title="Open Gantt chart">View Gantt &#8594;</a>
+          {% else %}
+            <span class="chip mgmt-badge-card">CARD</span>
+          {% endif %}
+          <a href="/portal/project/{{ p.id }}/slide" target="_blank">Generate Slide &#8599;</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">&#128203;</div>
+      No projects found.
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- MODALS                                                                    -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+<!-- ── Import from Excel ── -->
+<div class="modal-backdrop" id="modal-import">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Import from Excel</div>
+      <button class="modal-close" onclick="closeModal('modal-import')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div id="import-step-upload">
+        <div class="file-drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+          <input type="file" id="file-input" accept=".xlsx" onchange="handleFileSelect(event)">
+          <div class="drop-icon">&#128196;</div>
+          <div class="drop-text"><strong>Click to select</strong> or drag &amp; drop an Excel file (.xlsx)</div>
+          <div style="font-size:11px;color:var(--grey-text);margin-top:6px">Only .xlsx files are supported</div>
+        </div>
+        <div id="upload-progress-wrap" style="display:none">
+          <div style="font-size:13px;color:var(--grey-text);margin-bottom:4px" id="upload-filename"></div>
+          <div class="progress-bar-wrap"><div class="progress-bar-inner" id="upload-progress" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <div id="import-step-preview" style="display:none">
+        <div id="detected-sheet-badge" class="sheet-badge" style="display:none"></div>
+        <div style="margin-bottom:10px;font-size:13px;color:var(--text-sub)">
+          Review the changes below. Check the rows you want to apply.
+        </div>
+        <div class="import-preview-wrap">
+          <table class="import-table" id="import-preview-table">
+            <thead>
+              <tr>
+                <th style="width:32px"></th>
+                <th style="width:54px">Type</th>
+                <th>Project Name</th>
+                <th>Changes / Details</th>
+              </tr>
+            </thead>
+            <tbody id="import-preview-tbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;font-size:12px;color:var(--grey-text)" id="import-summary-text"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-import')">Cancel</button>
+      <button class="btn btn-primary" id="btn-apply-import" style="display:none" onclick="applyImport()">Apply Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add / Edit Project ── -->
+<div class="modal-backdrop" id="modal-add-project">
+  <div class="modal modal-md">
+    <div class="modal-header">
+      <div class="modal-title" id="add-project-modal-title">Add Project</div>
+      <button class="modal-close" onclick="closeModal('modal-add-project')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="add-project-form" onsubmit="saveProject(event)">
+        <input type="hidden" id="edit-project-id" value="">
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="proj-name">Project Name *</label>
+            <input class="form-control" type="text" id="proj-name" required placeholder="e.g. Falcon Upgrade">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="proj-leader">Leader</label>
+            <input class="form-control" type="text" id="proj-leader" placeholder="Full name">
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="proj-process-type">Process Type</label>
+            <select class="form-control" id="proj-process-type">
+              <option value="NPD">NPD</option>
+              <option value="N/A">N/A</option>
+              <option value="Cert">Cert</option>
+              <option value="OBS">OBS</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="proj-objective">Objective</label>
+            <select class="form-control" id="proj-objective">
+              <option value="Growth">Growth</option>
+              <option value="Maintain">Maintain</option>
+              <option value="Discontinue">Discontinue</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="proj-next-gate">Next Gate</label>
+            <input class="form-control" type="text" id="proj-next-gate" placeholder="e.g. Gate 3 — Q3 2025">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="proj-planned-launch">Planned Launch</label>
+            <input class="form-control" type="text" id="proj-planned-launch" placeholder="e.g. Q2 2026">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="proj-business-segment">Business Segment</label>
+          <input class="form-control" type="text" id="proj-business-segment" placeholder="e.g. Flame Detection">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Management Type</label>
+          <div class="form-radio-group">
+            <label>
+              <input type="radio" name="mgmt-type" value="CARD" checked>
+              Card
+            </label>
+            <label>
+              <input type="radio" name="mgmt-type" value="GANTT">
+              Gantt
+            </label>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-add-project')">Cancel</button>
+      <button class="btn btn-primary" onclick="document.getElementById('add-project-form').requestSubmit()">Save Project</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Priority Conflict ── -->
+<div class="modal-backdrop" id="modal-conflict">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">&#9888; Priority Changes — Resource Conflicts Detected</div>
+      <button class="modal-close" onclick="revertReorder()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;margin-bottom:10px;color:var(--text-sub)">
+        The following disciplines now have competing high-priority projects:
+      </p>
+      <div class="conflict-list" id="conflict-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="revertReorder()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmReorder()">Apply Anyway</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tooltip ── -->
+<div class="tooltip" id="tooltip"></div>
+
+<!-- ── Toast container ── -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                              -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<script>
+/* ── Jinja data ─────────────────────────────────────────────────────────── */
+const PROJECTS   = {{ projects | tojson }};
+const DISCIPLINES = {{ disciplines | tojson }};
+const TODAY_STR  = {{ today | tojson }};
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* TAB MANAGEMENT                                                           */
+/* ═══════════════════════════════════════════════════════════════════════ */
+const TAB_KEY = 'pipeline_active_tab';
+const TABS = ['priority','resource','schedule','projects'];
+
+function activateTab(tabId, persist=true) {
+  TABS.forEach(t => {
+    const btn   = document.querySelector(`.tab-btn[data-tab="${t}"]`);
+    const panel = document.getElementById(`panel-${t}`);
+    const active = t === tabId;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-selected', active);
+    panel.classList.toggle('active', active);
+  });
+  if (persist) localStorage.setItem(TAB_KEY, tabId);
+  // Tab-activation hooks
+  if (tabId === 'resource') onResourceTabActivated();
+  if (tabId === 'schedule') onScheduleTabActivated();
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+});
+
+// Restore last tab or default to priority
+(function initTab() {
+  const saved = localStorage.getItem(TAB_KEY);
+  activateTab(TABS.includes(saved) ? saved : 'priority', false);
+})();
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* MODAL HELPERS                                                             */
+/* ═══════════════════════════════════════════════════════════════════════ */
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-backdrop').forEach(bd => {
+  bd.addEventListener('click', e => {
+    if (e.target === bd) bd.classList.remove('open');
+  });
+});
+
+// Escape closes top-most modal
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const open = [...document.querySelectorAll('.modal-backdrop.open')];
+  if (open.length) open[open.length-1].classList.remove('open');
+});
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* TOAST NOTIFICATIONS                                                       */
+/* ═══════════════════════════════════════════════════════════════════════ */
+function showToast(msg, type='success', duration=4000) {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icon = type === 'success' ? '✓' : '✕';
+  t.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-msg">${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.classList.add('out');
+    t.addEventListener('animationend', () => t.remove(), {once:true});
+  }, duration);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* API HELPERS                                                               */
+/* ═══════════════════════════════════════════════════════════════════════ */
+async function apiPost(url, body) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function apiPatch(url, body) {
+  const r = await fetch(url, {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function apiDelete(url) {
+  const r = await fetch(url, { method: 'DELETE' });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.ok;
+}
+
+async function apiGet(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* SAVE SNAPSHOT                                                             */
+/* ═══════════════════════════════════════════════════════════════════════ */
+document.getElementById('btn-save-snapshot').addEventListener('click', async () => {
+  try {
+    await apiPost('/api/portfolio/snapshots', { created_by: 'PM', source: 'manual' });
+    showToast('Snapshot saved successfully.', 'success');
+  } catch(e) {
+    showToast('Failed to save snapshot: ' + e.message, 'error');
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* CONTEXT MENUS                                                             */
+/* ═══════════════════════════════════════════════════════════════════════ */
+document.addEventListener('click', e => {
+  // Toggle on trigger, close others
+  const trigger = e.target.closest('.ctx-trigger');
+  document.querySelectorAll('.ctx-menu.open').forEach(m => {
+    if (!trigger || m.id !== `ctx-${trigger.dataset.id}`) m.classList.remove('open');
+  });
+  if (trigger) {
+    const menu = document.getElementById(`ctx-${trigger.dataset.id}`);
+    if (menu) menu.classList.toggle('open');
+    e.stopPropagation();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* ADD / EDIT PROJECT                                                        */
+/* ═══════════════════════════════════════════════════════════════════════ */
+document.getElementById('btn-add-project').addEventListener('click', () => {
+  document.getElementById('add-project-modal-title').textContent = 'Add Project';
+  document.getElementById('edit-project-id').value = '';
+  document.getElementById('add-project-form').reset();
+  openModal('modal-add-project');
+});
+
+function openEditProject(id) {
+  document.querySelectorAll('.ctx-menu').forEach(m => m.classList.remove('open'));
+  const p = PROJECTS.find(p => p.id == id);
+  if (!p) return;
+  document.getElementById('add-project-modal-title').textContent = 'Edit Project';
+  document.getElementById('edit-project-id').value = p.id;
+  document.getElementById('proj-name').value             = p.name || '';
+  document.getElementById('proj-leader').value           = p.leader || '';
+  document.getElementById('proj-process-type').value     = p.process_type || 'N/A';
+  document.getElementById('proj-objective').value        = p.objective || 'Growth';
+  document.getElementById('proj-next-gate').value        = p.next_gate || '';
+  document.getElementById('proj-planned-launch').value   = p.planned_launch || '';
+  document.getElementById('proj-business-segment').value = p.business_segment || '';
+  const mt = (p.management_type||'CARD').toUpperCase();
+  document.querySelector(`input[name="mgmt-type"][value="${mt}"]`).checked = true;
+  openModal('modal-add-project');
+}
+
+async function saveProject(e) {
+  e.preventDefault();
+  const id = document.getElementById('edit-project-id').value;
+  const payload = {
+    name:             document.getElementById('proj-name').value.trim(),
+    leader:           document.getElementById('proj-leader').value.trim(),
+    process_type:     document.getElementById('proj-process-type').value,
+    objective:        document.getElementById('proj-objective').value,
+    next_gate:        document.getElementById('proj-next-gate').value.trim(),
+    planned_launch:   document.getElementById('proj-planned-launch').value.trim(),
+    business_segment: document.getElementById('proj-business-segment').value.trim(),
+    management_type:  document.querySelector('input[name="mgmt-type"]:checked').value
+  };
+  try {
+    if (id) {
+      await apiPatch(`/api/portfolio/projects/${id}`, payload);
+      showToast('Project updated.', 'success');
+    } else {
+      await apiPost('/api/portfolio/projects', payload);
+      showToast('Project created.', 'success');
+    }
+    closeModal('modal-add-project');
+    setTimeout(() => location.reload(), 800);
+  } catch(err) {
+    showToast('Save failed: ' + err.message, 'error');
+  }
+}
+
+async function deleteProject(id, name) {
+  document.querySelectorAll('.ctx-menu').forEach(m => m.classList.remove('open'));
+  if (!confirm(`Delete project "${name}"? This cannot be undone.`)) return;
+  try {
+    await apiDelete(`/api/portfolio/projects/${id}`);
+    showToast('Project deleted.', 'success');
+    // Remove row
+    const row = document.querySelector(`#priority-tbody tr[data-id="${id}"]`);
+    if (row) row.remove();
+    renumberPriorityBadges();
+  } catch(err) {
+    showToast('Delete failed: ' + err.message, 'error');
+  }
+}
+
+async function switchMgmt(id, type) {
+  document.querySelectorAll('.ctx-menu').forEach(m => m.classList.remove('open'));
+  try {
+    await apiPatch(`/api/portfolio/projects/${id}`, { management_type: type });
+    showToast(`Switched to ${type} mode.`, 'success');
+    setTimeout(() => location.reload(), 600);
+  } catch(err) {
+    showToast('Switch failed: ' + err.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* DRAG-AND-DROP REORDER                                                     */
+/* ═══════════════════════════════════════════════════════════════════════ */
+let dragSrcRow = null;
+let preDragOrder = [];
+
+function getRowOrder() {
+  return [...document.querySelectorAll('#priority-tbody tr[data-id]')]
+    .map(r => parseInt(r.dataset.id));
+}
+
+function initDragDrop() {
+  const tbody = document.getElementById('priority-tbody');
+  tbody.addEventListener('dragstart', e => {
+    const row = e.target.closest('tr[data-id]');
+    if (!row) return;
+    dragSrcRow = row;
+    preDragOrder = getRowOrder();
+    row.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', row.dataset.id);
+  });
+  tbody.addEventListener('dragend', e => {
+    const row = e.target.closest('tr[data-id]');
+    if (row) row.classList.remove('dragging');
+    document.querySelectorAll('#priority-tbody tr').forEach(r => r.classList.remove('drag-over'));
+    dragSrcRow = null;
+  });
+  tbody.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const row = e.target.closest('tr[data-id]');
+    document.querySelectorAll('#priority-tbody tr').forEach(r => r.classList.remove('drag-over'));
+    if (row && row !== dragSrcRow) row.classList.add('drag-over');
+  });
+  tbody.addEventListener('drop', e => {
+    e.preventDefault();
+    const targetRow = e.target.closest('tr[data-id]');
+    if (!targetRow || !dragSrcRow || targetRow === dragSrcRow) return;
+    // Re-insert before target
+    tbody.insertBefore(dragSrcRow, targetRow);
+    document.querySelectorAll('#priority-tbody tr').forEach(r => r.classList.remove('drag-over'));
+    onReorderDrop();
+  });
+  // Make rows draggable
+  document.querySelectorAll('#priority-tbody tr[data-id]').forEach(row => {
+    row.setAttribute('draggable', true);
+  });
+}
+
+let pendingOrder = null;
+
+async function onReorderDrop() {
+  const newOrder = getRowOrder();
+  renumberPriorityBadges(true);
+
+  pendingOrder = newOrder;
+
+  // Check for conflicts
+  let conflicts = [];
+  try {
+    const res = await apiPost('/api/portfolio/reorder-preview', { ordered_ids: newOrder, changed_by: 'PM' });
+    conflicts = res.conflicts || [];
+  } catch(_) {
+    // No preview endpoint: just apply
+  }
+
+  if (conflicts.length > 0) {
+    renderConflictModal(conflicts);
+    openModal('modal-conflict');
+  } else {
+    await submitReorder(newOrder);
+  }
+}
+
+function renderConflictModal(conflicts) {
+  const list = document.getElementById('conflict-list');
+  list.innerHTML = conflicts.map(c => `
+    <div class="conflict-item">
+      <strong>${c.discipline || ''}</strong>:
+      ${(c.projects || []).map(p => `#${p.priority} ${p.name}`).join(' vs ')}
+    </div>
+  `).join('');
+}
+
+async function confirmReorder() {
+  closeModal('modal-conflict');
+  await submitReorder(pendingOrder);
+}
+
+function revertReorder() {
+  closeModal('modal-conflict');
+  if (!preDragOrder.length) return;
+  const tbody = document.getElementById('priority-tbody');
+  const rows  = {};
+  tbody.querySelectorAll('tr[data-id]').forEach(r => { rows[r.dataset.id] = r; });
+  preDragOrder.forEach(id => { if (rows[id]) tbody.appendChild(rows[id]); });
+  renumberPriorityBadges(false);
+  pendingOrder = null;
+}
+
+async function submitReorder(orderedIds) {
+  try {
+    await apiPatch('/api/portfolio/reorder', { ordered_ids: orderedIds, changed_by: 'PM' });
+    showToast('Priority order saved.', 'success');
+  } catch(err) {
+    showToast('Reorder failed: ' + err.message, 'error');
+  }
+  pendingOrder = null;
+}
+
+function renumberPriorityBadges(animate=false) {
+  let i = 1;
+  document.querySelectorAll('#priority-tbody tr[data-id]').forEach(row => {
+    const badge = row.querySelector('.priority-badge');
+    if (badge) {
+      badge.textContent = i;
+      if (animate) {
+        badge.classList.remove('updated');
+        void badge.offsetWidth;
+        badge.classList.add('updated');
+      }
+    }
+    i++;
+  });
+}
+
+initDragDrop();
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* IMPORT FROM EXCEL                                                          */
+/* ═══════════════════════════════════════════════════════════════════════ */
+document.getElementById('btn-import').addEventListener('click', () => {
+  // Reset state
+  document.getElementById('import-step-upload').style.display = '';
+  document.getElementById('import-step-preview').style.display = 'none';
+  document.getElementById('btn-apply-import').style.display = 'none';
+  document.getElementById('upload-progress-wrap').style.display = 'none';
+  document.getElementById('upload-progress').style.width = '0%';
+  document.getElementById('file-input').value = '';
+  openModal('modal-import');
+});
+
+// Drag-and-drop on drop zone
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-active'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-active');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.xlsx')) uploadExcelFile(file);
+  else showToast('Please select an .xlsx file.', 'error');
+});
+
+let importParsedData = null;
+let importCheckedRows = [];
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) uploadExcelFile(file);
+}
+
+async function uploadExcelFile(file) {
+  document.getElementById('upload-progress-wrap').style.display = '';
+  document.getElementById('upload-filename').textContent = file.name;
+  // Animate progress
+  const bar = document.getElementById('upload-progress');
+  let prog = 0;
+  const tick = setInterval(() => { prog = Math.min(prog + 15, 85); bar.style.width = prog + '%'; }, 80);
+
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const r = await fetch('/api/portfolio/import-preview', { method:'POST', body: formData });
+    clearInterval(tick);
+    bar.style.width = '100%';
+    if (!r.ok) throw new Error(`Server error ${r.status}`);
+    const data = await r.json();
+    importParsedData = data;
+    renderImportPreview(data);
+  } catch(err) {
+    clearInterval(tick);
+    showToast('Upload failed: ' + err.message, 'error');
+    bar.style.width = '0%';
+  }
+}
+
+function renderImportPreview(data) {
+  document.getElementById('import-step-upload').style.display = 'none';
+  document.getElementById('import-step-preview').style.display = '';
+  document.getElementById('btn-apply-import').style.display = '';
+
+  // Sheet badge
+  if (data.sheet_name) {
+    const badge = document.getElementById('detected-sheet-badge');
+    badge.textContent = 'Sheet: ' + data.sheet_name;
+    badge.style.display = '';
+  }
+
+  const tbody = document.getElementById('import-preview-tbody');
+  tbody.innerHTML = '';
+  const all = [
+    ...(data.new_projects || []).map(p => ({...p, _type:'NEW'})),
+    ...(data.updated_projects || []).map(p => ({...p, _type:'UPDATE'}))
+  ];
+
+  if (!all.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--grey-text)">No changes detected.</td></tr>';
+    return;
+  }
+
+  all.forEach((item, idx) => {
+    const isNew = item._type === 'NEW';
+    const tr = document.createElement('tr');
+    tr.className = isNew ? 'new-row' : 'upd-row';
+
+    let changesHtml = '';
+    if (isNew) {
+      changesHtml = [item.name, item.leader, item.process_type, item.next_gate, item.planned_launch]
+        .filter(Boolean).join(' · ');
+    } else {
+      const diffs = item.diffs || {};
+      changesHtml = Object.entries(diffs).map(([field, {old:o, new:n}]) =>
+        `<span style="font-size:11px"><strong>${field}:</strong> <span class="diff-old">${o||''}</span><span class="diff-new">${n||''}</span></span>`
+      ).join('<br>');
+      if (!changesHtml) changesHtml = '<span style="color:var(--grey-text)">No field changes</span>';
+    }
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="import-row-check" data-idx="${idx}" checked></td>
+      <td>${isNew ? '<span class="badge-new">NEW</span>' : '<span class="badge-upd">UPDATE</span>'}</td>
+      <td style="font-weight:600">${item.name || '?'}</td>
+      <td>${changesHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const newCount = (data.new_projects||[]).length;
+  const updCount = (data.updated_projects||[]).length;
+  document.getElementById('import-summary-text').textContent =
+    `${newCount} new project${newCount!==1?'s':''}, ${updCount} update${updCount!==1?'s':''} detected.`;
+}
+
+async function applyImport() {
+  if (!importParsedData) return;
+  const checks = [...document.querySelectorAll('.import-row-check')];
+  const all = [
+    ...(importParsedData.new_projects||[]).map(p => ({...p, _type:'NEW'})),
+    ...(importParsedData.updated_projects||[]).map(p => ({...p, _type:'UPDATE'}))
+  ];
+  const approved = checks
+    .filter(c => c.checked)
+    .map(c => all[parseInt(c.dataset.idx)])
+    .filter(Boolean);
+
+  try {
+    await apiPost('/api/portfolio/import-apply', {
+      approved,
+      parsed_data: importParsedData
+    });
+    showToast(`Import applied: ${approved.length} change(s).`, 'success');
+    closeModal('modal-import');
+    setTimeout(() => location.reload(), 800);
+  } catch(err) {
+    showToast('Apply failed: ' + err.message, 'error');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* RESOURCE OVERVIEW TAB                                                     */
+/* ═══════════════════════════════════════════════════════════════════════ */
+let resourceData = null;
+let resourceTimer = null;
+let resourceTabActive = false;
+
+async function loadResourceOverview() {
+  const label = document.getElementById('resource-refresh-label');
+  label.textContent = 'Refreshing…';
+  label.classList.add('refreshing');
+  try {
+    const data = await apiGet('/api/portfolio/overview');
+    resourceData = data;
+    renderResourceTable(data);
+    label.textContent = 'Auto-refresh: 30s';
+  } catch(err) {
+    showToast('Resource load failed: ' + err.message, 'error');
+    label.textContent = 'Auto-refresh: 30s';
+  }
+  label.classList.remove('refreshing');
+}
+
+function renderResourceTable(data) {
+  const loading = document.getElementById('resource-loading');
+  const table   = document.getElementById('resource-table');
+  loading.style.display = 'none';
+  table.style.display   = '';
+
+  const tbody = document.getElementById('resource-tbody');
+  tbody.innerHTML = '';
+
+  const rows = data.rows || [];
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="${3+DISCIPLINES.length}" style="text-align:center;padding:24px;color:var(--grey-text)">No data available.</td></tr>`;
+    return;
+  }
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.dataset.id = row.id;
+    tr.innerHTML = `
+      <td class="left-align"><span class="priority-badge">${row.priority||''}</span></td>
+      <td class="left-align"><a class="project-link" href="/portal/project/${row.id}">${row.name||''}</a></td>
+      <td class="left-align" style="font-size:12px;color:var(--grey-text)">${row.leader||''}</td>
+      ${DISCIPLINES.map(disc => {
+        const cell = (row.disciplines||{})[disc] || {};
+        const status    = cell.status || 'N/A';
+        const demand    = cell.demand_days != null ? `<div class="demand">${cell.demand_days}d</div>` : '';
+        const contention = cell.contention ? ' contention' : '';
+        const cls = {
+          'Fully':'fully','Partially':'partially','No':'no','N/A':'na'
+        }[status] || 'na';
+        const abbr = status === 'N/A' ? 'N/A' : status.substring(0,3);
+        return `<td><span class="cov-badge ${cls}${contention}" title="${disc}: ${status}">${abbr}${demand}</span></td>`;
+      }).join('')}
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function applyResourceFilter() {
+  const disc   = document.getElementById('filter-discipline').value;
+  const status = document.getElementById('filter-status').value;
+  if (!resourceData) return;
+  const rows = document.querySelectorAll('#resource-tbody tr');
+  rows.forEach(tr => {
+    if (!disc && !status) { tr.style.display=''; return; }
+    const id = parseInt(tr.dataset.id);
+    const rowData = (resourceData.rows||[]).find(r=>r.id===id);
+    if (!rowData) return;
+    let show = true;
+    if (disc || status) {
+      const discs = disc ? [disc] : DISCIPLINES;
+      show = discs.some(d => {
+        const cell = (rowData.disciplines||{})[d]||{};
+        return !status || cell.status === status;
+      });
+    }
+    tr.style.display = show ? '' : 'none';
+  });
+}
+
+function clearResourceFilter() {
+  document.getElementById('filter-discipline').value = '';
+  document.getElementById('filter-status').value = '';
+  document.querySelectorAll('#resource-tbody tr').forEach(tr => tr.style.display='');
+}
+
+function onResourceTabActivated() {
+  resourceTabActive = true;
+  if (!resourceData) loadResourceOverview();
+  // Start auto-refresh
+  clearInterval(resourceTimer);
+  resourceTimer = setInterval(() => {
+    if (resourceTabActive) loadResourceOverview();
+  }, 30000);
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tab !== 'resource') {
+      resourceTabActive = false;
+      clearInterval(resourceTimer);
+    }
+  });
+});
+
+document.getElementById('btn-refresh-resource').addEventListener('click', loadResourceOverview);
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* PORTFOLIO SCHEDULE (GANTT)                                                */
+/* ═══════════════════════════════════════════════════════════════════════ */
+const GANTT_START_YEAR = 2025;
+const GANTT_END_YEAR   = 2029;
+const GANTT_YEARS      = GANTT_END_YEAR - GANTT_START_YEAR + 1; // 5 years
+const GANTT_QUARTERS   = GANTT_YEARS * 4;                        // 20 quarters
+
+let scheduleLoaded = false;
+
+function onScheduleTabActivated() {
+  if (!scheduleLoaded) loadSchedule();
+}
+
+async function loadSchedule() {
+  const loading = document.getElementById('schedule-loading');
+  const content = document.getElementById('gantt-content');
+  loading.style.display = 'flex';
+  content.style.display = 'none';
+  try {
+    const data = await apiGet('/api/portfolio/gate-timeline');
+    renderGantt(data);
+    scheduleLoaded = true;
+  } catch(err) {
+    showToast('Schedule load failed: ' + err.message, 'error');
+  }
+  loading.style.display = 'none';
+  content.style.display = '';
+}
+
+document.getElementById('btn-refresh-schedule').addEventListener('click', () => {
+  scheduleLoaded = false;
+  loadSchedule();
+});
+
+// Date-to-percentage helper (2025-01-01 = 0%, 2030-01-01 = 100%)
+function dateToPercent(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  const start = new Date(`${GANTT_START_YEAR}-01-01`);
+  const end   = new Date(`${GANTT_END_YEAR+1}-01-01`);
+  const pct = (d - start) / (end - start) * 100;
+  return Math.max(0, Math.min(100, pct));
+}
+
+function todayPercent() {
+  return dateToPercent(TODAY_STR);
+}
+
+function renderGantt(data) {
+  renderGanttHeader();
+  const bodyEl = document.getElementById('gantt-body-rows');
+  bodyEl.innerHTML = '';
+
+  const projects = data.projects || [];
+  const todayPct = todayPercent();
+
+  projects.forEach(proj => {
+    const row = document.createElement('div');
+    row.className = 'gantt-row';
+
+    // Label
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'gantt-row-label';
+    labelDiv.innerHTML = `
+      <span class="priority-badge" style="flex-shrink:0">${proj.priority||''}</span>
+      <a class="project-link" href="/portal/project/${proj.id}" style="font-size:12px;font-weight:600">${proj.name||''}</a>
+    `;
+
+    // Timeline area
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'gantt-row-timeline';
+
+    // Today line (relative to this row)
+    if (todayPct !== null) {
+      const todayLine = document.createElement('div');
+      todayLine.className = 'today-line';
+      todayLine.style.left = todayPct + '%';
+      timeDiv.appendChild(todayLine);
+    }
+
+    // Gates
+    const gates = proj.gates || [];
+    gates.forEach(gate => {
+      const pct = dateToPercent(gate.gate_date);
+      if (pct === null) return;
+
+      // Diamond
+      const diamond = document.createElement('div');
+      diamond.className = `gate-diamond ${gate.sign_off_date ? 'past' : 'future'}`;
+      diamond.style.left = pct + '%';
+      diamond.title = `${gate.gate_name}: ${gate.gate_date}`;
+      timeDiv.appendChild(diamond);
+
+      // Label below diamond
+      const lbl = document.createElement('div');
+      lbl.className = 'gate-label';
+      lbl.style.left = pct + '%';
+      lbl.textContent = gate.gate_name || '';
+      timeDiv.appendChild(lbl);
+
+      // Baseline marker (if different from gate_date)
+      if (gate.baseline_date && gate.baseline_date !== gate.gate_date) {
+        const bPct = dateToPercent(gate.baseline_date);
+        if (bPct !== null) {
+          const tri = document.createElement('div');
+          tri.className = 'gate-baseline-marker';
+          tri.style.left = bPct + '%';
+          tri.title = `Baseline: ${gate.baseline_date}`;
+          timeDiv.appendChild(tri);
+        }
+      }
+    });
+
+    // Right info col
+    const rightDiv = document.createElement('div');
+    rightDiv.className = 'gantt-row-right';
+    rightDiv.innerHTML = `
+      <span style="font-weight:600;color:var(--navy)">${proj.next_gate||'—'}</span>
+      <span>${proj.planned_launch||''}</span>
+    `;
+
+    row.appendChild(labelDiv);
+    row.appendChild(timeDiv);
+    row.appendChild(rightDiv);
+    bodyEl.appendChild(row);
+  });
+
+  // If no projects
+  if (!projects.length) {
+    bodyEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div>No schedule data available.</div>';
+  }
+}
+
+function renderGanttHeader() {
+  const area = document.getElementById('gantt-header-timeline');
+  // Years row
+  const yearsRow = document.createElement('div');
+  yearsRow.className = 'gantt-years';
+  for (let y = GANTT_START_YEAR; y <= GANTT_END_YEAR; y++) {
+    const div = document.createElement('div');
+    div.className = 'gantt-year';
+    div.textContent = y;
+    yearsRow.appendChild(div);
+  }
+  // Quarters row
+  const qRow = document.createElement('div');
+  qRow.className = 'gantt-quarters';
+  for (let y = GANTT_START_YEAR; y <= GANTT_END_YEAR; y++) {
+    for (let q = 1; q <= 4; q++) {
+      const div = document.createElement('div');
+      div.className = 'gantt-quarter';
+      div.textContent = `Q${q}`;
+      qRow.appendChild(div);
+    }
+  }
+  area.innerHTML = '';
+  area.appendChild(yearsRow);
+  area.appendChild(qRow);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════ */
+/* TOOLTIP                                                                   */
+/* ═══════════════════════════════════════════════════════════════════════ */
+const tooltip = document.getElementById('tooltip');
+document.addEventListener('mouseover', e => {
+  const t = e.target.closest('[title]');
+  if (!t || !t.title || t.title.length < 2) { tooltip.style.display='none'; return; }
+  // Only for gate diamonds and coverage badges
+  if (!t.classList.contains('gate-diamond') && !t.classList.contains('cov-badge') && !t.classList.contains('gate-baseline-marker')) {
+    tooltip.style.display='none'; return;
+  }
+  tooltip.textContent = t.getAttribute('title');
+  tooltip.style.display = 'block';
+  t.setAttribute('title',''); // prevent native tooltip
+  t.dataset.origTitle = tooltip.textContent;
+});
+document.addEventListener('mousemove', e => {
+  if (tooltip.style.display === 'block') {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top  = (e.clientY - 8)  + 'px';
+  }
+});
+document.addEventListener('mouseout', e => {
+  const t = e.target.closest('[data-orig-title]');
+  if (t) {
+    t.setAttribute('title', t.dataset.origTitle);
+    delete t.dataset.origTitle;
+  }
+  if (!e.relatedTarget || !e.relatedTarget.closest('[title],[data-orig-title]')) {
+    tooltip.style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
