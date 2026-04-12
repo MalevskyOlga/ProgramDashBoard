@@ -1,4 +1,4 @@
-# post_install.ps1 - run by Inno Setup after files are copied
+﻿# post_install.ps1 - run by Inno Setup after files are copied
 # Args: -InstallDir <path> -DataDir <path> -Port <number> -ServiceName <name>
 param(
     [string]$InstallDir  = "C:\Program Files\OverallDashboard",
@@ -42,8 +42,8 @@ Log "[1/7] Data directory ready: $DataDir"
 Log "[2/7] Installing Python to $PythonDir ..."
 
 # Helper: remove any Python 3.14 MSI components left by previous (partial) installs.
-# Without this, the bundle migrates JustForMe→AllUsers and then uninstalls the
-# JustForMe packages — wiping the same files it just installed (same TargetDir).
+# Without this, the bundle migrates JustForMe->AllUsers and then uninstalls the
+# JustForMe packages -- wiping the same files it just installed (same TargetDir).
 function Invoke-PythonPreclean {
     # Convert a product code GUID to the squished form used by Windows Installer registry
     function Convert-GuidToSquished([string]$Guid) {
@@ -73,12 +73,12 @@ function Invoke-PythonPreclean {
                 $keyPath     = $_.PSPath
                 Log "      Pre-removing: $($props.DisplayName) ($productCode)"
                 # Detect WiX Burn bundle entries by the BundleVersion registry value.
-                # msiexec /x does NOT work on bundles — it returns 1605 and leaves the
+                # msiexec /x does NOT work on bundles -- it returns 1605 and leaves the
                 # bundle's ARP key intact. That causes Burn to start in Modify mode on the
-                # next run, which skips lib_AllUsers → no stdlib → python.exe fails.
+                # next run, which skips lib_AllUsers -> no stdlib -> python.exe fails.
                 $isBundle = $null -ne $props.BundleVersion
                 if ($isBundle) {
-                    Log "      WiX bundle entry — force-removing ARP key directly"
+                    Log "      WiX bundle entry -- force-removing ARP key directly"
                     Remove-Item $keyPath -Recurse -Force -ErrorAction SilentlyContinue
                 } else {
                     # MSI product: ask msiexec to uninstall it
@@ -110,9 +110,9 @@ function Invoke-PythonPreclean {
     }
 
     # Clean up the WiX Burn bundle's dependency provider keys.
-    # These are what Burn checks to decide if the bundle is "installed" → Modify vs Install mode.
+    # These are what Burn checks to decide if the bundle is "installed" -> Modify vs Install mode.
     # If they survive, the next run starts in Modify mode even though all MSI packages are Absent,
-    # and the BA omits lib_AllUsers → no stdlib → python.exe fails with "no platform independent libraries".
+    # and the BA omits lib_AllUsers -> no stdlib -> python.exe fails with "no platform independent libraries".
     @(
         "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Dependencies\CPython-3.14",
         "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Dependencies\CPython-3.14"
@@ -124,7 +124,7 @@ function Invoke-PythonPreclean {
         }
     }
 
-    # Clear Python 3.14 package cache — stale "cached: Complete" entries cause the WiX
+    # Clear Python 3.14 package cache -- stale "cached: Complete" entries cause the WiX
     # bundle planner to skip lib_AllUsers (execute: None, uncache: Yes) instead of installing it
     $packageCache = Join-Path $env:ProgramData "Package Cache"
     if (Test-Path $packageCache) {
@@ -225,7 +225,7 @@ if (-not $pythonOK) {
 
 # -- 3. Create venv and install dependencies (offline wheels) ------------------
 Log "[3/7] Creating virtual environment at $VenvDir ..."
-# Stop the service first — running Python locks DLL files inside the venv
+# Stop the service first -- running Python locks DLL files inside the venv
 $existingSvc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existingSvc -and $existingSvc.Status -ne 'Stopped') {
     Log "      Stopping service '$ServiceName' to release file locks..."
