@@ -72,29 +72,55 @@ function Invoke-PythonPreclean {
                 $productCode = $_.PSChildName
                 $keyPath     = $_.PSPath
                 Log "      Pre-removing: $($props.DisplayName) ($productCode)"
-                # MSIFASTINSTALL=7: skip rollback/file-check so uninstall succeeds even with missing files
-                $p = Start-Process "msiexec.exe" -ArgumentList "/x `"$productCode`" /quiet /norestart MSIFASTINSTALL=7" -Wait -PassThru
-                Log "      msiexec /x exit: $($p.ExitCode)"
-                # If msiexec still failed, force-remove registry entries so the WiX bundle
-                # doesn't see this package as "Present" on the next run
-                if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 1605) {
-                    Log "      Force-removing registry entries for: $productCode"
+                # Detect WiX Burn bundle entries by the BundleVersion registry value.
+                # msiexec /x does NOT work on bundles — it returns 1605 and leaves the
+                # bundle's ARP key intact. That causes Burn to start in Modify mode on the
+                # next run, which skips lib_AllUsers → no stdlib → python.exe fails.
+                $isBundle = $null -ne $props.BundleVersion
+                if ($isBundle) {
+                    Log "      WiX bundle entry — force-removing ARP key directly"
                     Remove-Item $keyPath -Recurse -Force -ErrorAction SilentlyContinue
-                    $squished = Convert-GuidToSquished $productCode
-                    if ($squished) {
-                        @(
-                            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\$squished",
-                            "HKLM:\SOFTWARE\Classes\Installer\Products\$squished"
-                        ) | ForEach-Object {
-                            if (Test-Path $_) {
-                                Remove-Item $_ -Recurse -Force -ErrorAction SilentlyContinue
-                                Log "      Removed MSI tracking key: $_"
+                } else {
+                    # MSI product: ask msiexec to uninstall it
+                    # MSIFASTINSTALL=7: skip rollback/file-check so uninstall succeeds even with missing files
+                    $p = Start-Process "msiexec.exe" -ArgumentList "/x `"$productCode`" /quiet /norestart MSIFASTINSTALL=7" -Wait -PassThru
+                    Log "      msiexec /x exit: $($p.ExitCode)"
+                    # If msiexec still failed, force-remove registry entries so the WiX bundle
+                    # doesn't see this package as "Present" on the next run
+                    if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 1605) {
+                        Log "      Force-removing registry entries for: $productCode"
+                        Remove-Item $keyPath -Recurse -Force -ErrorAction SilentlyContinue
+                        $squished = Convert-GuidToSquished $productCode
+                        if ($squished) {
+                            @(
+                                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products\$squished",
+                                "HKLM:\SOFTWARE\Classes\Installer\Products\$squished"
+                            ) | ForEach-Object {
+                                if (Test-Path $_) {
+                                    Remove-Item $_ -Recurse -Force -ErrorAction SilentlyContinue
+                                    Log "      Removed MSI tracking key: $_"
+                                }
                             }
                         }
                     }
                 }
                 $found++
             }
+        }
+    }
+
+    # Clean up the WiX Burn bundle's dependency provider keys.
+    # These are what Burn checks to decide if the bundle is "installed" → Modify vs Install mode.
+    # If they survive, the next run starts in Modify mode even though all MSI packages are Absent,
+    # and the BA omits lib_AllUsers → no stdlib → python.exe fails with "no platform independent libraries".
+    @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Dependencies\CPython-3.14",
+        "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\Dependencies\CPython-3.14"
+    ) | ForEach-Object {
+        if (Test-Path $_) {
+            Remove-Item $_ -Recurse -Force -ErrorAction SilentlyContinue
+            Log "      Removed bundle dependency key: $_"
+            $found++
         }
     }
 
