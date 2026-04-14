@@ -4,7 +4,7 @@ REM Overall Programs Dashboard - Persistent Server Startup
 REM This script starts the server as a detached background process.
 
 set "SCRIPT_DIR=%~dp0"
-set "PORT=5001"
+set "PORT=5003"
 set "SERVER_URL=http://127.0.0.1:%PORT%"
 set "LOG_DIR=%SCRIPT_DIR%logs"
 set "STDOUT_LOG=%LOG_DIR%\server.stdout.log"

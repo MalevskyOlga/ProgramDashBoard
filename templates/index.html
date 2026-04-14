@@ -1821,6 +1821,183 @@
                 font-size: 24px;
             }
         }
+
+        /* ── Priority List Table ────────────────────────── */
+        .priority-list-section { margin-bottom: 24px; }
+        .priority-list-section h3 {
+            font-size: 15px; font-weight: 700; color: #1e293b;
+            margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+        }
+        .priority-table-wrap { overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .priority-table {
+            width: 100%; border-collapse: collapse;
+            font-size: 13px; background: white;
+        }
+        .priority-table thead tr { background: linear-gradient(90deg, #1e3a8a 0%, #1d4ed8 100%); }
+        .priority-table th {
+            color: white; padding: 9px 11px;
+            text-align: left; font-weight: 600; white-space: nowrap;
+        }
+        .priority-table td {
+            padding: 7px 11px; border-bottom: 1px solid #e2e8f0;
+            vertical-align: middle; color: #1e293b;
+        }
+        .priority-table tbody tr:nth-child(even) td { background: #f8fafc; }
+        .priority-table tbody tr:hover td { background: #eff6ff; }
+        .priority-col-priority { width: 44px; text-align: center; font-weight: 700; color: #1e40af; }
+        .priority-col-name { min-width: 200px; }
+        [contenteditable="true"]:focus {
+            outline: 2px solid #3b82f6; outline-offset: -2px;
+            background: #fff7ed !important; border-radius: 3px;
+        }
+        .priority-editable-name { display: inline; min-width: 40px; }
+        .priority-link-btn {
+            display: inline-block; margin-left: 7px;
+            padding: 1px 7px; background: #2563eb; color: white;
+            border-radius: 4px; font-size: 10px; font-weight: 700;
+            text-decoration: none; white-space: nowrap; vertical-align: middle;
+        }
+        .priority-link-btn:hover { background: #1d4ed8; }
+        /* Right-click context menu on Gantt links */
+        .gantt-ctx-menu {
+            display: none; position: fixed; z-index: 9999;
+            background: white; border: 1px solid #e2e8f0; border-radius: 7px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.18); min-width: 148px;
+            flex-direction: column; overflow: hidden; padding: 3px 0;
+        }
+        .gantt-ctx-menu.open { display: flex; }
+        .gantt-ctx-menu button {
+            background: none; border: none; padding: 8px 14px; text-align: left;
+            cursor: pointer; font-size: 13px; color: #1e293b; width: 100%;
+        }
+        .gantt-ctx-menu button:hover { background: #f1f5f9; }
+        .gantt-ctx-danger { color: #dc2626 !important; }
+        .gantt-ctx-sep { height: 1px; background: #e2e8f0; margin: 3px 0; }
+        /* Undo delete toast */
+        .gantt-undo-toast {
+            position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+            background: #1e293b; color: white; border-radius: 8px;
+            padding: 12px 18px; display: flex; align-items: center; gap: 14px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3); z-index: 9999;
+            opacity: 0; pointer-events: none; transition: opacity 0.2s;
+            min-width: 260px; flex-direction: column;
+        }
+        .gantt-undo-toast.show { opacity: 1; pointer-events: all; }
+        .gantt-undo-toast-row { display: flex; align-items: center; gap: 14px; width: 100%; }
+        .gantt-undo-btn {
+            background: #3b82f6; border: none; color: white; border-radius: 5px;
+            padding: 4px 12px; cursor: pointer; font-size: 13px; font-weight: 600;
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .gantt-undo-btn:hover { background: #2563eb; }
+        .gantt-undo-progress { height: 3px; background: #334155; border-radius: 2px; width: 100%; overflow: hidden; }
+        .gantt-undo-progress-bar { height: 100%; background: #3b82f6; width: 100%; }
+        .gantt-menu-wrap { position: relative; display: inline-block; }
+        .priority-add-gantt-btn {
+            background: none; border: 1px dashed #94a3b8; border-radius: 4px;
+            cursor: pointer; font-size: 11px; color: #64748b; padding: 1px 7px;
+            white-space: nowrap;
+        }
+        .priority-add-gantt-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+        /* Hide the Add Gantt button on linked rows until row is hovered or menu is open */
+        .priority-link-area a ~ .gantt-menu-wrap .priority-add-gantt-btn {
+            opacity: 0; transition: opacity 0.15s;
+        }
+        .priority-table tr:hover .priority-link-area a ~ .gantt-menu-wrap .priority-add-gantt-btn,
+        .priority-link-area a ~ .gantt-menu-wrap:has(.gantt-menu.open) .priority-add-gantt-btn {
+            opacity: 1;
+        }
+        .gantt-menu {
+            display: none; position: absolute; top: calc(100% + 3px); left: 0;
+            z-index: 200; background: white; border: 1px solid #e2e8f0;
+            border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+            min-width: 160px; flex-direction: column; overflow: hidden;
+        }
+        .gantt-menu.open { display: flex; }
+        .gantt-menu button {
+            background: none; border: none; padding: 8px 13px; text-align: left;
+            cursor: pointer; font-size: 12px; white-space: nowrap; color: #1e293b;
+            width: 100%;
+        }
+        .gantt-menu button:hover { background: #f1f5f9; }
+        .priority-link-picker {
+            font-size: 12px; padding: 2px 4px; border: 1px solid #3b82f6;
+            border-radius: 4px; cursor: pointer; max-width: 180px;
+        }
+        .priority-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 11px; font-weight: 600;
+        }
+        .pbadge-npd  { background: #dbeafe; color: #1e40af; }
+        .pbadge-cert { background: #fef3c7; color: #92400e; }
+        .pbadge-obs  { background: #fee2e2; color: #991b1b; }
+        .pbadge-na   { background: #f1f5f9; color: #64748b; }
+        /* Dropdown selects inside priority table */
+        .priority-table select {
+            border: 1px solid transparent; border-radius: 4px;
+            padding: 2px 5px; font-size: 12px; font-family: inherit;
+            background: transparent; cursor: pointer; color: #1e293b;
+            width: 100%;
+        }
+        .priority-table select:hover { border-color: #93c5fd; background: #f8fafc; }
+        .priority-table select:focus { outline: 2px solid #3b82f6; outline-offset: -2px; }
+        .priority-table select.pbadge-npd  { background: #dbeafe; color: #1e40af; font-weight: 600; }
+        .priority-table select.pbadge-cert { background: #fef3c7; color: #92400e; font-weight: 600; }
+        .priority-table select.pbadge-obs  { background: #fee2e2; color: #991b1b; font-weight: 600; }
+        .priority-table select.pbadge-na   { background: #f1f5f9; color: #64748b; font-weight: 600; }
+        /* Min-widths so dropdown values aren't clipped */
+        .priority-table td:nth-child(4) { min-width: 76px; }
+        .priority-table td:nth-child(5) { min-width: 90px; }
+        .priority-table td:nth-child(7) { min-width: 108px; }
+        .priority-table td:nth-child(8) { min-width: 108px; }
+
+        /* Action buttons column */
+        .priority-table th:last-child,
+        .priority-table td:last-child { width: 68px; text-align: center; }
+        .priority-actions { display: flex; gap: 4px; justify-content: center; }
+        .priority-action-btn {
+            border: none; border-radius: 4px; padding: 3px 7px;
+            font-size: 12px; font-weight: 700; cursor: pointer;
+            transition: opacity 0.15s; line-height: 1.4;
+        }
+        .priority-action-btn:hover { opacity: 0.75; }
+        .priority-btn-complete { background: #dcfce7; color: #166534; }
+        .priority-btn-delete   { background: #fee2e2; color: #991b1b; }
+        .priority-add-btn {
+            margin-top: 8px; width: 100%;
+            border: 2px dashed #93c5fd; background: transparent;
+            color: #2563eb; padding: 7px 0; border-radius: 6px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: background 0.15s;
+        }
+        .priority-add-btn:hover { background: #eff6ff; }
+        .priority-row-new td { background: #fffbeb !important; }
+
+        /* Archive section */
+        .archive-section { margin-top: 22px; }
+        .archive-section h3 { font-size: 14px; font-weight: 700; color: #94a3b8; margin-bottom: 8px; }
+        .archive-table-wrap { overflow-x: auto; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
+        .archive-table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
+        .archive-table thead tr { background: #475569; }
+        .archive-table th { color: white; padding: 8px 11px; text-align: left; font-weight: 600; }
+        .archive-table td { padding: 7px 11px; border-bottom: 1px solid #e2e8f0; color: #1e293b; }
+        .archive-table tbody tr:nth-child(even) td { background: #f8fafc; }
+        .archive-restore-btn {
+            border: none; border-radius: 4px; padding: 3px 10px;
+            background: #dbeafe; color: #1e40af;
+            font-size: 11px; font-weight: 700; cursor: pointer;
+        }
+        .archive-restore-btn:hover { background: #bfdbfe; }
+
+        .priority-save-toast {
+            position: fixed; bottom: 22px; right: 22px;
+            background: #166534; color: white;
+            padding: 8px 16px; border-radius: 6px;
+            font-size: 13px; font-weight: 600;
+            z-index: 9999; opacity: 0; transition: opacity 0.25s;
+            pointer-events: none;
+        }
+        .priority-save-toast.show { opacity: 1; }
     </style>
 </head>
     <body>
@@ -1884,11 +2061,15 @@
             <div class="resource-section">
                 <h2>Projects</h2>
                 <p>Project cards & import</p>
+                <div id="priorityListSection" class="priority-list-section">
+                    <div class="loading">Loading priority list…</div>
+                </div>
                 <div class="import-section">
                     <button class="import-btn" id="importBtn" onclick="document.getElementById('fileInput').click()">
                         📁 Import New Project from Excel
                     </button>
                     <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileSelect(event)">
+                    <input type="file" id="priorityGanttFileInput" accept=".xlsx" onchange="handlePriorityGanttFileSelect(event)" style="display:none">
                     <div class="message" id="message"></div>
                 </div>
                 <div id="projectsContainer">
@@ -1916,6 +2097,8 @@
         </div>
     </div>
     
+    <div class="priority-save-toast" id="prioritySaveToast">✓ Saved to Excel</div>
+
     <div class="progress-overlay" id="progressOverlay">
         <div class="progress-content">
             <div class="spinner"></div>
@@ -4284,12 +4467,512 @@
             }, 5000);
         }
         
+        // ── Priority Projects (DB-backed) ────────────────────
+        function priorityBadgeClass(type) {
+            switch ((type || '').toLowerCase()) {
+                case 'npd':  return 'pbadge-npd';
+                case 'cert': return 'pbadge-cert';
+                case 'obs':  return 'pbadge-obs';
+                default:     return 'pbadge-na';
+            }
+        }
+
+        function showPrioritySaveToast() {
+            const t = document.getElementById('prioritySaveToast');
+            if (!t) return;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        async function loadPrioritySection() {
+            const section = document.getElementById('priorityListSection');
+            if (!section) return;
+            try {
+                const [pRes, aRes] = await Promise.all([
+                    fetchFresh('/api/priority-projects'),
+                    fetchFresh('/api/archived-projects')
+                ]);
+                const projects = await pRes.json();
+                const archived = await aRes.json();
+                if (projects.error) throw new Error(projects.error);
+                renderPrioritySection(projects, Array.isArray(archived) ? archived : []);
+            } catch (err) {
+                document.getElementById('priorityListSection').innerHTML =
+                    `<div style="color:#b91c1c;font-size:13px;padding:10px 0">Could not load priority list: ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function _sel(opts, val, field, extraClass) {
+            const cls = extraClass ? ` class="${extraClass}"` : '';
+            const options = opts.map(o =>
+                `<option value="${escapeHtml(o)}"${o === val ? ' selected' : ''}>${escapeHtml(o) || '—'}</option>`
+            ).join('');
+            return `<select data-field="${field}" data-original="${escapeHtml(val)}" onchange="savePrioritySelect(this)"${cls}>${options}</select>`;
+        }
+
+        function _priorityRowHtml(p) {
+            const ganttMenu = `<span class="gantt-menu-wrap">
+                    <button class="priority-add-gantt-btn" onclick="toggleGanttMenu(event,${p.id})">📥 Add Gantt ▾</button>
+                    <div class="gantt-menu" id="gantt-menu-${p.id}">
+                        <button onclick="addGanttToPriorityProject(${p.id})">📥 Import from Excel</button>
+                        <button onclick="showLinkGanttPicker(${p.id})">🔗 Link existing</button>
+                    </div>
+                </span>`;
+            const linkArea = p.dashboard_name
+                ? `<span class="priority-link-area"> <a class="priority-link-btn" href="/project/${encodeURIComponent(p.dashboard_name)}" title="Open Gantt (right-click for options)" oncontextmenu="showGanttCtxMenu(event,${p.id},'${escapeJs(p.dashboard_name)}')">↗ Gantt</a> ${ganttMenu}</span>`
+                : `<span class="priority-link-area"> ${ganttMenu}</span>`;
+            const bc = priorityBadgeClass(p.process_type);
+            return `<tr data-id="${p.id}">
+                <td class="priority-col-priority" contenteditable="true" data-field="priority" data-original="${p.priority}">${p.priority}</td>
+                <td class="priority-col-name"><span class="priority-editable-name" contenteditable="true" data-field="name" data-original="${escapeHtml(p.name || '')}">${escapeHtml(p.name || '')}</span>${linkArea}</td>
+                <td contenteditable="true" data-field="leader" data-original="${escapeHtml(p.leader || '')}">${escapeHtml(p.leader || '')}</td>
+                <td>${_sel(['','NPD','N/A','Cert','OBS'], p.process_type||'', 'process_type', `priority-select priority-badge ${bc}`)}</td>
+                <td>${_sel(['','N/A','Gate 1','Gate 2','Gate 3','Gate 4','Gate 5','Gate C/D'], p.next_gate||'', 'next_gate', 'priority-select')}</td>
+                <td contenteditable="true" data-field="launch_date" data-original="${escapeHtml(p.launch_date || '')}">${escapeHtml(p.launch_date || '')}</td>
+                <td>${_sel(['','Growth','Maintain','Discontinue'], p.objective||'', 'objective', 'priority-select')}</td>
+                <td>${_sel(['','Industrial','Suppression','All'], p.segment||'', 'segment', 'priority-select')}</td>
+                <td class="priority-actions">
+                    <button class="priority-action-btn priority-btn-complete" onclick="completePriorityProject(${p.id})" title="Mark Complete">✓</button>
+                    <button class="priority-action-btn priority-btn-delete" onclick="deletePriorityProject(${p.id})" title="Delete">🗑</button>
+                </td>
+            </tr>`;
+        }
+
+        function _archiveSectionHtml(archived) {
+            if (!archived || archived.length === 0) return '';
+            const rows = archived.map(a => `
+                <tr>
+                    <td>${escapeHtml(a.name)}</td>
+                    <td>${escapeHtml(a.completed_date)}</td>
+                    <td><button class="archive-restore-btn" onclick="restoreArchivedProject(${a.id})">↩ Undo</button></td>
+                </tr>`).join('');
+            return `<div class="archive-section">
+                <h3>📦 Completed Projects</h3>
+                <div class="archive-table-wrap">
+                    <table class="archive-table">
+                        <thead><tr><th>Project Name</th><th>Completed</th><th></th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>`;
+        }
+
+        function renderPrioritySection(projects, archived) {
+            const section = document.getElementById('priorityListSection');
+            const tableRows = projects.map(_priorityRowHtml).join('');
+            section.innerHTML = `
+                <h3>📋 Flame &amp; Gas — Active Big Projects (Mar 2026)</h3>
+                <div class="priority-table-wrap">
+                    <table class="priority-table" id="priorityTable">
+                        <thead><tr>
+                            <th>#</th><th>Project Name</th><th>Leader</th><th>Type</th>
+                            <th>Next Gate</th><th>Target Date</th><th>Objective</th><th>Segment</th><th></th>
+                        </tr></thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+                <button class="priority-add-btn" onclick="addPriorityProject()">+ Add Project</button>
+                ${_archiveSectionHtml(archived)}`;
+            _attachPriorityTableListeners();
+        }
+
+        function _attachPriorityTableListeners() {
+            const table = document.getElementById('priorityTable');
+            if (!table) return;
+
+            table.addEventListener('keydown', e => {
+                if (!e.target.isContentEditable) return;
+                if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+                if (e.key === 'Escape') {
+                    e.target.textContent = e.target.dataset.original || '';
+                    e.target.blur();
+                }
+            });
+
+            table.addEventListener('focusout', async e => {
+                const el = e.target;
+                if (!el.isContentEditable) return;
+                const newValue = el.textContent.trim();
+                const original = el.dataset.original || '';
+                if (newValue === original) return;
+
+                const tr = el.closest('tr');
+                const id = tr ? parseInt(tr.dataset.id) : 0;
+                const field = el.dataset.field;
+                if (!id || !field) return;
+
+                el.dataset.original = newValue;
+                try {
+                    const res = await fetch(`/api/priority-projects/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ field, value: newValue })
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'Save failed');
+                    // Priority change → re-render to show new order
+                    if (field === 'priority' && data.projects) {
+                        const aRes = await fetchFresh('/api/archived-projects');
+                        const archived = await aRes.json();
+                        renderPrioritySection(data.projects, Array.isArray(archived) ? archived : []);
+                    } else {
+                        showPrioritySaveToast();
+                    }
+                } catch (err) {
+                    console.error('Priority save failed:', err);
+                    el.textContent = original;
+                    el.dataset.original = original;
+                }
+            });
+        }
+
+        async function savePrioritySelect(el) {
+            const field = el.dataset.field;
+            const newValue = el.value;
+            const original = el.dataset.original || '';
+            if (newValue === original) return;
+
+            const tr = el.closest('tr');
+            const id = tr ? parseInt(tr.dataset.id) : 0;
+            if (!id || !field) return;
+
+            // Optimistically update badge class for process_type
+            if (field === 'process_type') {
+                el.className = el.className.replace(/pbadge-\S+/g, '').trim();
+                el.classList.add(priorityBadgeClass(newValue));
+            }
+
+            el.dataset.original = newValue;
+            try {
+                const res = await fetch(`/api/priority-projects/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field, value: newValue })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Save failed');
+                showPrioritySaveToast();
+            } catch (err) {
+                console.error('Priority select save failed:', err);
+                el.value = original;
+                el.dataset.original = original;
+                if (field === 'process_type') {
+                    el.className = el.className.replace(/pbadge-\S+/g, '').trim();
+                    el.classList.add(priorityBadgeClass(original));
+                }
+            }
+        }
+
+        // ── Gantt right-click context menu ──────────────────────────────
+        let _ctxGanttId = null;
+        let _ctxGanttName = null;
+
+        function escapeJs(s) { return (s || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+        function showGanttCtxMenu(event, id, dashName) {
+            event.preventDefault();
+            _ctxGanttId = id;
+            _ctxGanttName = dashName;
+            const menu = document.getElementById('ganttCtxMenu');
+            // position near cursor, keep inside viewport
+            const x = Math.min(event.clientX, window.innerWidth  - 160);
+            const y = Math.min(event.clientY, window.innerHeight - 130);
+            menu.style.left = x + 'px';
+            menu.style.top  = y + 'px';
+            menu.classList.add('open');
+        }
+
+        function hideGanttCtxMenu() {
+            document.getElementById('ganttCtxMenu')?.classList.remove('open');
+        }
+
+        document.addEventListener('click', hideGanttCtxMenu);
+        document.addEventListener('contextmenu', e => {
+            if (!e.target.closest('#ganttCtxMenu') && !e.target.classList.contains('priority-link-btn')) {
+                hideGanttCtxMenu();
+            }
+        });
+
+        async function ctxRenameGantt() {
+            hideGanttCtxMenu();
+            const newName = prompt(`Rename "${_ctxGanttName}" to:`, _ctxGanttName);
+            if (!newName || newName.trim() === _ctxGanttName) return;
+            try {
+                const res = await fetch(`/api/project/${encodeURIComponent(_ctxGanttName)}/rename`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_name: newName.trim() })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Rename failed');
+                await loadPrioritySection();
+                await refreshDashboardData();
+            } catch(e) { alert('Rename failed: ' + e.message); }
+        }
+
+        let _undoDeleteTimer = null;
+        let _undoDeleteId   = null;
+        let _undoDeleteName = null;
+
+        async function ctxDeleteGantt() {
+            hideGanttCtxMenu();
+            const id   = _ctxGanttId;
+            const name = _ctxGanttName;
+            if (!confirm(`Delete Gantt "${name}"?`)) return;
+
+            try {
+                // Soft-delete the dashboard (data preserved for undo)
+                await fetch(`/api/project/${encodeURIComponent(name)}/soft-delete`, { method: 'POST' });
+            } catch(e) { console.warn('soft-delete failed:', e); }
+            try {
+                // Unlink from priority row immediately
+                await fetch(`/api/priority-projects/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field: 'linked_dashboard', value: '' })
+                });
+            } catch(e) { console.warn('unlink failed:', e); }
+            await loadPrioritySection();
+
+            // Show undo toast — actual deletion happens after countdown
+            _undoDeleteId   = id;
+            _undoDeleteName = name;
+            if (_undoDeleteTimer) clearTimeout(_undoDeleteTimer);
+
+            const toast = document.getElementById('ganttUndoToast');
+            document.getElementById('ganttUndoMsg').textContent = `"${name}" deleted`;
+            toast.classList.add('show');
+
+            // Animate progress bar
+            const bar = document.getElementById('ganttUndoBar');
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                bar.style.transition = 'width 10s linear';
+                bar.style.width = '0%';
+            }));
+
+            _undoDeleteTimer = setTimeout(async () => {
+                toast.classList.remove('show');
+                try {
+                    // Permanently delete after undo window expires
+                    await fetch(`/api/project/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                    await refreshDashboardData();
+                } catch(e) { console.error('Permanent delete failed:', e); }
+                _undoDeleteId = _undoDeleteName = null;
+            }, 10000);
+        }
+
+        async function undoGanttDelete() {
+            if (_undoDeleteTimer) clearTimeout(_undoDeleteTimer);
+            _undoDeleteTimer = null;
+            document.getElementById('ganttUndoToast').classList.remove('show');
+            if (!_undoDeleteId || !_undoDeleteName) { alert('Too late — Gantt was already permanently deleted.'); return; }
+            const id = _undoDeleteId, name = _undoDeleteName;
+            _undoDeleteId = _undoDeleteName = null;
+            // Restore soft-deleted dashboard
+            await fetch(`/api/project/${encodeURIComponent(name)}/restore`, { method: 'POST' });
+            // Re-link to priority row
+            await fetch(`/api/priority-projects/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ field: 'linked_dashboard', value: name })
+            });
+            await loadPrioritySection();
+            await refreshDashboardData();
+        }
+
+        function ctxReplaceGantt() {
+            hideGanttCtxMenu();
+            toggleGanttMenu({ stopPropagation: () => {} }, _ctxGanttId);
+        }
+
+        let _openGanttMenuId = null;
+
+        function toggleGanttMenu(event, id) {
+            event.stopPropagation();
+            const menu = document.getElementById(`gantt-menu-${id}`);
+            if (!menu) return;
+            const isOpen = menu.classList.contains('open');
+            // close any previously open menu
+            if (_openGanttMenuId) {
+                const prev = document.getElementById(`gantt-menu-${_openGanttMenuId}`);
+                if (prev) prev.classList.remove('open');
+            }
+            if (!isOpen) {
+                menu.classList.add('open');
+                _openGanttMenuId = id;
+            } else {
+                _openGanttMenuId = null;
+            }
+        }
+
+        document.addEventListener('click', () => {
+            if (_openGanttMenuId) {
+                const menu = document.getElementById(`gantt-menu-${_openGanttMenuId}`);
+                if (menu) menu.classList.remove('open');
+                _openGanttMenuId = null;
+            }
+        });
+
+        let _priorityGanttTargetId = null;
+
+        function addGanttToPriorityProject(id) {
+            _priorityGanttTargetId = id;
+            const inp = document.getElementById('priorityGanttFileInput');
+            inp.value = '';
+            inp.click();
+        }
+
+        async function handlePriorityGanttFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.name.endsWith('.xlsx')) {
+                showMessage('Please select a valid Excel file (.xlsx)', 'error');
+                return;
+            }
+
+            const overlay = document.getElementById('progressOverlay');
+            const progressText = document.getElementById('progressText');
+            overlay.classList.add('show');
+            progressText.textContent = 'Uploading and processing Excel file...';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                // Use the priority row's project name instead of the Excel template name
+                if (_priorityGanttTargetId) {
+                    const tr = document.querySelector(`#priorityTable tr[data-id="${_priorityGanttTargetId}"]`);
+                    const rowName = tr?.querySelector('.priority-editable-name')?.textContent?.trim();
+                    if (rowName) formData.append('project_name', rowName);
+                }
+                const response = await fetch('/api/upload-excel', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Upload failed');
+
+                progressText.textContent = 'Linking to project...';
+
+                if (_priorityGanttTargetId && result.project_name) {
+                    await fetch(`/api/priority-projects/${_priorityGanttTargetId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ field: 'linked_dashboard', value: result.project_name })
+                    });
+                }
+
+                overlay.classList.remove('show');
+                showMessage(`Imported & linked: ${result.project_name || file.name}`, 'success');
+                await loadPrioritySection();
+                await refreshDashboardData();
+            } catch (error) {
+                console.error('Error importing Gantt:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+                overlay.classList.remove('show');
+            }
+
+            event.target.value = '';
+            _priorityGanttTargetId = null;
+        }
+
+        async function showLinkGanttPicker(id) {
+            const tr = document.querySelector(`#priorityTable tr[data-id="${id}"]`);
+            if (!tr) return;
+            const linkArea = tr.querySelector('.priority-link-area');
+            if (!linkArea) return;
+
+            let dashboards = [];
+            try {
+                const res = await fetchFresh('/api/projects');
+                dashboards = await res.json();
+            } catch(e) {
+                console.error('Could not load dashboards', e);
+                return;
+            }
+
+            const options = [{ name: '' }, ...dashboards]
+                .map(d => `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name) || '— None (unlink) —'}</option>`)
+                .join('');
+            linkArea.innerHTML = `<select class="priority-link-picker" onchange="saveLinkGantt(${id}, this)">${options}</select>`;
+            linkArea.querySelector('select').focus();
+        }
+
+        async function saveLinkGantt(id, selectEl) {
+            const val = selectEl.value;
+            try {
+                const res = await fetch(`/api/priority-projects/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field: 'linked_dashboard', value: val })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            } catch(e) {
+                console.error('Link save failed:', e);
+            }
+            await loadPrioritySection();
+        }
+
+        async function addPriorityProject() {
+            try {
+                const res = await fetch('/api/priority-projects', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                await loadPrioritySection();
+                // Highlight and focus the new last row
+                const table = document.getElementById('priorityTable');
+                if (table) {
+                    const lastRow = table.querySelector('tbody tr:last-child');
+                    if (lastRow) {
+                        lastRow.classList.add('priority-row-new');
+                        const nameCell = lastRow.querySelector('[data-field="name"]');
+                        if (nameCell) nameCell.focus();
+                    }
+                }
+            } catch (err) { console.error('Add project failed:', err); }
+        }
+
+        async function deletePriorityProject(id) {
+            if (!confirm('Delete this project from the list?')) return;
+            try {
+                const res = await fetch(`/api/priority-projects/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const tr = document.querySelector(`#priorityTable tr[data-id="${id}"]`);
+                if (tr) tr.remove();
+                showPrioritySaveToast();
+            } catch (err) { console.error('Delete failed:', err); }
+        }
+
+        async function completePriorityProject(id) {
+            try {
+                const res = await fetch(`/api/priority-projects/${id}/complete`, { method: 'POST' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                await loadPrioritySection();
+            } catch (err) { console.error('Complete failed:', err); }
+        }
+
+        async function restoreArchivedProject(archId) {
+            try {
+                const res = await fetch(`/api/archived-projects/${archId}/restore`, { method: 'POST' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const aRes = await fetchFresh('/api/archived-projects');
+                const archived = await aRes.json();
+                renderPrioritySection(data.projects, Array.isArray(archived) ? archived : []);
+                showPrioritySaveToast();
+            } catch (err) { console.error('Restore failed:', err); }
+        }
+        // ─────────────────────────────────────────────────────
+
         function refreshDashboardData() {
             loadStats();
             loadOverallGateTimeline();
             loadOverallResourceLoad();
             loadOverallCriticalPathOverview();
             loadProjects();
+            loadPrioritySection();
         }
 
         function applyEmbeddedOverallDashboardPayload() {
@@ -4340,6 +5023,23 @@
         window.addEventListener('resize', closeAllTableFilterMenus);
         window.addEventListener('scroll', closeAllTableFilterMenus, true);
     </script>
+
+    <!-- Gantt delete undo toast -->
+    <div id="ganttUndoToast" class="gantt-undo-toast">
+        <div class="gantt-undo-toast-row">
+            <span id="ganttUndoMsg"></span>
+            <button class="gantt-undo-btn" onclick="undoGanttDelete()">Undo</button>
+        </div>
+        <div class="gantt-undo-progress"><div id="ganttUndoBar" class="gantt-undo-progress-bar"></div></div>
+    </div>
+
+    <!-- Gantt right-click context menu -->
+    <div id="ganttCtxMenu" class="gantt-ctx-menu">
+        <button onclick="ctxRenameGantt()">✏️ Rename</button>
+        <button onclick="ctxReplaceGantt()">🔄 Replace</button>
+        <div class="gantt-ctx-sep"></div>
+        <button class="gantt-ctx-danger" onclick="ctxDeleteGantt()">🗑 Delete</button>
+    </div>
 </body>
 </html>
 

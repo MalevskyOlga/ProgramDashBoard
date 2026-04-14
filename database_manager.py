@@ -181,8 +181,16 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_resource_teams_team ON resource_teams(team_name)')
         
         conn.commit()
+
+        # Migration: add is_deleted for soft-delete support
+        try:
+            cursor.execute('ALTER TABLE projects ADD COLUMN is_deleted INTEGER DEFAULT 0')
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
         conn.close()
-        
+
         print(f"✓ Database initialized: {self.db_path}")
     
     def get_all_projects(self):
@@ -243,6 +251,7 @@ class DatabaseManager:
                 ON tc.project_id = p.id
             LEFT JOIN gate_rollup gr
                 ON gr.project_id = p.id
+            WHERE (p.is_deleted = 0 OR p.is_deleted IS NULL)
             ORDER BY p.updated_at DESC
         ''')
         
@@ -264,7 +273,7 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        cursor.execute('SELECT * FROM projects WHERE name = ?', (name,))
+        cursor.execute('SELECT * FROM projects WHERE name = ? AND (is_deleted = 0 OR is_deleted IS NULL)', (name,))
         row = cursor.fetchone()
         conn.close()
         
@@ -440,6 +449,26 @@ class DatabaseManager:
         conn.close()
         
         return deleted_count
+
+    def soft_delete_project(self, project_name):
+        """Mark a project as deleted without removing data (supports undo)."""
+        conn = self.get_connection()
+        try:
+            conn.execute('UPDATE projects SET is_deleted = 1 WHERE name = ?', (project_name,))
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+
+    def restore_project(self, project_name):
+        """Restore a soft-deleted project."""
+        conn = self.get_connection()
+        try:
+            conn.execute('UPDATE projects SET is_deleted = 0 WHERE name = ?', (project_name,))
+            conn.commit()
+            return True
+        finally:
+            conn.close()
 
     def delete_project(self, project_name):
         """Delete a project and all its related data (tasks, dependencies, gates)"""

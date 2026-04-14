@@ -42,6 +42,18 @@ def add_no_cache_headers(response):
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+    # Log every request so errors are visible in server.stdout.log
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    status = response.status_code
+    if status >= 400:
+        # Log errors with response body so the cause is clear
+        try:
+            body = response.get_data(as_text=True)[:500]
+        except Exception:
+            body = ''
+        print(f'[{ts}] {request.method} {request.path} -> {status} | {body}', flush=True)
+    else:
+        print(f'[{ts}] {request.method} {request.path} -> {status}', flush=True)
     return response
 
 
@@ -230,7 +242,12 @@ def api_upload_excel():
         
         # Parse Excel file
         project_info, tasks = parser.parse_excel_file(temp_file_path)
-        
+
+        # Allow caller to override the project name (e.g. from priority list row)
+        override_name = request.form.get('project_name', '').strip()
+        if override_name:
+            project_info['name'] = override_name
+
         # Create or update project
         project_id = db_manager.create_or_update_project(
             name=project_info['name'],
@@ -373,6 +390,305 @@ def api_get_stats():
         'last_scan': 'N/A'
     }
     return jsonify(stats)
+
+
+# Priority Projects Endpoints (DB-backed; Excel is read-only seed)
+
+_PRIORITY_ALLOWED_FIELDS = {
+    'priority', 'name', 'leader', 'process_type',
+    'next_gate', 'launch_date', 'objective', 'segment', 'linked_dashboard'
+}
+
+
+def _ensure_priority_tables():
+    """Return an open connection with priority tables created if absent."""
+    conn = db_manager.get_connection()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS priority_projects (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            priority      INTEGER NOT NULL DEFAULT 0,
+            name          TEXT NOT NULL DEFAULT '',
+            leader        TEXT DEFAULT '',
+            process_type  TEXT DEFAULT '',
+            next_gate     TEXT DEFAULT '',
+            launch_date   TEXT DEFAULT '',
+            objective     TEXT DEFAULT '',
+            segment       TEXT DEFAULT '',
+            created_at    TEXT DEFAULT (datetime('now')),
+            updated_at    TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS archived_projects (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            name           TEXT NOT NULL DEFAULT '',
+            completed_date TEXT NOT NULL,
+            priority       INTEGER DEFAULT 0,
+            leader         TEXT DEFAULT '',
+            process_type   TEXT DEFAULT '',
+            next_gate      TEXT DEFAULT '',
+            launch_date    TEXT DEFAULT '',
+            objective      TEXT DEFAULT '',
+            segment        TEXT DEFAULT ''
+        )
+    """)
+    conn.commit()
+    # Migration: add linked_dashboard column if it doesn't exist yet
+    try:
+        conn.execute("ALTER TABLE priority_projects ADD COLUMN linked_dashboard TEXT DEFAULT NULL")
+        conn.commit()
+    except Exception:
+        pass  # column already exists
+    return conn
+
+
+def _seed_priority_from_excel(conn):
+    """Seed priority_projects from Excel (called once when table is empty)."""
+    try:
+        import openpyxl
+        excel_path = config.PRIORITY_LIST_PATH
+        if not excel_path.exists():
+            return
+        wb = openpyxl.load_workbook(str(excel_path), data_only=True)
+        ws = wb[config.PRIORITY_LIST_SHEET]
+        for row_idx in range(1, ws.max_row + 1):
+            pv = ws.cell(row=row_idx, column=1).value
+            if not isinstance(pv, int) or pv < 1:
+                continue
+            conn.execute("""
+                INSERT INTO priority_projects
+                    (priority, name, leader, process_type, next_gate, launch_date, objective, segment)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                pv,
+                str(ws.cell(row=row_idx, column=2).value or '').strip(),
+                str(ws.cell(row=row_idx, column=3).value or '').strip(),
+                str(ws.cell(row=row_idx, column=4).value or '').strip(),
+                str(ws.cell(row=row_idx, column=5).value or '').strip(),
+                str(ws.cell(row=row_idx, column=6).value or '').strip(),
+                str(ws.cell(row=row_idx, column=7).value or '').strip(),
+                str(ws.cell(row=row_idx, column=8).value or '').strip(),
+            ))
+        conn.commit()
+    except Exception as e:
+        print(f'Warning: could not seed priority list from Excel: {e}')
+
+
+def _build_priority_response(conn):
+    """Return sorted priority projects list with dashboard link hints."""
+    # Only include projects that are NOT soft-deleted
+    existing = {p['name'].strip().lower(): p['name'] for p in db_manager.get_all_projects()}
+    rows = conn.execute(
+        "SELECT * FROM priority_projects ORDER BY priority, id"
+    ).fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        linked = d.get('linked_dashboard')
+        if linked and linked.strip().lower() in existing:
+            # Manual link — only if the project actually exists (not soft-deleted)
+            d['dashboard_name'] = linked
+        else:
+            # Fall back to auto-match by row name
+            d['dashboard_name'] = existing.get((d.get('name') or '').strip().lower())
+        result.append(d)
+    return result
+
+
+@app.route('/api/priority-projects', methods=['GET'])
+def api_get_priority_projects():
+    """Return all active priority projects (seed from Excel on first call)."""
+    try:
+        conn = _ensure_priority_tables()
+        if conn.execute("SELECT COUNT(*) FROM priority_projects").fetchone()[0] == 0:
+            _seed_priority_from_excel(conn)
+        result = _build_priority_response(conn)
+        conn.close()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/priority-projects', methods=['POST'])
+def api_create_priority_project():
+    """Append a blank project row at max priority + 1."""
+    try:
+        conn = _ensure_priority_tables()
+        max_p = conn.execute(
+            "SELECT COALESCE(MAX(priority), 0) FROM priority_projects"
+        ).fetchone()[0]
+        new_p = max_p + 1
+        row_id = conn.execute("""
+            INSERT INTO priority_projects
+                (priority, name, leader, process_type, next_gate, launch_date, objective, segment)
+            VALUES (?, '', '', '', '', '', '', '')
+        """, (new_p,)).lastrowid
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'id': row_id, 'priority': new_p}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/priority-projects/<int:proj_id>', methods=['PUT'])
+def api_update_priority_project(proj_id):
+    """Update one field of a priority project; cascade on priority conflicts."""
+    try:
+        data = request.json or {}
+        field = data.get('field')
+        value = data.get('value', '')
+
+        if field not in _PRIORITY_ALLOWED_FIELDS:
+            return jsonify({'error': f'Unknown field: {field}'}), 400
+
+        conn = _ensure_priority_tables()
+
+        if field == 'priority':
+            try:
+                new_p = int(value)
+            except (ValueError, TypeError):
+                conn.close()
+                return jsonify({'error': 'Priority must be a number'}), 400
+            if new_p < 1:
+                conn.close()
+                return jsonify({'error': 'Priority must be ≥ 1'}), 400
+
+            row = conn.execute(
+                "SELECT priority FROM priority_projects WHERE id = ?", (proj_id,)
+            ).fetchone()
+            if not row:
+                conn.close()
+                return jsonify({'error': 'Project not found'}), 404
+            old_p = row[0]
+
+            if new_p != old_p:
+                conflict = conn.execute(
+                    "SELECT id FROM priority_projects WHERE priority = ? AND id != ?",
+                    (new_p, proj_id)
+                ).fetchone()
+                if conflict:
+                    if new_p < old_p:  # moving up → shift others down
+                        conn.execute("""
+                            UPDATE priority_projects
+                            SET priority = priority + 1
+                            WHERE priority >= ? AND priority < ? AND id != ?
+                        """, (new_p, old_p, proj_id))
+                    else:              # moving down → shift others up
+                        conn.execute("""
+                            UPDATE priority_projects
+                            SET priority = priority - 1
+                            WHERE priority > ? AND priority <= ? AND id != ?
+                        """, (old_p, new_p, proj_id))
+            conn.execute(
+                "UPDATE priority_projects SET priority = ?, updated_at = datetime('now') WHERE id = ?",
+                (new_p, proj_id)
+            )
+        elif field == 'linked_dashboard':
+            conn.execute(
+                "UPDATE priority_projects SET linked_dashboard = ?, updated_at = datetime('now') WHERE id = ?",
+                (value if value else None, proj_id)
+            )
+        else:
+            conn.execute(
+                f"UPDATE priority_projects SET {field} = ?, updated_at = datetime('now') WHERE id = ?",
+                (value or '', proj_id)
+            )
+
+        conn.commit()
+        result = _build_priority_response(conn)
+        conn.close()
+        return jsonify({'success': True, 'projects': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/priority-projects/<int:proj_id>', methods=['DELETE'])
+def api_delete_priority_project(proj_id):
+    """Permanently remove a priority project."""
+    try:
+        conn = _ensure_priority_tables()
+        conn.execute("DELETE FROM priority_projects WHERE id = ?", (proj_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/priority-projects/<int:proj_id>/complete', methods=['POST'])
+def api_complete_priority_project(proj_id):
+    """Move a project to the archive with today's date."""
+    try:
+        from datetime import date as _date_cls
+        conn = _ensure_priority_tables()
+        row = conn.execute(
+            "SELECT * FROM priority_projects WHERE id = ?", (proj_id,)
+        ).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'error': 'Project not found'}), 404
+        d = dict(row)
+        conn.execute("""
+            INSERT INTO archived_projects
+                (name, completed_date, priority, leader, process_type, next_gate, launch_date, objective, segment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            d['name'], _date_cls.today().isoformat(), d['priority'],
+            d['leader'], d['process_type'], d['next_gate'],
+            d['launch_date'], d['objective'], d['segment']
+        ))
+        conn.execute("DELETE FROM priority_projects WHERE id = ?", (proj_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/archived-projects', methods=['GET'])
+def api_get_archived_projects():
+    """Return all archived (completed) projects."""
+    try:
+        conn = _ensure_priority_tables()
+        rows = conn.execute(
+            "SELECT * FROM archived_projects ORDER BY completed_date DESC, id DESC"
+        ).fetchall()
+        conn.close()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/archived-projects/<int:arch_id>/restore', methods=['POST'])
+def api_restore_archived_project(arch_id):
+    """Restore an archived project to the bottom of the active list."""
+    try:
+        conn = _ensure_priority_tables()
+        row = conn.execute(
+            "SELECT * FROM archived_projects WHERE id = ?", (arch_id,)
+        ).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'error': 'Archived project not found'}), 404
+        d = dict(row)
+        max_p = conn.execute(
+            "SELECT COALESCE(MAX(priority), 0) FROM priority_projects"
+        ).fetchone()[0]
+        conn.execute("""
+            INSERT INTO priority_projects
+                (priority, name, leader, process_type, next_gate, launch_date, objective, segment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            max_p + 1, d['name'], d['leader'], d['process_type'],
+            d['next_gate'], d['launch_date'], d['objective'], d['segment']
+        ))
+        conn.execute("DELETE FROM archived_projects WHERE id = ?", (arch_id,))
+        conn.commit()
+        result = _build_priority_response(conn)
+        conn.close()
+        return jsonify({'success': True, 'projects': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # Gate Baseline and Change Log Endpoints
@@ -695,6 +1011,55 @@ def api_delete_gate_sign_off(project_name, gate_name):
     """Remove a gate sign-off"""
     success = db_manager.delete_gate_sign_off(project_name, gate_name)
     return jsonify({'success': success})
+
+
+@app.route('/api/project/<project_name>/soft-delete', methods=['POST'])
+def api_soft_delete_project(project_name):
+    """Mark project as deleted (reversible within undo window)."""
+    try:
+        db_manager.soft_delete_project(project_name)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/project/<project_name>/restore', methods=['POST'])
+def api_restore_project(project_name):
+    """Restore a soft-deleted project."""
+    try:
+        db_manager.restore_project(project_name)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/project/<project_name>/rename', methods=['PUT'])
+def api_rename_project(project_name):
+    """Rename a project across all tables."""
+    try:
+        new_name = (request.json or {}).get('new_name', '').strip()
+        if not new_name:
+            return jsonify({'error': 'new_name is required'}), 400
+        if new_name == project_name:
+            return jsonify({'success': True})
+        conn = db_manager.get_connection()
+        if not conn.execute('SELECT id FROM projects WHERE name = ?', (project_name,)).fetchone():
+            conn.close()
+            return jsonify({'error': 'Project not found'}), 404
+        if conn.execute('SELECT id FROM projects WHERE name = ?', (new_name,)).fetchone():
+            conn.close()
+            return jsonify({'error': f'A project named "{new_name}" already exists'}), 409
+        conn.execute('UPDATE projects            SET name         = ? WHERE name         = ?', (new_name, project_name))
+        conn.execute('UPDATE gate_sign_offs      SET project_name = ? WHERE project_name = ?', (new_name, project_name))
+        conn.execute('UPDATE gate_baselines      SET project_name = ? WHERE project_name = ?', (new_name, project_name))
+        conn.execute('UPDATE gate_change_log     SET project_name = ? WHERE project_name = ?', (new_name, project_name))
+        conn.execute('UPDATE task_dependencies   SET project_name = ? WHERE project_name = ?', (new_name, project_name))
+        conn.execute('UPDATE priority_projects   SET linked_dashboard = ? WHERE linked_dashboard = ?', (new_name, project_name))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'new_name': new_name})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/project/<project_name>', methods=['DELETE'])

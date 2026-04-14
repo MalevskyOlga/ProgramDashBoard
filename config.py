@@ -7,7 +7,7 @@ from pathlib import Path
 
 # Server settings
 SERVER_HOST = '127.0.0.1'  # localhost only
-SERVER_PORT = 5001  # Different port from DashboardGeneratorWeb
+SERVER_PORT = 5003  # Different port from DashboardGeneratorWeb
 DEBUG_MODE = False  # ALWAYS False for stability - prevents crashes during code changes
 
 # Paths
@@ -41,6 +41,10 @@ EXCEL_COLUMNS = {
     'date_closed': 'H',
     'result': 'I'
 }
+
+# Priority list Excel
+PRIORITY_LIST_PATH = BASE_DIR / 'Flame & Gas Project Priority List.xlsx'
+PRIORITY_LIST_SHEET = 'Mar26'
 
 # Ensure directories exist
 DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
