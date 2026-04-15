@@ -651,12 +651,15 @@
 
         .today-label {
             position: absolute;
-            top: -18px;
+            top: -30px;
             transform: translateX(-50%);
             color: #ff616d;
             font-size: 10px;
             font-weight: 700;
-            letter-spacing: 0.12em;
+            letter-spacing: 0.08em;
+            text-align: center;
+            white-space: nowrap;
+            line-height: 1.4;
         }
 
         .timeline-legend {
@@ -2307,9 +2310,10 @@
                 const today = new Date();
                 if (today >= rangeStart && today <= renderedRangeEnd) {
                     const leftPercent = getTimelinePercent(today, rangeStart, renderedRangeEnd);
+                    const todayStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                     boardHtml += `
                         <div class="today-line" style="left: calc(200px + ((100% - 200px) * ${leftPercent / 100}));">
-                            <div class="today-label">TODAY</div>
+                            <div class="today-label">TODAY<br>${todayStr}</div>
                         </div>
                     `;
                 }
@@ -2521,9 +2525,10 @@
             const today = new Date();
             if (today >= rangeStart && today <= renderedRangeEnd) {
                 const leftPercent = getTimelinePercent(today, rangeStart, renderedRangeEnd);
+                const todayStr = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 boardHtml += `
                     <div class="today-line" style="left: calc(240px + ((100% - 240px) * ${leftPercent / 100}));">
-                        <div class="today-label">TODAY</div>
+                        <div class="today-label">TODAY<br>${todayStr}</div>
                     </div>
                 `;
             }
