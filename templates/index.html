@@ -4727,11 +4727,11 @@
                 await fetch(`/api/project/${encodeURIComponent(name)}/soft-delete`, { method: 'POST' });
             } catch(e) { console.warn('soft-delete failed:', e); }
             try {
-                // Unlink from priority row immediately
+                // Unlink from priority row — use sentinel to suppress auto-match re-linking
                 await fetch(`/api/priority-projects/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ field: 'linked_dashboard', value: '' })
+                    body: JSON.stringify({ field: 'linked_dashboard', value: '__none__' })
                 });
             } catch(e) { console.warn('unlink failed:', e); }
             await loadPrioritySection();

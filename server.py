@@ -485,11 +485,14 @@ def _build_priority_response(conn):
     for r in rows:
         d = dict(r)
         linked = d.get('linked_dashboard')
-        if linked and linked.strip().lower() in existing:
+        if linked == '__none__':
+            # User explicitly deleted the Gantt — suppress auto-match
+            d['dashboard_name'] = None
+        elif linked and linked.strip().lower() in existing:
             # Manual link — only if the project actually exists (not soft-deleted)
             d['dashboard_name'] = linked
         else:
-            # Fall back to auto-match by row name
+            # Fall back to auto-match by row name (only when never explicitly linked/unlinked)
             d['dashboard_name'] = existing.get((d.get('name') or '').strip().lower())
         result.append(d)
     return result
@@ -584,9 +587,11 @@ def api_update_priority_project(proj_id):
                 (new_p, proj_id)
             )
         elif field == 'linked_dashboard':
+            # Store '__none__' sentinel as-is; empty string → NULL; real name → real name
+            stored = value if value else None
             conn.execute(
                 "UPDATE priority_projects SET linked_dashboard = ?, updated_at = datetime('now') WHERE id = ?",
-                (value if value else None, proj_id)
+                (stored, proj_id)
             )
         else:
             conn.execute(
