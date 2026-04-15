@@ -567,6 +567,7 @@ class DatabaseManager:
                     CAST(REPLACE(t.name, 'Gate ', '') AS INTEGER) AS gate_id,
                     t.start_date,
                     t.end_date AS projected_date,
+                    t.status AS task_status,
                     gb.baseline_date,
                     gso.sign_off_date,
                     gso.status AS sign_off_status,
@@ -582,6 +583,7 @@ class DatabaseManager:
                    AND gso.gate_name = t.name
                 WHERE t.milestone = 1
                   AND t.name LIKE 'Gate %'
+                  AND p.is_deleted = 0
             )
             SELECT
                 project_name,
@@ -596,6 +598,7 @@ class DatabaseManager:
                 COALESCE(sign_off_date, projected_date, baseline_date) AS display_date,
                 CASE
                     WHEN sign_off_date IS NOT NULL THEN 'Signed Off'
+                    WHEN task_status = 'Completed' THEN 'Signed Off'
                     WHEN projected_date IS NOT NULL THEN 'Projected'
                     ELSE 'Baseline'
                 END AS date_source
@@ -678,6 +681,8 @@ class DatabaseManager:
             if not owner_name:
                 continue
 
+            if not row['start_date'] or not row['end_date']:
+                continue
             start_date = datetime.strptime(row['start_date'], '%Y-%m-%d').date()
             end_date = datetime.strptime(row['end_date'], '%Y-%m-%d').date()
             if end_date < start_date:
