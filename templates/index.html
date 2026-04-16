@@ -614,6 +614,11 @@
             color: #fff2f3;
         }
 
+        .gate-chip.pwr {
+            background: linear-gradient(135deg, #57c253 45%, #e8920a 55%);
+            color: #fff;
+        }
+
         .lane-cell .critical-bar {
             text-decoration: none;
             cursor: pointer;
@@ -688,6 +693,7 @@
 
         .legend-done { background: #57c253; }
         .legend-planned { background: #ff9f1a; }
+        .legend-pwr { background: linear-gradient(135deg, #57c253 45%, #e8920a 55%); }
         .legend-rework { background: #d94b57; }
         .legend-driver { background: linear-gradient(135deg, #b32939 0%, #ef6670 100%); }
         .legend-line {
@@ -2035,6 +2041,7 @@
                 </div>
                 <div class="timeline-legend">
                     <span><i class="legend-box legend-done"></i> Done gate</span>
+                    <span><i class="legend-box legend-pwr"></i> Passed w/ Rework</span>
                     <span><i class="legend-box legend-planned"></i> Planned gate</span>
                     <span><i class="legend-box legend-rework"></i> Rework sign-off</span>
                     <span><i class="legend-line"></i> Today</span>
@@ -2679,7 +2686,10 @@
 
         function getMarkerClass(item) {
             if (item.date_source === 'Rework Due') return 'rework';
-            if (item.date_source === 'Signed Off') return 'done';
+            if (item.date_source === 'Signed Off') {
+                if ((item.sign_off_status || '') === 'Passed with Rework') return 'pwr';
+                return 'done';
+            }
             return 'planned';
         }
 
