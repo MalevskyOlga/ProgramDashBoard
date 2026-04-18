@@ -24,6 +24,7 @@ import sqlite3
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dashboard-generator-secret-key'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 # Initialize database manager
 db_manager = DatabaseManager(config.DATABASE_PATH)
@@ -71,12 +72,12 @@ def view_project(project_name):
     if not project:
         return f"Project '{project_name}' not found", 404
     
-    return render_template('dashboard.html', 
+    return render_template('dashboard.html',
                          project_name=project_name,
                          project_manager=project['manager'],
                          PROJECT_NAME=project_name,
                          PROJECT_MANAGER=project['manager'],
-                         GENERATED_DATE=datetime.now().strftime('%Y-%m-%d %H:%M'))
+                         PROGRAM_MANAGER=project.get('program_manager') or '')
 
 
 @app.route('/project/<project_name>/schematic')
@@ -1034,6 +1035,20 @@ def api_restore_project(project_name):
     try:
         db_manager.restore_project(project_name)
         return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/project/<project_name>/program_manager', methods=['PUT'])
+def api_update_program_manager(project_name):
+    """Update the program manager for a project."""
+    try:
+        value = (request.json or {}).get('program_manager', '').strip()
+        conn = db_manager.get_connection()
+        conn.execute('UPDATE projects SET program_manager = ? WHERE name = ?', (value, project_name))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'program_manager': value})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

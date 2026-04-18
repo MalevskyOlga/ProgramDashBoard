@@ -2027,8 +2027,9 @@
 
         <div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
             <button class="dashboard-tab active" data-tab="schedule" onclick="setActiveDashboardTab('schedule')">Portfolio Schedule Overview</button>
-            <button class="dashboard-tab" data-tab="resources" onclick="setActiveDashboardTab('resources')">Overall Resource Load</button>
+            <button class="dashboard-tab" data-tab="pipeline" onclick="setActiveDashboardTab('pipeline')">F&amp;G Pipeline</button>
             <button class="dashboard-tab" data-tab="projects" onclick="setActiveDashboardTab('projects')">Projects</button>
+            <button class="dashboard-tab" data-tab="resources" onclick="setActiveDashboardTab('resources')">Overall Resource Load</button>
             <button class="dashboard-tab" data-tab="critical" onclick="setActiveDashboardTab('critical')">Critical Path</button>
         </div>
 
@@ -2070,19 +2071,26 @@
             </div>
         </div>
 
-        <div class="tab-pane" data-pane="projects">
+        <div class="tab-pane" data-pane="pipeline">
             <div class="resource-section">
-                <h2>Projects</h2>
-                <p>Project cards & import</p>
+                <h2>F&amp;G Pipeline</h2>
+                <p>Flame &amp; Gas — Active Big Projects priority list &amp; Gantt management</p>
                 <div id="priorityListSection" class="priority-list-section">
                     <div class="loading">Loading priority list…</div>
                 </div>
+                <input type="file" id="priorityGanttFileInput" accept=".xlsx" onchange="handlePriorityGanttFileSelect(event)" style="display:none">
+            </div>
+        </div>
+
+        <div class="tab-pane" data-pane="projects">
+            <div class="resource-section">
+                <h2>Projects</h2>
+                <p>All imported Gantt project dashboards</p>
                 <div class="import-section">
                     <button class="import-btn" id="importBtn" onclick="document.getElementById('fileInput').click()">
                         📁 Import New Project from Excel
                     </button>
                     <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileSelect(event)">
-                    <input type="file" id="priorityGanttFileInput" accept=".xlsx" onchange="handlePriorityGanttFileSelect(event)" style="display:none">
                     <div class="message" id="message"></div>
                 </div>
                 <div id="projectsContainer">

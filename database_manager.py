@@ -189,6 +189,13 @@ class DatabaseManager:
         except Exception:
             pass  # column already exists
 
+        # Migration: add program_manager field
+        try:
+            cursor.execute('ALTER TABLE projects ADD COLUMN program_manager TEXT')
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
         conn.close()
 
         print(f"✓ Database initialized: {self.db_path}")
