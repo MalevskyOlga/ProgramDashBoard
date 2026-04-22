@@ -1982,10 +1982,10 @@
         .priority-table td:nth-child(7) { min-width: 88px; }
         .priority-table td:nth-child(8) { min-width: 88px; }
 
-        /* Action buttons column */
-        .priority-table th:last-child,
-        .priority-table td:last-child { width: 120px; text-align: center; white-space: nowrap; }
-        .priority-actions { display: flex; gap: 3px; justify-content: center; align-items: center; flex-wrap: nowrap; }
+        /* Risk & Action columns */
+        .priority-col-risk    { width: 70px;  text-align: center; white-space: nowrap; }
+        .priority-col-actions { width: 90px;  text-align: center; white-space: nowrap; }
+        .priority-actions { display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: nowrap; }
         .priority-action-btn {
             border: none; border-radius: 4px; padding: 3px 7px;
             font-size: 12px; font-weight: 700; cursor: pointer;
@@ -4605,8 +4605,10 @@
                 <td contenteditable="true" data-field="launch_date" data-original="${escapeHtml(p.launch_date || '')}">${escapeHtml(p.launch_date || '')}</td>
                 <td>${_sel(['','Growth','Maintain','Discontinue'], p.objective||'', 'objective', 'priority-select')}</td>
                 <td>${_sel(['','Industrial','Suppression','All'], p.segment||'', 'segment', 'priority-select')}</td>
-                <td class="priority-actions">
+                <td class="priority-col-risk">
                     <button class="risk-badge ${riskClass}" onclick="${riskOnClick}" title="${riskLabel} open risk${riskLabel!=='1'?'s':''} — click to manage" style="font-size:0.72em;padding:2px 6px;">${riskIcon} ${riskLabel}</button>
+                </td>
+                <td class="priority-col-actions priority-actions">
                     <button class="priority-action-btn priority-btn-complete" onclick="completePriorityProject(${p.id})" title="Mark Complete">✓</button>
                     <button class="priority-action-btn priority-btn-delete" onclick="deletePriorityProject(${p.id})" title="Delete">🗑</button>
                 </td>
@@ -4641,7 +4643,7 @@
                     <table class="priority-table" id="priorityTable">
                         <thead><tr>
                             <th>#</th><th>Project Name</th><th>Leader</th><th>Type</th>
-                            <th>Next Gate</th><th>Target Date</th><th>Objective</th><th>Segment</th><th>Risk</th>
+                            <th>Next Gate</th><th>Target Date</th><th>Objective</th><th>Segment</th><th>Risk</th><th>Actions</th>
                         </tr></thead>
                         <tbody>${tableRows}</tbody>
                     </table>
