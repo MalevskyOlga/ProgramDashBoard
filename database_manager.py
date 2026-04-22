@@ -196,33 +196,49 @@ class DatabaseManager:
         except Exception:
             pass  # column already exists
 
-        # Risks table — drop old schema (portfolio_project_id) if present, recreate correctly
+        # Risks table — ensure correct schema (project_id nullable, pipeline_project_id present)
         cursor.execute("PRAGMA table_info(risks)")
-        risk_cols = [r[1] for r in cursor.fetchall()]
-        if risk_cols and 'project_id' not in risk_cols:
-            cursor.execute('DROP TABLE risks')
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS risks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER,
-                pipeline_project_id INTEGER,
-                title TEXT NOT NULL,
-                category TEXT DEFAULT 'Other',
-                probability TEXT DEFAULT 'Medium',
-                impact TEXT DEFAULT 'Medium',
-                owner TEXT,
-                mitigation TEXT,
-                status TEXT DEFAULT 'Open',
-                due_date DATE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        # Migration: add pipeline_project_id to existing risks table
-        try:
-            cursor.execute('ALTER TABLE risks ADD COLUMN pipeline_project_id INTEGER')
-        except Exception:
-            pass
+        risk_info = cursor.fetchall()
+        risk_cols = [r[1] for r in risk_info]
+        risk_notnull = {r[1]: r[3] for r in risk_info}  # col -> notnull flag
+        needs_recreate = (
+            not risk_cols                                        # table missing
+            or 'project_id' not in risk_cols                    # old portfolio schema
+            or risk_notnull.get('project_id', 0) == 1          # project_id wrongly NOT NULL
+        )
+        if needs_recreate:
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS risks_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    project_id INTEGER,
+                    pipeline_project_id INTEGER,
+                    title TEXT NOT NULL,
+                    category TEXT DEFAULT 'Other',
+                    probability TEXT DEFAULT 'Medium',
+                    impact TEXT DEFAULT 'Medium',
+                    owner TEXT,
+                    mitigation TEXT,
+                    status TEXT DEFAULT 'Open',
+                    due_date DATE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            if risk_cols and 'project_id' in risk_cols:
+                # Preserve existing rows
+                common = [c for c in ['id','project_id','pipeline_project_id','title','category',
+                                      'probability','impact','owner','mitigation','status',
+                                      'due_date','created_at','updated_at'] if c in risk_cols]
+                cols_sql = ', '.join(common)
+                cursor.execute(f'INSERT INTO risks_new ({cols_sql}) SELECT {cols_sql} FROM risks')
+            cursor.execute('DROP TABLE IF EXISTS risks')
+            cursor.execute('ALTER TABLE risks_new RENAME TO risks')
+        else:
+            # Add pipeline_project_id if missing (upgrade from older install)
+            try:
+                cursor.execute('ALTER TABLE risks ADD COLUMN pipeline_project_id INTEGER')
+            except Exception:
+                pass
         conn.commit()
 
         conn.close()
