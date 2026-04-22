@@ -4543,16 +4543,20 @@
             setTimeout(() => t.classList.remove('show'), 2200);
         }
 
+        let _pipelineRiskCounts = {};
+
         async function loadPrioritySection() {
             const section = document.getElementById('priorityListSection');
             if (!section) return;
             try {
-                const [pRes, aRes] = await Promise.all([
+                const [pRes, aRes, rcRes] = await Promise.all([
                     fetchFresh('/api/priority-projects'),
-                    fetchFresh('/api/archived-projects')
+                    fetchFresh('/api/archived-projects'),
+                    fetchFresh('/api/risks/counts/pipeline').catch(() => ({ json: async () => ({}) }))
                 ]);
                 const projects = await pRes.json();
                 const archived = await aRes.json();
+                _pipelineRiskCounts = await rcRes.json().catch(() => ({}));
                 if (projects.error) throw new Error(projects.error);
                 renderPrioritySection(projects, Array.isArray(archived) ? archived : []);
             } catch (err) {
@@ -4581,6 +4585,17 @@
                 ? `<span class="priority-link-area"> <a class="priority-link-btn" href="/project/${encodeURIComponent(p.dashboard_name)}" title="Open Gantt (right-click for options)" oncontextmenu="showGanttCtxMenu(event,${p.id},'${escapeJs(p.dashboard_name)}')">↗ Gantt</a> ${ganttMenu}</span>`
                 : `<span class="priority-link-area"> ${ganttMenu}</span>`;
             const bc = priorityBadgeClass(p.process_type);
+            // Risk badge: linked Gantt → Gantt risks; unlinked → pipeline risks
+            const rc = p.dashboard_name
+                ? (_projectRiskCountsByName && _projectRiskCountsByName[p.dashboard_name]) || {}
+                : (_pipelineRiskCounts && _pipelineRiskCounts[p.id]) || {};
+            const openCount  = rc.open || 0;
+            const riskClass  = rc.high > 0 ? 'high' : rc.medium > 0 ? 'medium' : openCount > 0 ? 'low' : 'none';
+            const riskIcon   = rc.high > 0 ? '🔴' : rc.medium > 0 ? '🟡' : openCount > 0 ? '🟢' : '✅';
+            const riskLabel  = openCount > 0 ? `${openCount}` : '0';
+            const riskOnClick = p.dashboard_name
+                ? `openRiskPanel('${escapeJs(p.dashboard_name)}', null)`
+                : `openPipelineRiskPanel(${p.id}, '${escapeJs(p.name || '')}')`;
             return `<tr data-id="${p.id}">
                 <td class="priority-col-priority" contenteditable="true" data-field="priority" data-original="${p.priority}">${p.priority}</td>
                 <td class="priority-col-name"><span class="priority-editable-name" contenteditable="true" data-field="name" data-original="${escapeHtml(p.name || '')}">${escapeHtml(p.name || '')}</span>${linkArea}</td>
@@ -4591,6 +4606,7 @@
                 <td>${_sel(['','Growth','Maintain','Discontinue'], p.objective||'', 'objective', 'priority-select')}</td>
                 <td>${_sel(['','Industrial','Suppression','All'], p.segment||'', 'segment', 'priority-select')}</td>
                 <td class="priority-actions">
+                    <button class="risk-badge ${riskClass}" onclick="${riskOnClick}" title="View risks" style="font-size:0.75em;padding:2px 8px;">${riskIcon} ${riskLabel} Risk${riskLabel!=='1'?'s':''}</button>
                     <button class="priority-action-btn priority-btn-complete" onclick="completePriorityProject(${p.id})" title="Mark Complete">✓</button>
                     <button class="priority-action-btn priority-btn-delete" onclick="deletePriorityProject(${p.id})" title="Delete">🗑</button>
                 </td>
@@ -5174,17 +5190,35 @@
 </div>
 
 <script>
-(function() {
-    let _riskProjectName = null;
+let _projectRiskCountsByName = {};
 
-    window.openRiskPanel = async function(projectName, projectId) {
-        _riskProjectName = projectName;
-        document.getElementById('riskPanelProjectName').textContent = projectName;
-        const panel = document.getElementById('riskPanel');
+(function() {
+    let _riskMode = 'gantt';       // 'gantt' | 'pipeline'
+    let _riskProjectName = null;
+    let _riskPipelineId  = null;
+
+    function _openPanel(title) {
+        document.getElementById('riskPanelProjectName').textContent = title;
         document.getElementById('riskPanelOverlay').style.display = 'block';
+        const panel = document.getElementById('riskPanel');
         panel.style.display = 'flex';
         panel.style.flexDirection = 'column';
         cancelRiskForm();
+    }
+
+    window.openRiskPanel = async function(projectName) {
+        _riskMode = 'gantt';
+        _riskProjectName = projectName;
+        _riskPipelineId  = null;
+        _openPanel(projectName);
+        await refreshRiskTable();
+    };
+
+    window.openPipelineRiskPanel = async function(pipelineId, projectName) {
+        _riskMode = 'pipeline';
+        _riskPipelineId  = pipelineId;
+        _riskProjectName = null;
+        _openPanel(projectName);
         await refreshRiskTable();
     };
 
@@ -5192,7 +5226,9 @@
         document.getElementById('riskPanelOverlay').style.display = 'none';
         document.getElementById('riskPanel').style.display = 'none';
         _riskProjectName = null;
-        loadProjects(); // refresh badges
+        _riskPipelineId  = null;
+        loadProjects();
+        if (typeof loadPrioritySection === 'function') loadPrioritySection();
     };
 
     window.openRiskForm = function(risk) {
@@ -5228,7 +5264,10 @@
             due_date:    document.getElementById('riskDueDate').value || null,
             mitigation:  document.getElementById('riskMitigation').value.trim(),
         };
-        const url = id ? `/api/risk/${id}` : `/api/project/${encodeURIComponent(_riskProjectName)}/risks`;
+        const postUrl = _riskMode === 'pipeline'
+            ? `/api/pipeline-project/${_riskPipelineId}/risks`
+            : `/api/project/${encodeURIComponent(_riskProjectName)}/risks`;
+        const url = id ? `/api/risk/${id}` : postUrl;
         const method = id ? 'PUT' : 'POST';
         const resp = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
         if (!resp.ok) { alert('Save failed'); return; }
@@ -5243,7 +5282,10 @@
     };
 
     async function refreshRiskTable() {
-        const risks = await fetch(`/api/project/${encodeURIComponent(_riskProjectName)}/risks`).then(r => r.json());
+        const fetchUrl = _riskMode === 'pipeline'
+            ? `/api/pipeline-project/${_riskPipelineId}/risks`
+            : `/api/project/${encodeURIComponent(_riskProjectName)}/risks`;
+        const risks = await fetch(fetchUrl).then(r => r.json());
         const container = document.getElementById('riskTableContainer');
         if (!risks.length) {
             container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px 0;font-size:0.92em;">No risks recorded yet. Click "+ Add Risk" to start.</div>';

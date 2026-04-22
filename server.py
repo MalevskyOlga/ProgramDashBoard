@@ -1237,6 +1237,35 @@ def api_risk_counts():
     return jsonify(counts)
 
 
+@app.route('/api/risks/counts/pipeline', methods=['GET'])
+def api_risk_counts_pipeline():
+    counts = db_manager.get_risk_counts_pipeline()
+    return jsonify(counts)
+
+
+@app.route('/api/pipeline-project/<int:pipeline_project_id>/risks', methods=['GET'])
+def api_get_pipeline_risks(pipeline_project_id):
+    risks = db_manager.get_pipeline_risks(pipeline_project_id)
+    return jsonify(risks)
+
+
+@app.route('/api/pipeline-project/<int:pipeline_project_id>/risks', methods=['POST'])
+def api_create_pipeline_risk(pipeline_project_id):
+    data = request.get_json(silent=True) or {}
+    risk_id = db_manager.create_pipeline_risk(
+        pipeline_project_id,
+        title=data.get('title', '').strip(),
+        category=data.get('category', 'Other'),
+        probability=data.get('probability', 'Medium'),
+        impact=data.get('impact', 'Medium'),
+        owner=data.get('owner', '').strip(),
+        mitigation=data.get('mitigation', '').strip(),
+        status=data.get('status', 'Open'),
+        due_date=data.get('due_date') or None,
+    )
+    return jsonify({'id': risk_id}), 201
+
+
 if __name__ == '__main__':
     print("=" * 80)
     print("Dashboard Generator Web Server")

@@ -204,7 +204,8 @@ class DatabaseManager:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS risks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER NOT NULL,
+                project_id INTEGER,
+                pipeline_project_id INTEGER,
                 title TEXT NOT NULL,
                 category TEXT DEFAULT 'Other',
                 probability TEXT DEFAULT 'Medium',
@@ -214,10 +215,14 @@ class DatabaseManager:
                 status TEXT DEFAULT 'Open',
                 due_date DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        # Migration: add pipeline_project_id to existing risks table
+        try:
+            cursor.execute('ALTER TABLE risks ADD COLUMN pipeline_project_id INTEGER')
+        except Exception:
+            pass
         conn.commit()
 
         conn.close()
@@ -1453,21 +1458,69 @@ class DatabaseManager:
         conn.close()
         return success
 
+    def get_pipeline_risks(self, pipeline_project_id):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT * FROM risks WHERE pipeline_project_id = ?
+            ORDER BY created_at DESC
+        ''', (pipeline_project_id,))
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    def create_pipeline_risk(self, pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        now = datetime.now().isoformat()
+        cursor.execute('''
+            INSERT INTO risks (pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date, now, now))
+        risk_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return risk_id
+
     def get_risk_counts_all_projects(self):
-        """Returns {project_id: {open: N, high: N, medium: N}} for badge display."""
+        """Returns {project_id: {...}} for Gantt projects and badge display."""
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('''
             SELECT r.project_id, r.status, r.probability, r.impact
             FROM risks r
             JOIN projects p ON p.id = r.project_id
-            WHERE p.is_deleted = 0
+            WHERE p.is_deleted = 0 AND r.project_id IS NOT NULL
         ''')
         rows = cursor.fetchall()
         conn.close()
         counts = {}
         for row in rows:
             pid = row['project_id']
+            if pid not in counts:
+                counts[pid] = {'open': 0, 'high': 0, 'medium': 0, 'total': 0}
+            counts[pid]['total'] += 1
+            if row['status'] == 'Open':
+                counts[pid]['open'] += 1
+                if row['probability'] == 'High' or row['impact'] == 'High':
+                    counts[pid]['high'] += 1
+                elif row['probability'] == 'Medium' or row['impact'] == 'Medium':
+                    counts[pid]['medium'] += 1
+        return counts
+
+    def get_risk_counts_pipeline(self):
+        """Returns {pipeline_project_id: {...}} for F&G pipeline badge display."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT pipeline_project_id, status, probability, impact
+            FROM risks WHERE pipeline_project_id IS NOT NULL
+        ''')
+        rows = cursor.fetchall()
+        conn.close()
+        counts = {}
+        for row in rows:
+            pid = row['pipeline_project_id']
             if pid not in counts:
                 counts[pid] = {'open': 0, 'high': 0, 'medium': 0, 'total': 0}
             counts[pid]['total'] += 1
