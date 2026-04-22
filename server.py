@@ -1177,6 +1177,66 @@ def api_delete_project(project_name):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ── Risk Management Routes ───────────────────────────────────────────────────
+
+@app.route('/api/project/<project_name>/risks', methods=['GET'])
+def api_get_risks(project_name):
+    risks = db_manager.get_risks(project_name)
+    return jsonify(risks)
+
+
+@app.route('/api/project/<project_name>/risks', methods=['POST'])
+def api_create_risk(project_name):
+    data = request.get_json(silent=True) or {}
+    risk_id = db_manager.create_risk(
+        project_name,
+        title=data.get('title', '').strip(),
+        category=data.get('category', 'Other'),
+        probability=data.get('probability', 'Medium'),
+        impact=data.get('impact', 'Medium'),
+        owner=data.get('owner', '').strip(),
+        mitigation=data.get('mitigation', '').strip(),
+        status=data.get('status', 'Open'),
+        due_date=data.get('due_date') or None,
+    )
+    if risk_id is None:
+        return jsonify({'error': 'Project not found'}), 404
+    return jsonify({'id': risk_id}), 201
+
+
+@app.route('/api/risk/<int:risk_id>', methods=['PUT'])
+def api_update_risk(risk_id):
+    data = request.get_json(silent=True) or {}
+    success = db_manager.update_risk(
+        risk_id,
+        title=data.get('title', '').strip(),
+        category=data.get('category', 'Other'),
+        probability=data.get('probability', 'Medium'),
+        impact=data.get('impact', 'Medium'),
+        owner=data.get('owner', '').strip(),
+        mitigation=data.get('mitigation', '').strip(),
+        status=data.get('status', 'Open'),
+        due_date=data.get('due_date') or None,
+    )
+    if not success:
+        return jsonify({'error': 'Risk not found'}), 404
+    return jsonify({'success': True})
+
+
+@app.route('/api/risk/<int:risk_id>', methods=['DELETE'])
+def api_delete_risk(risk_id):
+    success = db_manager.delete_risk(risk_id)
+    if not success:
+        return jsonify({'error': 'Risk not found'}), 404
+    return jsonify({'success': True})
+
+
+@app.route('/api/risks/counts', methods=['GET'])
+def api_risk_counts():
+    counts = db_manager.get_risk_counts_all_projects()
+    return jsonify(counts)
+
+
 if __name__ == '__main__':
     print("=" * 80)
     print("Dashboard Generator Web Server")
