@@ -380,6 +380,82 @@ def api_export_schematic_to_ppt(project_name):
     return jsonify({'error': 'Failed to export schematic to PowerPoint'}), 500
 
 
+@app.route('/api/project/<project_name>/export-gantt-ppt', methods=['POST'])
+def api_export_gantt_ppt(project_name):
+    """Export all tasks as a Gantt-style PowerPoint slide, save locally and open."""
+    from gantt_ppt_exporter import GanttPptExporter
+
+    project = db_manager.get_project_by_name(project_name)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    tasks = db_manager.get_tasks_by_project(project_name)
+    data = request.get_json(silent=True) or {}
+    save_path = data.get('save_path') or None
+
+    # If the browser sent critical-path IDs (critical path mode was active), mark them red
+    critical_ids = set(data.get('critical_ids') or [])
+    if critical_ids:
+        tasks = [dict(t, critical=(1 if t['id'] in critical_ids else t.get('critical', 0)))
+                 for t in tasks]
+
+    exporter = GanttPptExporter()
+    ppt_path = exporter.export_gantt(project, tasks, config.EXCEL_OUTPUT_FOLDER, save_path)
+
+    if not ppt_path or not os.path.exists(ppt_path):
+        return jsonify({'error': 'Export failed'}), 500
+
+    # Auto-open in PowerPoint
+    try:
+        os.startfile(ppt_path)
+    except Exception:
+        pass
+
+    return jsonify({'success': True, 'path': ppt_path})
+
+
+@app.route('/api/project/<project_name>/export-critical-path-ppt', methods=['POST'])
+def api_export_critical_path_ppt(project_name):
+    """Compute CPM and export critical-path tasks as a Gantt PPT."""
+    from gantt_ppt_exporter import GanttPptExporter
+
+    project = db_manager.get_project_by_name(project_name)
+    if not project:
+        return jsonify({'error': 'Project not found'}), 404
+
+    tasks = db_manager.get_tasks_by_project(project_name)
+    deps  = db_manager.get_dependencies_by_project(project_name)
+    data  = request.get_json(silent=True) or {}
+    save_path = data.get('save_path') or None
+
+    exporter = GanttPptExporter()
+    ppt_path = exporter.export_critical_path(project, tasks, deps, config.EXCEL_OUTPUT_FOLDER, save_path)
+
+    if not ppt_path or not os.path.exists(ppt_path):
+        return jsonify({'error': 'Export failed — no critical path tasks found or generation error'}), 500
+
+    try:
+        os.startfile(ppt_path)
+    except Exception:
+        pass
+
+    return jsonify({'success': True, 'path': ppt_path})
+
+
+@app.route('/api/open-file', methods=['POST'])
+def api_open_file():
+    """Open a local file with its default application."""
+    data = request.get_json(silent=True) or {}
+    path = data.get('path', '').strip()
+    if not path or not os.path.exists(path):
+        return jsonify({'error': 'File not found'}), 404
+    try:
+        os.startfile(path)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/stats')
 def api_get_stats():
     """API endpoint to get server statistics"""
@@ -783,8 +859,11 @@ def api_create_dependency(project_name):
         successor_id = data.get('successor_id')
         if not predecessor_id or not successor_id:
             return jsonify({'error': 'predecessor_id and successor_id required'}), 400
-        dep_id = db_manager.create_dependency(project_name, predecessor_id, successor_id)
-        return jsonify({'success': True, 'id': dep_id})
+        try:
+            dep_id = db_manager.create_dependency(project_name, predecessor_id, successor_id)
+            return jsonify({'success': True, 'id': dep_id})
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 409
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1063,21 +1142,24 @@ def api_rename_project(project_name):
         if new_name == project_name:
             return jsonify({'success': True})
         conn = db_manager.get_connection()
-        if not conn.execute('SELECT id FROM projects WHERE name = ?', (project_name,)).fetchone():
+        try:
+            if not conn.execute('SELECT id FROM projects WHERE name = ?', (project_name,)).fetchone():
+                return jsonify({'error': 'Project not found'}), 404
+            if conn.execute('SELECT id FROM projects WHERE name = ?', (new_name,)).fetchone():
+                return jsonify({'error': f'A project named "{new_name}" already exists'}), 409
+            conn.execute('UPDATE projects            SET name         = ? WHERE name         = ?', (new_name, project_name))
+            conn.execute('UPDATE gate_sign_offs      SET project_name = ? WHERE project_name = ?', (new_name, project_name))
+            conn.execute('UPDATE gate_baselines      SET project_name = ? WHERE project_name = ?', (new_name, project_name))
+            conn.execute('UPDATE gate_change_log     SET project_name = ? WHERE project_name = ?', (new_name, project_name))
+            conn.execute('UPDATE task_dependencies   SET project_name = ? WHERE project_name = ?', (new_name, project_name))
+            conn.execute('UPDATE priority_projects   SET linked_dashboard = ? WHERE linked_dashboard = ?', (new_name, project_name))
+            conn.commit()
+            return jsonify({'success': True, 'new_name': new_name})
+        except Exception as e:
+            conn.rollback()
+            raise
+        finally:
             conn.close()
-            return jsonify({'error': 'Project not found'}), 404
-        if conn.execute('SELECT id FROM projects WHERE name = ?', (new_name,)).fetchone():
-            conn.close()
-            return jsonify({'error': f'A project named "{new_name}" already exists'}), 409
-        conn.execute('UPDATE projects            SET name         = ? WHERE name         = ?', (new_name, project_name))
-        conn.execute('UPDATE gate_sign_offs      SET project_name = ? WHERE project_name = ?', (new_name, project_name))
-        conn.execute('UPDATE gate_baselines      SET project_name = ? WHERE project_name = ?', (new_name, project_name))
-        conn.execute('UPDATE gate_change_log     SET project_name = ? WHERE project_name = ?', (new_name, project_name))
-        conn.execute('UPDATE task_dependencies   SET project_name = ? WHERE project_name = ?', (new_name, project_name))
-        conn.execute('UPDATE priority_projects   SET linked_dashboard = ? WHERE linked_dashboard = ?', (new_name, project_name))
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True, 'new_name': new_name})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

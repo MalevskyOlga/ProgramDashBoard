@@ -1297,11 +1297,37 @@ class DatabaseManager:
         conn.close()
         return deps
 
+    def _would_create_cycle(self, cursor, project_name, predecessor_id, successor_id):
+        """Return True if adding predecessor_id→successor_id would create a cycle."""
+        if predecessor_id == successor_id:
+            return True
+        # BFS: can we reach predecessor_id starting from successor_id via existing edges?
+        cursor.execute(
+            'SELECT predecessor_id, successor_id FROM task_dependencies WHERE project_name = ?',
+            (project_name,)
+        )
+        succ_map = {}
+        for row in cursor.fetchall():
+            succ_map.setdefault(row['predecessor_id'], []).append(row['successor_id'])
+        visited = set()
+        queue = [successor_id]
+        while queue:
+            node = queue.pop()
+            if node == predecessor_id:
+                return True
+            if node in visited:
+                continue
+            visited.add(node)
+            queue.extend(succ_map.get(node, []))
+        return False
+
     def create_dependency(self, project_name, predecessor_id, successor_id):
-        """Create a dependency between two tasks. Returns id or None if already exists."""
+        """Create a dependency between two tasks. Returns id, None if duplicate, or raises ValueError on cycle."""
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
+            if self._would_create_cycle(cursor, project_name, predecessor_id, successor_id):
+                raise ValueError(f'Adding this dependency would create a circular chain')
             cursor.execute(
                 'INSERT OR IGNORE INTO task_dependencies (project_name, predecessor_id, successor_id) VALUES (?, ?, ?)',
                 (project_name, predecessor_id, successor_id)
@@ -1310,6 +1336,9 @@ class DatabaseManager:
             conn.commit()
             conn.close()
             return dep_id
+        except ValueError:
+            conn.close()
+            raise
         except Exception as e:
             conn.close()
             return None

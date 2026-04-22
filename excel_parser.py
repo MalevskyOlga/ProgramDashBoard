@@ -66,9 +66,9 @@ class ExcelParser:
                 if not description:
                     continue
                 
-                # Check if this is a Gate milestone (e.g., "Gate 4", "Gate 5")
+                # Check if this is a Gate milestone (e.g., "Gate 4", "Gate 5 - Review", etc.)
                 description_str = str(description or '').strip()
-                is_gate_milestone = bool(re.match(r'^Gate\s*\d+\s*$', description_str, re.IGNORECASE))
+                is_gate_milestone = bool(re.search(r'\bGate\s*\d+', description_str, re.IGNORECASE))
                 
                 # Parse dates
                 start_date_str = self._parse_date(date_entered)

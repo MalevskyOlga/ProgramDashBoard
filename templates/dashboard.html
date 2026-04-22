@@ -244,8 +244,8 @@
         }
 
         .task-table {
-            min-width: 1020px;
-            max-width: 1020px;
+            min-width: 1080px;
+            max-width: 1080px;
             background: #f8f9fa;
             border-right: 2px solid #ddd;
             overflow-y: auto;
@@ -254,7 +254,7 @@
 
         .table-header {
             display: grid;
-            grid-template-columns: 40px 200px 120px 105px 65px 105px 85px 120px 115px;
+            grid-template-columns: 40px 200px 120px 105px 65px 105px 85px 120px 140px;
             gap: 8px;
             padding: 15px 12px;
             background: #2c5f2d;
@@ -305,7 +305,7 @@
 
         .task-row {
             display: grid;
-            grid-template-columns: 40px 200px 120px 105px 65px 105px 85px 120px 115px;
+            grid-template-columns: 40px 200px 120px 105px 65px 105px 85px 120px 140px;
             gap: 8px;
             padding: 10px 12px;
             border-bottom: 1px solid #e0e0e0;
@@ -329,7 +329,36 @@
             padding: 12px;
             min-height: 45px;
             height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
+        .gate-health-badge {
+            display: inline-flex; align-items: center; gap: 10px;
+            font-size: 0.78em; font-weight: 600; letter-spacing: 0.02em;
+        }
+        .gate-health-pill {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 2px 9px; border-radius: 12px; font-size: 0.95em;
+        }
+        .gate-health-pill.green  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .gate-health-pill.yellow { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
+        .gate-health-pill.red    { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .gate-health-stat { color: #555; font-weight: 400; }
+
+        /* What-If simulation mode */
+        .whatif-banner {
+            display: none; position: sticky; top: 0; z-index: 200;
+            background: #fff3cd; border-bottom: 2px solid #ffc107;
+            padding: 7px 18px; font-size: 0.9em; font-weight: 600;
+            color: #856404; align-items: center; gap: 14px;
+        }
+        .whatif-banner.active { display: flex; }
+        .whatif-banner button { font-size: 0.85em; padding: 3px 12px; border-radius: 6px; cursor: pointer; border: 1px solid; }
+        .whatif-commit { background: #198754; color: #fff; border-color: #198754 !important; }
+        .whatif-discard { background: #dc3545; color: #fff; border-color: #dc3545 !important; }
+        .btn-whatif { background: #fff3cd !important; color: #856404 !important; border: 1px solid #ffc107 !important; }
+        .btn-whatif.active { background: #ffc107 !important; color: #000 !important; }
 
         .task-row.critical {
             border-left: 4px solid #dc3545;
@@ -634,6 +663,20 @@
         .gantt-bar.planned {
             background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
         }
+
+        .float-bar {
+            position: absolute;
+            height: 6px;
+            top: 26px;
+            border-radius: 0 3px 3px 0;
+            opacity: 0.35;
+            pointer-events: auto;
+            cursor: default;
+        }
+        .float-bar.float-green  { background: #4caf50; }
+        .float-bar.float-yellow { background: #ff9800; }
+        .float-bar.float-red    { background: #f44336; }
+        .float-bar:hover { opacity: 0.7; }
 
         .gantt-bar.critical {
             background: linear-gradient(135deg, #ff1744 0%, #d50000 100%);
@@ -1298,7 +1341,10 @@
         <button class="btn btn-info" onclick="openDepMap()" title="View full dependency network and find orphan tasks">🗺 Dependency Map</button>
         <button class="btn btn-primary" onclick="exportToExcel()">📊 Export to Excel</button>
         <button class="btn btn-primary" onclick="exportUpdatedHTML()">📤 Export Updated HTML (Share This!)</button>
+        <button class="btn btn-primary" id="exportPptBtn" onclick="openGanttPptModal()" title="Preview and export all tasks as a Gantt PowerPoint slide" style="background:#7B4FDB;border-color:#7B4FDB;">📑 Export PPT</button>
+        <button class="btn btn-primary" id="exportCriticalPptBtn" onclick="exportCriticalPathPpt()" title="Export critical-path tasks as a Gantt PowerPoint slide" style="background:#C0392B;border-color:#C0392B;">🔴 Critical Path PPT</button>
         <button class="btn btn-warning" onclick="refreshDashboard()" title="Clear cache and reload">🔄 Force Refresh</button>
+        <button class="btn btn-whatif" id="whatIfBtn" onclick="toggleWhatIf()" title="Try date changes without saving — discard or commit when done">🧪 What-If</button>
         
         <div class="gantt-view-toggle">
             <button class="gantt-view-btn active" data-view="detailed">📊 Detailed Gantt</button>
@@ -1377,6 +1423,12 @@
         <span class="pred-link pred-link-blocking" style="pointer-events:none;">3</span><span>Overdue — blocking</span>
         <span class="pred-link succ-link" style="pointer-events:none;">4</span><span>Successor</span>
         <span class="pred-link succ-link succ-link-done" style="pointer-events:none;">5</span><span>Successor (done)</span>
+    </div>
+
+    <div class="whatif-banner" id="whatIfBanner">
+        🧪 <strong>What-If Mode</strong> — date changes are simulated only, nothing is saved.
+        <button class="whatif-commit" onclick="commitWhatIf()">✅ Commit changes</button>
+        <button class="whatif-discard" onclick="discardWhatIf()">✗ Discard</button>
     </div>
 
     <div class="gantt-container">
@@ -2346,6 +2398,8 @@
         let editingCell = null;
         let currentZoom = 'month';
         let currentGanttView = 'detailed'; // 'detailed' or 'highlevel'
+        let _whatIfMode = false;          // When true, date changes are in-memory only
+        let _whatIfSnapshot = null;       // Deep copy of tasks before what-if edits
         let dependencies = []; // Task dependency pairs {id, predecessor_id, successor_id}
         let gateSignOffs = {}; // { gate_name: signOff } — loaded from API
         let currentGateSignOffTaskId = null;
@@ -3818,6 +3872,62 @@
             applyFilters();
         }
 
+        // Compute schedule health for a gate phase.
+        // Returns { pct, overdue, exceedsGate, total, daysToGate, color, label }
+        function computeGateHealth(phaseName, phaseTasks) {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const nonMilestone = phaseTasks.filter(t => !t.milestone && !t.tailed_out);
+            const total = nonMilestone.length;
+            if (total === 0) return null;
+
+            const completed  = nonMilestone.filter(t => t.status === 'Completed').length;
+            const overdue    = nonMilestone.filter(t => t.status !== 'Completed' && t.due && new Date(t.due) < today).length;
+            const exceeds    = nonMilestone.filter(t => t.exceedsGateDeadline).length;
+            const pct        = Math.round(completed / total * 100);
+
+            // Find the gate milestone for this phase
+            const gate = phaseTasks.find(t => t.milestone && t.name && t.name.toLowerCase().includes('gate'));
+            const daysToGate = gate && gate.due
+                ? Math.ceil((new Date(gate.due) - today) / 86400000)
+                : null;
+
+            // Health colour rules
+            let color, label;
+            if (overdue === 0 && exceeds === 0) {
+                color = 'green'; label = 'On Track';
+            } else if (overdue >= 3 || exceeds > total * 0.3 || (daysToGate !== null && daysToGate < 30 && pct < 70)) {
+                color = 'red';   label = 'At Risk';
+            } else {
+                color = 'yellow'; label = 'Watch';
+            }
+
+            return { pct, overdue, exceeds, total, daysToGate, color, label };
+        }
+
+        // Calendar-aware pixel offset: computes how many pixels from the gantt origin
+        // a given date falls, matching how columns are generated (setMonth/setFullYear steps).
+        // This avoids drift from fixed 30/90/365 day approximations.
+        function ganttPixelOffset(date, projectStart, columnWidth) {
+            const dateMs = date.getTime();
+            let col = new Date(projectStart);
+            let offset = 0;
+            const advance = () => {
+                const next = new Date(col);
+                if (currentZoom === 'month')   next.setMonth(next.getMonth() + 1);
+                else if (currentZoom === 'quarter') next.setMonth(next.getMonth() + 3);
+                else                           next.setFullYear(next.getFullYear() + 1);
+                return next;
+            };
+            let next = advance();
+            while (next.getTime() <= dateMs) {
+                offset += columnWidth;
+                col = next;
+                next = advance();
+            }
+            const colSpanMs = next.getTime() - col.getTime();
+            return offset + ((dateMs - col.getTime()) / colSpanMs) * columnWidth;
+        }
+
         function renderTodayLine(projectStart, columnWidth) {
             const existing = document.getElementById('gantt-today-line');
             if (existing) existing.remove();
@@ -3876,12 +3986,6 @@
                 projectStart = new Date(Math.min(...allDates));
                 projectEnd = new Date(Math.max(...allDates));
                 
-                // Ensure timeline never starts before 2026
-                const minimumYear = new Date(2026, 0, 1);
-                if (projectStart < minimumYear) {
-                    projectStart = minimumYear;
-                }
-                
                 // For year/fit view: round to start of earliest year and end of latest year
                 if (currentZoom === 'year' || currentZoom === 'fit') {
                     projectStart = new Date(projectStart.getFullYear(), 0, 1);
@@ -3912,7 +4016,7 @@
                 const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
                 const quarterMonths = [0, 3, 6, 9];
 
-                for (let year = 2025; year <= 2028; year++) {
+                for (let year = projectStart.getFullYear(); year <= projectEnd.getFullYear(); year++) {
                     for (let q = 0; q < 4; q++) {
                         const qDate = new Date(year, quarterMonths[q], 1);
                         if (qDate >= projectStart && qDate <= projectEnd) {
@@ -4043,20 +4147,11 @@
                 }
                 
                 let startOffset, duration;
-                
-                if (currentZoom === 'month') {
-                    startOffset = ((startDate - projectStart) / (1000 * 60 * 60 * 24 * 30)) * columnWidth;
-                    duration = ((endDate - startDate) / (1000 * 60 * 60 * 24 * 30)) * columnWidth;
-                } else if (currentZoom === 'quarter') {
-                    startOffset = ((startDate - projectStart) / (1000 * 60 * 60 * 24 * 90)) * columnWidth;
-                    duration = ((endDate - startDate) / (1000 * 60 * 60 * 24 * 90)) * columnWidth;
-                } else {
-                    startOffset = ((startDate - projectStart) / (1000 * 60 * 60 * 24 * 365)) * columnWidth;
-                    duration = ((endDate - startDate) / (1000 * 60 * 60 * 24 * 365)) * columnWidth;
-                }
+                startOffset = ganttPixelOffset(startDate, projectStart, columnWidth);
+                duration = ganttPixelOffset(endDate, projectStart, columnWidth) - startOffset;
 
                 let barClass = 'gantt-bar';
-                
+
                 if (task.tailed_out) {
                     barClass += ' tailed-out';
                 } else if (task.milestone) {
@@ -4077,6 +4172,7 @@
 
                 let barWidth;
                 if (duration < 5) {
+                    barWidth = '40px';
                 } else {
                     barWidth = `${Math.max(duration, 40)}px`;
                 }
@@ -4091,9 +4187,27 @@
                     barLabel = task.name.substring(0, 6);
                 }
 
+                // Float bar: buffer from task end to gate deadline
+                let floatBarHTML = '';
+                if (!task.milestone && !task.tailed_out && task.status !== 'Completed' && task.due) {
+                    const gate = tasks.find(t => t.milestone && t.phase === task.phase && t.name && t.name.toLowerCase().includes('gate') && t.due);
+                    if (gate) {
+                        const floatDays = Math.round((new Date(gate.due) - new Date(task.due)) / 86400000);
+                        if (floatDays > 0) {
+                            const barEnd = startOffset + parseFloat(barWidth);
+                            const gateOffset = ganttPixelOffset(new Date(gate.due), projectStart, columnWidth);
+                            const floatWidth = gateOffset - barEnd;
+                            if (floatWidth > 4) {
+                                const fc = floatDays > 60 ? 'float-green' : floatDays > 30 ? 'float-yellow' : 'float-red';
+                                floatBarHTML = `<div class="float-bar ${fc}" style="left:${barEnd}px;width:${floatWidth}px;" title="Buffer: ${floatDays}d until ${gate.name} (${formatDateDisplay(gate.due)})"></div>`;
+                            }
+                        }
+                    }
+                }
+
                 timelineHTML += `
                     <div class="timeline-task-row ${task.critical ? 'critical' : ''}">
-                        <div class="${barClass}" 
+                        <div class="${barClass}"
                              style="left: ${startOffset}px; width: ${barWidth};"
                              data-task-id="${task.id}"
                              title="${task.name}\n${task.owner}\n${formatDateDisplay(task.entered)} → ${formatDateDisplay(task.due)}"
@@ -4103,6 +4217,7 @@
                              onmouseleave="hideTooltip()">
                             ${barLabel}
                         </div>
+                        ${floatBarHTML}
                     </div>
                 `;
             });
@@ -4568,7 +4683,7 @@
                 const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
                 const quarterMonths = [0, 3, 6, 9];
 
-                for (let year = 2025; year <= 2028; year++) {
+                for (let year = projectStart.getFullYear(); year <= projectEnd.getFullYear(); year++) {
                     for (let q = 0; q < 4; q++) {
                         const qDate = new Date(year, quarterMonths[q], 1);
                         if (qDate >= projectStart && qDate <= projectEnd) {
@@ -4634,8 +4749,23 @@
             sortedPhases.forEach(([phaseName, phaseTasks]) => {
                 if (phaseTasks.length === 0) return;
 
-                // Phase header
-                taskHTML += `<div class="task-row phase-header">${phaseName}</div>`;
+                // Phase header with health badge — use full task list (not filtered) for accurate stats
+                const allPhaseTasks = tasks.filter(t => t.phase === phaseName);
+                const health = computeGateHealth(phaseName, allPhaseTasks);
+                let healthBadgeHTML = '';
+                if (health) {
+                    const gateLine = health.daysToGate !== null
+                        ? `<span class="gate-health-stat">${health.daysToGate > 0 ? health.daysToGate + 'd to gate' : health.daysToGate === 0 ? 'Gate today' : Math.abs(health.daysToGate) + 'd past gate'}</span>`
+                        : '';
+                    const overdueStr = health.overdue > 0 ? `<span class="gate-health-stat">${health.overdue} overdue</span>` : '';
+                    healthBadgeHTML = `
+                        <div class="gate-health-badge">
+                            ${overdueStr}
+                            ${gateLine}
+                            <span class="gate-health-pill ${health.color}">${health.color === 'green' ? '✓' : health.color === 'red' ? '!' : '~'} ${health.label} &nbsp;·&nbsp; ${health.pct}% done</span>
+                        </div>`;
+                }
+                taskHTML += `<div class="task-row phase-header"><span>${phaseName}</span>${healthBadgeHTML}</div>`;
                 timelineHTML += `<div class="timeline-task-row phase-header"></div>`;
 
                 // Tasks
@@ -4715,17 +4845,8 @@
                     }
                     
                     let startOffset, duration;
-                    
-                    if (currentZoom === 'month') {
-                        startOffset = ((startDate - projectStart) / (1000 * 60 * 60 * 24 * 30)) * columnWidth;
-                        duration = ((endDate - startDate) / (1000 * 60 * 60 * 24 * 30)) * columnWidth;
-                    } else if (currentZoom === 'quarter') {
-                        startOffset = ((startDate - projectStart) / (1000 * 60 * 60 * 24 * 90)) * columnWidth;
-                        duration = ((endDate - startDate) / (1000 * 60 * 60 * 24 * 90)) * columnWidth;
-                    } else { // year
-                        startOffset = ((startDate - projectStart) / (1000 * 60 * 60 * 24 * 365)) * columnWidth;
-                        duration = ((endDate - startDate) / (1000 * 60 * 60 * 24 * 365)) * columnWidth;
-                    }
+                    startOffset = ganttPixelOffset(startDate, projectStart, columnWidth);
+                    duration = ganttPixelOffset(endDate, projectStart, columnWidth) - startOffset;
                     
                     // Debug bar positioning for 2027+ tasks
                     if (taskYear >= 2027) {
@@ -4779,9 +4900,27 @@
                         barLabel = task.name.substring(0, 6);
                     }
 
+                    // Float bar: semi-transparent buffer from task end → gate deadline
+                    let floatBarHTML = '';
+                    if (!task.milestone && !task.tailed_out && task.status !== 'Completed' && task.due) {
+                        const gate = tasks.find(t => t.milestone && t.phase === task.phase && t.name && t.name.toLowerCase().includes('gate') && t.due);
+                        if (gate) {
+                            const floatDays = Math.round((new Date(gate.due) - new Date(task.due)) / 86400000);
+                            if (floatDays > 0) {
+                                const barEnd = startOffset + parseFloat(barWidth);
+                                const gateOffset = ganttPixelOffset(new Date(gate.due), projectStart, columnWidth);
+                                const floatWidth = gateOffset - barEnd;
+                                if (floatWidth > 4) {
+                                    const fc = floatDays > 60 ? 'float-green' : floatDays > 30 ? 'float-yellow' : 'float-red';
+                                    floatBarHTML = `<div class="float-bar ${fc}" style="left:${barEnd}px;width:${floatWidth}px;" title="Buffer: ${floatDays}d until ${gate.name} (${formatDateDisplay(gate.due)})"></div>`;
+                                }
+                            }
+                        }
+                    }
+
                     timelineHTML += `
                         <div class="timeline-task-row ${task.critical ? 'critical' : ''}">
-                            <div class="${barClass}" 
+                            <div class="${barClass}"
                                  style="left: ${startOffset}px; width: ${barWidth};"
                                  data-task-id="${task.id}"
                                  title="${task.name}\n${task.owner}\n${formatDateDisplay(task.entered)} → ${formatDateDisplay(task.due)}"
@@ -4791,6 +4930,7 @@
                                  onmouseleave="hideTooltip()">
                                 ${barLabel}
                             </div>
+                            ${floatBarHTML}
                         </div>
                     `;
                 });
@@ -4980,13 +5120,22 @@
                 task.due = newDate;
             }
 
+            if (_whatIfMode) {
+                // In simulation mode: update in-memory only, no API call
+                editingCell = null;
+                autoMarkCriticalByGateDeadline(true);
+                applyFilters();
+                showNotification('🧪 Simulated — not saved', 'info');
+                return;
+            }
+
             try {
                 await saveToAPI(task, false);
                 showNotification('✓ Date updated successfully', 'success');
             } catch (error) {
                 showNotification('⚠️ Failed to update date', 'error');
             }
-            
+
             editingCell = null;
             applyFilters();
         }
@@ -5118,6 +5267,61 @@
                 applyFilters(); // Re-render everything
                 showNotification('✓ Dashboard refreshed!', 'success');
             }
+        }
+
+        // ── What-If Simulation Mode ───────────────────────────────────────────
+        function toggleWhatIf() {
+            if (_whatIfMode) {
+                discardWhatIf();
+            } else {
+                _whatIfSnapshot = JSON.parse(JSON.stringify(tasks)); // deep copy
+                _whatIfMode = true;
+                document.getElementById('whatIfBanner').classList.add('active');
+                document.getElementById('whatIfBtn').classList.add('active');
+                document.getElementById('whatIfBtn').textContent = '🧪 What-If ON';
+                showNotification('🧪 What-If mode on — date changes are simulated only', 'info');
+                applyFilters();
+            }
+        }
+
+        async function commitWhatIf() {
+            if (!_whatIfMode || !_whatIfSnapshot) return;
+            const changed = tasks.filter(t => {
+                const orig = _whatIfSnapshot.find(o => o.id === t.id);
+                return orig && (orig.entered !== t.entered || orig.due !== t.due);
+            });
+            if (changed.length === 0) { discardWhatIf(); return; }
+            if (!confirm(`Commit ${changed.length} date change(s) to the database?`)) return;
+            for (const t of changed) {
+                await fetch(`/api/task/${t.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entered: t.entered, due: t.due })
+                });
+            }
+            _whatIfMode = false;
+            _whatIfSnapshot = null;
+            document.getElementById('whatIfBanner').classList.remove('active');
+            document.getElementById('whatIfBtn').classList.remove('active');
+            document.getElementById('whatIfBtn').textContent = '🧪 What-If';
+            showNotification(`✅ Committed ${changed.length} change(s)`, 'success');
+            applyFilters();
+        }
+
+        function discardWhatIf() {
+            if (!_whatIfMode || !_whatIfSnapshot) return;
+            // Restore original dates
+            _whatIfSnapshot.forEach(orig => {
+                const t = tasks.find(t => t.id === orig.id);
+                if (t) { t.entered = orig.entered; t.due = orig.due; }
+            });
+            _whatIfMode = false;
+            _whatIfSnapshot = null;
+            document.getElementById('whatIfBanner').classList.remove('active');
+            document.getElementById('whatIfBtn').classList.remove('active');
+            document.getElementById('whatIfBtn').textContent = '🧪 What-If';
+            showNotification('✗ What-If changes discarded', 'info');
+            applyFilters();
         }
 
         function onFilterCriticalChange(cb) {
@@ -5748,11 +5952,15 @@
                     const savedTaskId = savedTask.id;
                     if (savedTaskId) {
                         for (const predId of selectedPredIds) {
-                            await fetch(`${API_BASE}/dependencies`, {
+                            const r = await fetch(`${API_BASE}/dependencies`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ predecessor_id: predId, successor_id: savedTaskId })
                             });
+                            if (r.status === 409) {
+                                const err = await r.json();
+                                showNotification(`⚠️ Dependency skipped: ${err.error}`, 'warning');
+                            }
                         }
                         const depsResp = await fetch(`${API_BASE}/dependencies`);
                         if (depsResp.ok) dependencies = await depsResp.json();
@@ -5776,11 +5984,15 @@
                     const currentPredIds = currentPreds.map(d => d.predecessor_id);
                     for (const predId of selectedPredIds) {
                         if (!currentPredIds.includes(predId)) {
-                            await fetch(`${API_BASE}/dependencies`, {
+                            const r = await fetch(`${API_BASE}/dependencies`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ predecessor_id: predId, successor_id: savedTaskId })
                             });
+                            if (r.status === 409) {
+                                const err = await r.json();
+                                showNotification(`⚠️ Dependency skipped: ${err.error}`, 'warning');
+                            }
                         }
                     }
                     
@@ -6361,11 +6573,15 @@
             // Add new
             for (const predId of selectedIds) {
                 if (!currentPredIds.includes(predId)) {
-                    await fetch(`${API_BASE}/dependencies`, {
+                    const r = await fetch(`${API_BASE}/dependencies`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ predecessor_id: predId, successor_id: taskId })
                     });
+                    if (r.status === 409) {
+                        const err = await r.json();
+                        showNotification(`⚠️ Dependency skipped: ${err.error}`, 'warning');
+                    }
                 }
             }
 
@@ -7323,6 +7539,399 @@
                 });
             });
         });
+    </script>
+
+    <!-- Gantt PPT Export Modal -->
+    <div class="modal" id="ganttPptModal" style="display:none;">
+        <div class="modal-content" style="max-width:900px;width:95vw;">
+            <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>📑 Gantt PPT Preview — All Tasks</span>
+                <button onclick="closeGanttPptModal()" style="background:none;border:none;color:white;font-size:1.4em;cursor:pointer;line-height:1;">×</button>
+            </div>
+            <div style="padding:16px 20px 0;">
+                <!-- Canvas preview -->
+                <div style="border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f9f9f9;margin-bottom:14px;">
+                    <canvas id="ganttPptCanvas" style="display:block;width:100%;"></canvas>
+                </div>
+                <p style="font-size:0.82em;color:#666;margin-bottom:14px;">
+                    Preview shows <strong id="pptTaskCount">—</strong> active tasks (Planned + In Process) across all phases.
+                    The exported PPT is generated with crisp vector graphics.
+                </p>
+                <!-- Actions -->
+                <div style="background:#f0f9f0;border:1px solid #c3e6cb;border-radius:6px;padding:14px;margin-bottom:10px;">
+                    <div style="font-weight:600;margin-bottom:10px;font-size:0.95em;">Export options</div>
+                    <button onclick="downloadGanttPpt()" class="btn btn-primary" style="background:#1B4332;border-color:#1B4332;margin-bottom:10px;">
+                        📑 Export &amp; Open in PowerPoint
+                    </button>
+                    <div style="font-size:0.85em;color:#555;margin:8px 0 6px;">Or save to a specific folder:</div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input type="text" id="pptSavePath" placeholder="e.g.  C:\Users\omalevsky\Documents\Project Reports"
+                               style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:5px;font-size:0.88em;">
+                        <button onclick="saveGanttPptToPath()" class="btn btn-primary" style="white-space:nowrap;">
+                            📂 Save to Folder
+                        </button>
+                    </div>
+                    <div id="pptSaveStatus" style="margin-top:8px;font-size:0.85em;display:none;"></div>
+                </div>
+                <div style="text-align:right;padding-bottom:4px;">
+                    <button onclick="closeGanttPptModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Gantt PPT Export ─────────────────────────────────────────────────
+        function openGanttPptModal() {
+            document.getElementById('ganttPptModal').style.display = 'flex';
+            _drawGanttPptPreview();
+        }
+
+        function closeGanttPptModal() {
+            document.getElementById('ganttPptModal').style.display = 'none';
+        }
+
+        function _drawGanttPptPreview() {
+            const canvas = document.getElementById('ganttPptCanvas');
+            const CW = canvas.offsetWidth || 860;
+            const CH = Math.round(CW * 7.5 / 13.333);
+            canvas.width  = CW;
+            canvas.height = CH;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, CW, CH);
+
+            // Only Planned + In Process
+            const allTasks = tasks.filter(t => t.status === 'In Process' || t.status === 'Planned');
+            document.getElementById('pptTaskCount').textContent = allTasks.length;
+
+            // Date range across ALL tasks (so timeline spans full project)
+            let minD = null, maxD = null;
+            tasks.forEach(t => {
+                const s = t.entered ? new Date(t.entered) : null;
+                const e = t.due     ? new Date(t.due)     : null;
+                if (s && (!minD || s < minD)) minD = s;
+                if (e && (!maxD || e > maxD)) maxD = e;
+            });
+            if (!minD) { ctx.fillStyle = '#999'; ctx.fillText('No dated tasks', 40, 40); return; }
+
+            // Snap to month boundaries
+            const projStart = new Date(minD.getFullYear(), minD.getMonth(), 1);
+            let endY = maxD.getFullYear(), endM = maxD.getMonth() + 1;
+            if (endM > 11) { endM = 0; endY++; }
+            const projEnd = new Date(endY, endM, 1);
+            const spanMs  = Math.max(1, projEnd - projStart);
+
+            // Layout constants (pixels)
+            const ML     = Math.round(CW * 0.008);
+            const HDR_H  = Math.round(CH * 0.060);
+            const TL_H   = Math.round(CH * 0.042);
+            const FOOT_H = Math.round(CH * 0.032);
+            const PHASE_H = Math.round(CH * 0.032);
+            const NAME_W  = Math.round(CW * 0.200);
+            const OWN_W   = Math.round(CW * 0.072);
+            const TL_LEFT = ML + NAME_W + OWN_W + Math.round(CW * 0.004);
+            const TL_W    = CW - TL_LEFT - ML;
+            const TL_RIGHT = TL_LEFT + TL_W;
+
+            function toX(d) {
+                if (!d) return TL_LEFT;
+                const frac = Math.max(0, Math.min(1, (d - projStart) / spanMs));
+                return TL_LEFT + frac * TL_W;
+            }
+
+            // clip helper — always use beginPath before rect
+            function clipRect(x, y, w, h) {
+                ctx.beginPath();
+                ctx.rect(x, y, w, h);
+                ctx.clip();
+            }
+
+            // Group by phase, sort phases by gate number, tasks within phase by start date
+            const phaseOrder = [], phaseMap = {};
+            allTasks.forEach(t => {
+                const ph = (t.phase || 'Other').trim();
+                if (!phaseMap[ph]) { phaseOrder.push(ph); phaseMap[ph] = []; }
+                phaseMap[ph].push(t);
+            });
+            // Sort phases by gate number extracted from name, else alphabetically
+            phaseOrder.sort((a, b) => {
+                const na = (a.match(/\d+/) || [999])[0] | 0;
+                const nb = (b.match(/\d+/) || [999])[0] | 0;
+                return na - nb || a.localeCompare(b);
+            });
+            // Sort tasks within each phase by start date
+            phaseOrder.forEach(ph => {
+                phaseMap[ph].sort((a, b) => {
+                    const da = a.entered ? new Date(a.entered) : new Date(0);
+                    const db = b.entered ? new Date(b.entered) : new Date(0);
+                    return da - db;
+                });
+            });
+
+            const nRows  = allTasks.length + phaseOrder.length;
+            const availH = CH - HDR_H - TL_H - FOOT_H - 4;
+            const rowH   = Math.max(7, Math.min(24, availH / Math.max(1, nRows)));
+            const fs     = Math.max(5.5, Math.min(10, rowH * 0.60));
+
+            // ── Header ──────────────────────────────────────────────────────
+            ctx.fillStyle = '#1B4332';
+            ctx.fillRect(0, 0, CW, HDR_H);
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${Math.round(HDR_H * 0.46)}px Segoe UI,sans-serif`;
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = 'left';
+            ctx.fillText('{{ project_name }}', ML + 6, HDR_H * 0.5);
+            const today = new Date();
+            const todayStr = today.toLocaleDateString('en-US', {day:'2-digit', month:'short', year:'numeric'});
+            ctx.font = `${Math.round(HDR_H * 0.30)}px Segoe UI,sans-serif`;
+            ctx.fillStyle = '#A8D5B5';
+            ctx.textAlign = 'right';
+            ctx.fillText(`Planned + In Process  |  ${todayStr}`, CW - 8, HDR_H * 0.5);
+            ctx.textAlign = 'left';
+
+            // ── Timeline header ──────────────────────────────────────────────
+            const tlTop = HDR_H + 1;
+            ctx.fillStyle = '#F8FAFC';
+            ctx.fillRect(TL_LEFT, tlTop, TL_W, TL_H);
+
+            const spanMonths = (projEnd.getFullYear() - projStart.getFullYear()) * 12
+                             + projEnd.getMonth() - projStart.getMonth();
+            const step = spanMonths <= 30 ? 1 : 3;
+            let cur = new Date(projStart.getFullYear(), projStart.getMonth(), 1);
+            let alt = false;
+            while (cur < projEnd) {
+                const nx  = new Date(cur.getFullYear(), cur.getMonth() + step, 1);
+                const x1  = toX(cur);
+                const x2  = Math.min(TL_RIGHT, toX(nx));
+                const w   = x2 - x1;
+                if (alt && w > 0) {
+                    ctx.fillStyle = '#EEF2F7';
+                    ctx.fillRect(x1, tlTop, w, TL_H);
+                }
+                if (w > 18) {
+                    const lbl = step === 1
+                        ? cur.toLocaleDateString('en-US', {month:'short', year:'2-digit'})
+                        : `Q${Math.floor(cur.getMonth()/3)+1} ${cur.getFullYear()}`;
+                    ctx.fillStyle = '#374151';
+                    ctx.font = `bold ${Math.round(TL_H * 0.46)}px Segoe UI,sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(lbl, x1 + w / 2, tlTop + TL_H * 0.52);
+                }
+                cur = nx;
+                alt = !alt;
+            }
+            ctx.textAlign = 'left';
+
+            // Year grid lines + labels
+            for (let yr = projStart.getFullYear(); yr <= projEnd.getFullYear(); yr++) {
+                const xv = toX(new Date(yr, 0, 1));
+                ctx.strokeStyle = '#D1D5DB';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(xv, tlTop);
+                ctx.lineTo(xv, CH - FOOT_H);
+                ctx.stroke();
+                ctx.fillStyle = '#9CA3AF';
+                ctx.font = `${Math.round(TL_H * 0.36)}px Segoe UI,sans-serif`;
+                ctx.textBaseline = 'top';
+                ctx.fillText(yr, xv + 2, tlTop + 1);
+            }
+
+            // Separator
+            ctx.strokeStyle = '#D1D5DB';
+            ctx.lineWidth = 0.8;
+            ctx.beginPath();
+            ctx.moveTo(ML, tlTop + TL_H);
+            ctx.lineTo(CW - ML, tlTop + TL_H);
+            ctx.stroke();
+
+            // ── Task rows — chronological, split by today ─────────────────────
+            const STATUS_COLORS = { 'In Process':'#10B981', 'Planned':'#F59E0B' };
+            let cy = HDR_H + TL_H + 2;
+            let rowAlt = false;
+
+            function drawDivider(label, bgColor, textColor) {
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(ML, cy, CW - ML * 2, PHASE_H);
+                ctx.fillStyle = textColor;
+                ctx.font = `bold ${Math.round(PHASE_H * 0.58)}px Segoe UI,sans-serif`;
+                ctx.textBaseline = 'middle';
+                ctx.textAlign = 'left';
+                ctx.fillText(label, ML + 6, cy + PHASE_H * 0.52);
+                cy += PHASE_H;
+            }
+
+            function drawTaskRow(task) {
+                if (rowAlt) {
+                    ctx.fillStyle = '#F9FAFB';
+                    ctx.fillRect(ML, cy, CW - ML * 2, rowH);
+                }
+                rowAlt = !rowAlt;
+
+                const status   = task.status || 'Planned';
+                const isCrit   = !!task.critical;
+                const isMs     = !!task.milestone;
+                const barColor = isCrit ? '#EF4444' : isMs ? '#6366F1' : (STATUS_COLORS[status] || '#F59E0B');
+
+                // Task name
+                ctx.save();
+                clipRect(ML + 2, cy, NAME_W - 4, rowH);
+                ctx.fillStyle = '#111827';
+                ctx.font = `${isMs ? 'bold ' : ''}${fs}px Segoe UI,sans-serif`;
+                ctx.textBaseline = 'middle';
+                ctx.textAlign = 'left';
+                ctx.fillText(task.name || '', ML + 4, cy + rowH * 0.52);
+                ctx.restore();
+
+                // Owner
+                ctx.save();
+                clipRect(ML + NAME_W, cy, OWN_W, rowH);
+                ctx.fillStyle = '#6B7280';
+                ctx.font = `${fs - 1}px Segoe UI,sans-serif`;
+                ctx.textBaseline = 'middle';
+                ctx.textAlign = 'left';
+                ctx.fillText(task.owner || '', ML + NAME_W + 2, cy + rowH * 0.52);
+                ctx.restore();
+
+                // Bar — fully clipped to timeline bounds
+                const tStart = task.entered ? new Date(task.entered) : projStart;
+                const tEnd   = task.due     ? new Date(task.due)     : tStart;
+                const bx     = Math.max(TL_LEFT, toX(tStart));
+                const bx2    = Math.min(TL_RIGHT, Math.max(toX(tStart) + 3, toX(tEnd)));
+                const bw     = Math.max(3, bx2 - bx);
+                const bh     = Math.max(3, rowH * 0.54);
+                const by     = cy + (rowH - bh) / 2;
+
+                ctx.save();
+                clipRect(TL_LEFT, cy, TL_W, rowH);
+                ctx.fillStyle = barColor;
+                if (isMs) {
+                    const ds = Math.min(bh * 1.05, rowH * 0.68);
+                    const dx = Math.min(TL_RIGHT - ds, toX(tEnd) - ds / 2);
+                    const dy = cy + (rowH - ds) / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(dx + ds / 2, dy);
+                    ctx.lineTo(dx + ds, dy + ds / 2);
+                    ctx.lineTo(dx + ds / 2, dy + ds);
+                    ctx.lineTo(dx, dy + ds / 2);
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    const r = Math.min(2, bh / 3);
+                    ctx.beginPath();
+                    ctx.roundRect(bx, by, bw, bh, r);
+                    ctx.fill();
+                }
+                ctx.restore();
+
+                cy += rowH;
+            }
+
+            // Waterfall: gate groups in order, tasks chronological within each gate
+            phaseOrder.forEach(ph => {
+                if (!phaseMap[ph] || phaseMap[ph].length === 0) return;
+                drawDivider(ph, '#1F3A5F', '#FFFFFF');
+                phaseMap[ph].forEach(drawTaskRow);
+            });
+
+            // ── Today line ───────────────────────────────────────────────────
+            const todayX = toX(today);
+            if (todayX >= TL_LEFT && todayX <= TL_RIGHT) {
+                ctx.save();
+                ctx.strokeStyle = '#EF4444';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([3, 2]);
+                ctx.beginPath();
+                ctx.moveTo(todayX, HDR_H + TL_H - 4);
+                ctx.lineTo(todayX, CH - FOOT_H);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.fillStyle = '#EF4444';
+                ctx.font = `bold ${Math.round(TL_H * 0.42)}px Segoe UI,sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText('TODAY', todayX, HDR_H + TL_H - 2);
+                ctx.restore();
+            }
+
+            // ── Footer ────────────────────────────────────────────────────────
+            ctx.fillStyle = '#F3F4F6';
+            ctx.fillRect(0, CH - FOOT_H, CW, FOOT_H);
+            ctx.fillStyle = '#9CA3AF';
+            ctx.font = `${Math.round(FOOT_H * 0.52)}px Segoe UI,sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Emerson — Program / Project Management Dashboard', CW / 2, CH - FOOT_H / 2);
+        }
+
+        async function exportCriticalPathPpt() {
+            showNotification('⏳ Computing critical path & generating PPT…', 'info');
+            try {
+                const resp = await fetch(API_BASE + '/export-critical-path-ppt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || resp.statusText);
+                showNotification('✅ Critical Path PPT opened in PowerPoint!', 'success');
+            } catch (err) {
+                showNotification('❌ Export failed: ' + err.message, 'error');
+            }
+        }
+
+        async function downloadGanttPpt() {
+            showNotification('⏳ Generating PPT…', 'info');
+            try {
+                // If critical path is active in the UI, pass those IDs so bars render red
+                const critIds = (_criticalPathIds && _criticalPathIds.size > 0)
+                    ? Array.from(_criticalPathIds) : null;
+                const resp = await fetch(API_BASE + '/export-gantt-ppt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ critical_ids: critIds })
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || resp.statusText);
+                const status = document.getElementById('pptSaveStatus');
+                status.style.display = 'block';
+                status.style.color   = '#155724';
+                status.textContent   = '✅ Saved to: ' + data.path + ' — opened in PowerPoint';
+                showNotification('✅ PPT opened in PowerPoint!', 'success');
+            } catch (err) {
+                showNotification('❌ Export failed: ' + err.message, 'error');
+            }
+        }
+
+        async function saveGanttPptToPath() {
+            const path = document.getElementById('pptSavePath').value.trim();
+            if (!path) { showNotification('Please enter a folder or file path', 'error'); return; }
+            const status = document.getElementById('pptSaveStatus');
+            status.style.display = 'none';
+            showNotification('⏳ Saving PPT…', 'info');
+            try {
+                const resp = await fetch(API_BASE + '/export-gantt-ppt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        save_path: path,
+                        critical_ids: (_criticalPathIds && _criticalPathIds.size > 0) ? Array.from(_criticalPathIds) : null
+                    })
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || resp.statusText);
+                status.style.display = 'block';
+                status.style.color   = '#155724';
+                status.textContent   = '✅ Saved to: ' + data.path + ' — opened in PowerPoint';
+                showNotification('✅ PPT saved and opened in PowerPoint!', 'success');
+            } catch (err) {
+                status.style.display = 'block';
+                status.style.color   = '#721c24';
+                status.textContent   = '❌ ' + err.message;
+                showNotification('❌ Save failed: ' + err.message, 'error');
+            }
+        }
     </script>
 
     <!-- Gate Sign-Off Modal -->
