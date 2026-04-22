@@ -1870,13 +1870,13 @@
             text-align: left; font-weight: 600; white-space: nowrap;
         }
         .priority-table td {
-            padding: 7px 11px; border-bottom: 1px solid #e2e8f0;
+            padding: 6px 7px; border-bottom: 1px solid #e2e8f0;
             vertical-align: middle; color: #1e293b;
         }
         .priority-table tbody tr:nth-child(even) td { background: #f8fafc; }
         .priority-table tbody tr:hover td { background: #eff6ff; }
-        .priority-col-priority { width: 44px; text-align: center; font-weight: 700; color: #1e40af; }
-        .priority-col-name { min-width: 200px; }
+        .priority-col-priority { width: 36px; text-align: center; font-weight: 700; color: #1e40af; }
+        .priority-col-name { min-width: 180px; }
         [contenteditable="true"]:focus {
             outline: 2px solid #3b82f6; outline-offset: -2px;
             background: #fff7ed !important; border-radius: 3px;
@@ -1977,15 +1977,15 @@
         .priority-table select.pbadge-obs  { background: #fee2e2; color: #991b1b; font-weight: 600; }
         .priority-table select.pbadge-na   { background: #f1f5f9; color: #64748b; font-weight: 600; }
         /* Min-widths so dropdown values aren't clipped */
-        .priority-table td:nth-child(4) { min-width: 76px; }
-        .priority-table td:nth-child(5) { min-width: 90px; }
-        .priority-table td:nth-child(7) { min-width: 108px; }
-        .priority-table td:nth-child(8) { min-width: 108px; }
+        .priority-table td:nth-child(4) { min-width: 68px; }
+        .priority-table td:nth-child(5) { min-width: 82px; }
+        .priority-table td:nth-child(7) { min-width: 88px; }
+        .priority-table td:nth-child(8) { min-width: 88px; }
 
         /* Action buttons column */
         .priority-table th:last-child,
-        .priority-table td:last-child { width: 68px; text-align: center; }
-        .priority-actions { display: flex; gap: 4px; justify-content: center; }
+        .priority-table td:last-child { width: 120px; text-align: center; white-space: nowrap; }
+        .priority-actions { display: flex; gap: 3px; justify-content: center; align-items: center; flex-wrap: nowrap; }
         .priority-action-btn {
             border: none; border-radius: 4px; padding: 3px 7px;
             font-size: 12px; font-weight: 700; cursor: pointer;
@@ -4606,7 +4606,7 @@
                 <td>${_sel(['','Growth','Maintain','Discontinue'], p.objective||'', 'objective', 'priority-select')}</td>
                 <td>${_sel(['','Industrial','Suppression','All'], p.segment||'', 'segment', 'priority-select')}</td>
                 <td class="priority-actions">
-                    <button class="risk-badge ${riskClass}" onclick="${riskOnClick}" title="View risks" style="font-size:0.75em;padding:2px 8px;">${riskIcon} ${riskLabel} Risk${riskLabel!=='1'?'s':''}</button>
+                    <button class="risk-badge ${riskClass}" onclick="${riskOnClick}" title="${riskLabel} open risk${riskLabel!=='1'?'s':''} — click to manage" style="font-size:0.72em;padding:2px 6px;">${riskIcon} ${riskLabel}</button>
                     <button class="priority-action-btn priority-btn-complete" onclick="completePriorityProject(${p.id})" title="Mark Complete">✓</button>
                     <button class="priority-action-btn priority-btn-delete" onclick="deletePriorityProject(${p.id})" title="Delete">🗑</button>
                 </td>
