@@ -73,12 +73,22 @@ def _badge_info(level):
     return _BADGE_MAP.get((level or '').lower(), (RGBColor(0x94, 0xA3, 0xB8), (level or 'N/A').upper()))
 
 
+def _strip_style(sp):
+    """Remove python-pptx's auto-added <p:style> element that references theme colors.
+    Our shapes use fully explicit fill/stroke/font, so the style element is redundant
+    and can cause strict-mode validation failures in some Office builds."""
+    style_el = sp._element.find(qn('p:style'))
+    if style_el is not None:
+        sp._element.remove(style_el)
+
+
 def _rect(slide, left, top, width, height, fill_rgb):
     """Add a solid rectangle with no border."""
     sp = slide.shapes.add_shape(MSO.RECTANGLE, Emu(left), Emu(top), Emu(width), Emu(height))
     sp.fill.solid()
     sp.fill.fore_color.rgb = fill_rgb
     sp.line.fill.background()
+    _strip_style(sp)
     return sp
 
 
@@ -109,6 +119,7 @@ def _badge(slide, left, top, label, fill_rgb):
     sp.fill.solid()
     sp.fill.fore_color.rgb = fill_rgb
     sp.line.fill.background()
+    _strip_style(sp)
 
     tf = sp.text_frame
     tf.word_wrap = False
@@ -211,12 +222,13 @@ def export_risks_to_pptx(project_name, risks):
     prs = Presentation()
     prs.slide_width  = Emu(SLIDE_W)
     prs.slide_height = Emu(SLIDE_H)
-    # Fix the slide size type — default template sets screen4x3 even for 16:9 dimensions,
-    # which causes PowerPoint to flag the file as requiring repair. Use 'custom' for any
-    # non-standard size (14630400×8229600 ≈ 16"×9").
+    # Remove the 'type' attribute from <p:sldSz> — python-pptx's default template sets
+    # type="screen4x3" even when dimensions are 16:9, which causes PowerPoint to flag
+    # the file as needing repair. The original NPD Meeting deck omits the type attribute
+    # entirely (treated as custom/no predefined layout), so we match that behavior.
     sld_sz = prs.element.find(qn('p:sldSz'))
-    if sld_sz is not None:
-        sld_sz.set('type', 'custom')
+    if sld_sz is not None and sld_sz.get('type'):
+        del sld_sz.attrib['type']
 
     batches = [risks_sorted[i:i + ROWS_PER_SLIDE]
                for i in range(0, max(1, len(risks_sorted)), ROWS_PER_SLIDE)]
