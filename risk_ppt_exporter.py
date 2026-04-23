@@ -36,11 +36,11 @@ COL_MIT_L   = 8480000
 COL_MIT_W   = SLIDE_W - COL_MIT_L - MARGIN_R   # ≈5660400
 
 # ── Header bar ───────────────────────────────────────────────────────────────
-HDR_T = 325783
-HDR_H = 468173
+HDR_T = 460000
+HDR_H = 440000
 
 # ── Row layout ───────────────────────────────────────────────────────────────
-FIRST_ROW_T    = 1050000
+FIRST_ROW_T    = 920000
 ROW_H          = 1450000   # fixed row height
 ROWS_PER_SLIDE = 5
 
@@ -140,9 +140,9 @@ def _build_slide(prs, project_name, risks_batch, slide_num, total_slides):
 
     # ── Title ────────────────────────────────────────────────────────────────
     suffix = f' ({slide_num}/{total_slides})' if total_slides > 1 else ''
-    _textbox(slide, 505888, 18000, 13167360, 560000,
+    _textbox(slide, 505888, 18000, 13167360, HDR_T - 30000,
              f'{project_name} — Top Risks{suffix}',
-             size_pt=22, bold=True,
+             size_pt=16, bold=True, wrap=False,
              color=RGBColor(0x1B, 0x2A, 0x4A), font='Arial Black')
 
     # ── Header bar ───────────────────────────────────────────────────────────
@@ -181,8 +181,8 @@ def _build_slide(prs, project_name, risks_batch, slide_num, total_slides):
         _textbox(slide, COL_RISK_L + 200000, row_top + 50000, COL_RISK_W - 220000, ROW_H - 80000,
                  risk.get('title', ''), size_pt=9.5, color=TEXT_DARK)
 
-        # Probability badge (vertically centered)
-        badge_top = row_top + (ROW_H - BADGE_H) // 2
+        # Probability badge (top-aligned with text)
+        badge_top = row_top + 55000
         prob_rgb, prob_lbl = _badge_info(risk.get('probability', 'Medium'))
         _badge(slide, BADGE_PROB_L, badge_top, prob_lbl, prob_rgb)
 
