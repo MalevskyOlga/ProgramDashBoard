@@ -10,6 +10,7 @@ from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE as MSO
+from pptx.oxml.ns import qn
 
 # ── Slide dimensions (16" × 9") ─────────────────────────────────────────────
 SLIDE_W = 14630400
@@ -210,6 +211,12 @@ def export_risks_to_pptx(project_name, risks):
     prs = Presentation()
     prs.slide_width  = Emu(SLIDE_W)
     prs.slide_height = Emu(SLIDE_H)
+    # Fix the slide size type — default template sets screen4x3 even for 16:9 dimensions,
+    # which causes PowerPoint to flag the file as requiring repair. Use 'custom' for any
+    # non-standard size (14630400×8229600 ≈ 16"×9").
+    sld_sz = prs.element.find(qn('p:sldSz'))
+    if sld_sz is not None:
+        sld_sz.set('type', 'custom')
 
     batches = [risks_sorted[i:i + ROWS_PER_SLIDE]
                for i in range(0, max(1, len(risks_sorted)), ROWS_PER_SLIDE)]

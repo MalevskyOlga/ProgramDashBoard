@@ -5392,11 +5392,25 @@ let _projectRiskCountsByName = {};
         setTimeout(() => { statusEl.textContent = ''; }, 4000);
     };
 
-    window.exportRisksPpt = function() {
+    window.exportRisksPpt = async function() {
         const url = _riskMode === 'pipeline'
             ? `/api/pipeline-project/${_riskPipelineId}/risks/export-ppt`
             : `/api/project/${encodeURIComponent(_riskProjectName)}/risks/export-ppt`;
-        window.location.href = url;
+        try {
+            const resp = await fetch(url);
+            if (!resp.ok) { alert('Export failed: ' + resp.status); return; }
+            const blob = await resp.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            const cd = resp.headers.get('Content-Disposition') || '';
+            const m = cd.match(/filename="([^"]+)"/);
+            a.download = m ? m[1] : 'Risks.pptx';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 1000);
+        } catch(e) {
+            alert('Export failed: ' + e.message);
+        }
     };
 
     async function refreshRiskTable() {
