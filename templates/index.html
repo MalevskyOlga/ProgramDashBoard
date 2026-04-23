@@ -5131,7 +5131,7 @@
     </div>
 <!-- ── Risk Panel ─────────────────────────────────────────────────────── -->
 <div id="riskPanelOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;" onclick="closeRiskPanel()"></div>
-<div id="riskPanel" style="display:none;position:fixed;top:0;right:0;width:min(1300px,98vw);height:100vh;background:#fff;z-index:9001;box-shadow:-4px 0 28px rgba(0,0,0,0.22);flex-direction:column;overflow:hidden;">
+<div id="riskPanel" style="display:none;position:fixed;top:0;right:0;width:min(1700px,99vw);height:100vh;background:#fff;z-index:9001;box-shadow:-4px 0 28px rgba(0,0,0,0.22);flex-direction:column;overflow:hidden;">
 
     <!-- Header -->
     <div style="background:#1e3a5f;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
@@ -5204,7 +5204,7 @@
             <div>
                 <label style="font-size:0.78em;font-weight:600;color:#374151;">Status</label>
                 <select id="riskStatus" style="width:100%;margin-top:2px;padding:5px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;">
-                    <option>Open</option><option>Assigned</option><option>In Process</option><option>Mitigated</option><option>Closed</option>
+                    <option>In Process</option><option>Assigned</option><option>Canceled</option><option>Completed</option>
                 </select>
             </div>
             <!-- Row 4: due date, date closed -->
@@ -5313,7 +5313,7 @@ let _projectRiskCountsByName = {};
         document.getElementById('riskProbability').value   = risk ? (risk.probability || 'Medium') : 'Medium';
         document.getElementById('riskImpact').value        = risk ? (risk.impact || 'Medium') : 'Medium';
         document.getElementById('riskSchedImpact').value   = risk ? (risk.schedule_impact_weeks ?? '') : '';
-        document.getElementById('riskStatus').value        = risk ? (risk.status || 'Open') : 'Open';
+        document.getElementById('riskStatus').value        = risk ? (risk.status || 'In Process') : 'In Process';
         document.getElementById('riskDueDate').value       = risk ? (risk.due_date || '') : '';
         document.getElementById('riskDateClosed').value    = risk ? (risk.date_closed || '') : '';
         document.getElementById('riskMitigation').value    = risk ? (risk.mitigation || '') : '';
@@ -5413,64 +5413,153 @@ let _projectRiskCountsByName = {};
         }
     };
 
+    window.saveRiskField = async function(el) {
+        const riskId = el.dataset.rid;
+        const field  = el.dataset.field;
+        const value  = el.innerText.trim();
+        el.style.background = '';
+        try {
+            const resp = await fetch(`/api/risk/${riskId}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({[field]: value})
+            });
+            if (!resp.ok) el.style.outline = '1px solid #dc2626';
+            else el.style.outline = '';
+        } catch(e) { el.style.outline = '1px solid #dc2626'; }
+    };
+
+    window.saveRiskSelect = async function(riskId, field, selectEl) {
+        try {
+            await fetch(`/api/risk/${riskId}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({[field]: selectEl.value})
+            });
+            if (field === 'probability' || field === 'impact') {
+                const row = selectEl.closest('tr');
+                const tds = row.querySelectorAll('td');
+                const probSel = tds[3].querySelector('select');
+                const impSel  = tds[4].querySelector('select');
+                if (probSel && impSel) {
+                    const rv = rpn(probSel.value, impSel.value);
+                    tds[5].textContent = rv;
+                    tds[5].style.color = rpnColor(rv);
+                }
+            }
+        } catch(e) { /* silent */ }
+    };
+
+    window.updateRiskStatus = async function(riskId, newStatus, selectEl) {
+        const STATUS_STYLE = {
+            'In Process': 'background:#fef3c7;color:#92400e',
+            'Assigned':   'background:#dbeafe;color:#1e40af',
+            'Canceled':   'background:#f1f5f9;color:#64748b',
+            'Completed':  'background:#dcfce7;color:#15803d',
+        };
+        try {
+            const resp = await fetch(`/api/risk/${riskId}`, {
+                method: 'PATCH',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: newStatus})
+            });
+            if (!resp.ok) { alert('Update failed: ' + resp.status); return; }
+            const st = STATUS_STYLE[newStatus] || 'background:#f1f5f9;color:#64748b';
+            selectEl.style.cssText = `border:none;border-radius:10px;padding:2px 6px;font-size:0.77em;font-weight:600;cursor:pointer;${st};outline:none;`;
+        } catch(e) {
+            alert('Update failed: ' + e.message);
+        }
+    };
+
     async function refreshRiskTable() {
         const fetchUrl = _riskMode === 'pipeline'
             ? `/api/pipeline-project/${_riskPipelineId}/risks`
             : `/api/project/${encodeURIComponent(_riskProjectName)}/risks`;
-        const risks = await fetch(fetchUrl).then(r => r.json());
+        let risks;
+        try { risks = await fetch(fetchUrl).then(r => r.json()); }
+        catch(e) { document.getElementById('riskTableContainer').innerHTML = '<div style="color:red;padding:12px;">Error loading risks: ' + e.message + '</div>'; return; }
         const container = document.getElementById('riskTableContainer');
         if (!risks.length) {
             container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px 0;font-size:0.92em;">No risks recorded yet. Click "+ Add Risk" to start.</div>';
             return;
         }
-        const statusBadge = s => {
-            const map = {Open:'#fee2e2;color:#b91c1c', Assigned:'#dbeafe;color:#1e40af',
-                         'In Process':'#fef3c7;color:#92400e', Mitigated:'#ede9fe;color:#5b21b6', Closed:'#dcfce7;color:#15803d'};
-            return `<span style="background:${map[s]||'#f1f5f9;color:#64748b'};padding:2px 7px;border-radius:10px;font-size:0.77em;font-weight:600;white-space:nowrap;">${s}</span>`;
+        const STATUS_LIST = ['In Process','Assigned','Canceled','Completed'];
+        const STATUS_STYLE = {
+            'In Process': 'background:#fef3c7;color:#92400e',
+            'Assigned':   'background:#dbeafe;color:#1e40af',
+            'Canceled':   'background:#f1f5f9;color:#64748b',
+            'Completed':  'background:#dcfce7;color:#15803d',
         };
-        const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+        const statusSelect = (r) => {
+            const opts = STATUS_LIST.map(s =>
+                `<option value="${s}" ${r.status===s?'selected':''}>${s}</option>`
+            ).join('');
+            const st = STATUS_STYLE[r.status] || 'background:#f1f5f9;color:#64748b';
+            return `<select onchange="updateRiskStatus(${r.id}, this.value, this)"
+                style="border:none;border-radius:10px;padding:3px 6px;font-size:0.78em;font-weight:600;cursor:pointer;${st};outline:none;width:100%;min-width:100px;">
+                ${opts}</select>`;
+        };
+        const esc = s => (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
         const th = (t, w, mw) => `<th style="padding:7px 8px;white-space:nowrap;font-size:0.8em;background:#1e3a5f;color:#fff;${w?'width:'+w+';':''}${mw?'min-width:'+mw+';':''}border-right:1px solid #2d5080;">${t}</th>`;
-        container.innerHTML = `
-        <table style="border-collapse:collapse;font-size:0.81em;width:100%;table-layout:auto;">
-            <thead><tr>
-                ${th('#','32px')}${th('Date','80px')}${th('Category','90px')}
-                ${th('Risk Statement','','240px')}${th('Prob','62px')}${th('Impact','62px')}
-                ${th('RPN','50px')}${th('Sched (wks)','68px')}${th('Type','62px')}
-                ${th('Strategy','78px')}${th('Action Plan','','260px')}${th('Owner','88px')}
-                ${th('Status','88px')}${th('Outcome','','140px')}${th('','92px')}
-            </tr></thead>
-            <tbody>
-            ${risks.map((r, idx) => {
-                const rv = rpn(r.probability, r.impact);
-                const bg = rpnBg(rv);
-                const rc = rpnColor(rv);
-                const rj = esc(JSON.stringify(r));
-                const dt = r.created_at ? r.created_at.substring(0,10) : '—';
-                const ap = r.mitigation ? `<span style="white-space:pre-wrap;word-break:break-word;">${esc(r.mitigation)}</span>` : '—';
-                const oc = r.outcome ? `<span style="white-space:pre-wrap;word-break:break-word;">${esc(r.outcome)}</span>` : '—';
-                return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;vertical-align:top;">
-                    <td style="padding:6px 8px;text-align:center;font-weight:700;color:#6b7280;">${idx+1}</td>
-                    <td style="padding:6px 8px;white-space:nowrap;color:#6b7280;">${dt}</td>
-                    <td style="padding:6px 8px;color:#475569;">${esc(r.category||'')}</td>
-                    <td style="padding:6px 8px;font-weight:600;word-break:break-word;">${esc(r.title)}</td>
-                    <td style="padding:6px 8px;text-align:center;">${esc(r.probability||'')}</td>
-                    <td style="padding:6px 8px;text-align:center;">${esc(r.impact||'')}</td>
-                    <td style="padding:6px 8px;text-align:center;font-weight:800;color:${rc};">${rv}</td>
-                    <td style="padding:6px 8px;text-align:center;">${r.schedule_impact_weeks != null ? r.schedule_impact_weeks : '—'}</td>
-                    <td style="padding:6px 8px;color:#6b7280;">${esc(r.risk_type||'')}</td>
-                    <td style="padding:6px 8px;">${esc(r.strategy||'')}</td>
-                    <td style="padding:6px 10px;line-height:1.45;">${ap}</td>
-                    <td style="padding:6px 8px;">${esc(r.owner||'—')}</td>
-                    <td style="padding:6px 8px;">${statusBadge(r.status)}</td>
-                    <td style="padding:6px 8px;line-height:1.45;">${oc}</td>
-                    <td style="padding:5px 6px;white-space:nowrap;text-align:center;">
-                        <button onclick='openRiskForm(${rj})' style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:600;">✏️</button>
-                        <button onclick="deleteRisk(${r.id})" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:600;margin-left:3px;">🗑</button>
-                    </td>
-                </tr>`;
-            }).join('')}
-            </tbody>
-        </table>`;
+        const editTd = (id, field, value, tdStyle='', multiline=false) =>
+            `<td style="${tdStyle}"><div contenteditable="true" data-rid="${id}" data-field="${field}"
+                onblur="saveRiskField(this)"
+                onkeydown="${multiline ? '' : 'if(event.key===\'Enter\'){event.preventDefault();this.blur();}' }"
+                style="min-height:1.1em;outline:none;cursor:text;white-space:pre-wrap;word-break:break-word;border-radius:3px;padding:1px 2px;"
+                onfocus="this.style.background='#f0f9ff'"
+                >${esc(value||'')}</div></td>`;
+        const selTd = (id, field, value, opts, tdStyle='') => {
+            const optsHtml = opts.map(o => `<option${o===value?' selected':''}>${esc(o)}</option>`).join('');
+            return `<td style="${tdStyle}"><select data-rid="${id}" data-field="${field}"
+                onchange="saveRiskSelect(${id},'${field}',this)"
+                style="border:none;background:transparent;font-size:0.81em;cursor:pointer;padding:1px 0;width:100%;color:inherit;">
+                ${optsHtml}</select></td>`;
+        };
+        const CATS = ['Technical','Schedule','Cost / Quality','Supply Chain','Regulatory','Marketing','Design','Other'];
+        const LEVELS = ['Low','Medium','High','Very High'];
+        const STRATS = ['Mitigate','Accept','Transfer','Avoid','Watch'];
+        const TYPES  = ['Type 1','Type 2','Type 3'];
+        try {
+            container.innerHTML = `
+            <table style="border-collapse:collapse;font-size:0.81em;width:100%;table-layout:auto;">
+                <thead><tr>
+                    ${th('#','30px')}${th('Date','82px')}${th('Category','100px')}
+                    ${th('Risk Statement','','220px')}${th('Prob','90px')}${th('Impact','90px')}
+                    ${th('RPN','48px')}${th('Sched (wks)','72px')}${th('Type','80px')}
+                    ${th('Strategy','90px')}${th('Action Plan','','240px')}${th('Owner','90px')}
+                    ${th('Status','115px')}${th('Outcome','','130px')}${th('','48px')}
+                </tr></thead>
+                <tbody>
+                ${risks.map((r, idx) => {
+                    const rv = rpn(r.probability, r.impact);
+                    const bg = rpnBg(rv);
+                    const rc = rpnColor(rv);
+                    const dt = r.created_at ? r.created_at.substring(0,10) : '—';
+                    return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;vertical-align:top;">
+                        <td style="padding:6px 8px;text-align:center;font-weight:700;color:#6b7280;">${idx+1}</td>
+                        <td style="padding:6px 8px;white-space:nowrap;color:#6b7280;">${dt}</td>
+                        ${selTd(r.id,'category',r.category||'Other',CATS,'padding:3px 4px;')}
+                        ${editTd(r.id,'title',r.title,'padding:3px 4px;font-weight:600;')}
+                        ${selTd(r.id,'probability',r.probability||'Medium',LEVELS,'padding:3px 6px;text-align:center;')}
+                        ${selTd(r.id,'impact',r.impact||'Medium',LEVELS,'padding:3px 6px;text-align:center;')}
+                        <td style="padding:6px 8px;text-align:center;font-weight:800;color:${rc};">${rv}</td>
+                        ${editTd(r.id,'schedule_impact_weeks',r.schedule_impact_weeks!=null?String(r.schedule_impact_weeks):'','padding:3px 4px;text-align:center;')}
+                        ${selTd(r.id,'risk_type',r.risk_type||'Type 1',TYPES,'padding:3px 4px;')}
+                        ${selTd(r.id,'strategy',r.strategy||'Mitigate',STRATS,'padding:3px 4px;')}
+                        ${editTd(r.id,'mitigation',r.mitigation||'','padding:3px 6px;line-height:1.45;',true)}
+                        ${editTd(r.id,'owner',r.owner||'','padding:3px 4px;')}
+                        <td style="padding:4px 6px;">${statusSelect(r)}</td>
+                        ${editTd(r.id,'outcome',r.outcome||'','padding:3px 6px;line-height:1.45;',true)}
+                        <td style="padding:5px 6px;white-space:nowrap;text-align:center;">
+                            <button onclick="deleteRisk(${r.id})" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:600;">🗑</button>
+                        </td>
+                    </tr>`;
+                }).join('')}
+                </tbody>
+            </table>`;
+        } catch(e) {
+            container.innerHTML = '<div style="color:red;padding:12px;font-size:0.85em;">Render error: ' + e.message + '</div>';
+        }
     }
 })();
 </script>

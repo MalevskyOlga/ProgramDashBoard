@@ -1212,6 +1212,37 @@ def api_create_risk(project_name):
     return jsonify({'id': risk_id}), 201
 
 
+@app.route('/api/risk/<int:risk_id>', methods=['PATCH'])
+def api_patch_risk(risk_id):
+    """Partial update — only updates fields present in the request body."""
+    data = request.get_json(silent=True) or {}
+    conn = db_manager.get_connection()
+    row = conn.execute('SELECT * FROM risks WHERE id = ?', (risk_id,)).fetchone()
+    conn.close()
+    if not row:
+        return jsonify({'error': 'Risk not found'}), 404
+    merged = dict(row)
+    for k, v in data.items():
+        merged[k] = v
+    success = db_manager.update_risk(
+        risk_id,
+        title=(merged.get('title') or '').strip(),
+        category=merged.get('category', 'Other'),
+        probability=merged.get('probability', 'Medium'),
+        impact=merged.get('impact', 'Medium'),
+        owner=(merged.get('owner') or '').strip(),
+        mitigation=(merged.get('mitigation') or '').strip(),
+        status=merged.get('status', 'In Process'),
+        due_date=merged.get('due_date') or None,
+        strategy=merged.get('strategy', 'Mitigate'),
+        risk_type=merged.get('risk_type', 'Type 1'),
+        schedule_impact_weeks=merged.get('schedule_impact_weeks') or None,
+        outcome=(merged.get('outcome') or '').strip() or None,
+        date_closed=merged.get('date_closed') or None,
+    )
+    return jsonify({'success': True}) if success else (jsonify({'error': 'Update failed'}), 500)
+
+
 @app.route('/api/risk/<int:risk_id>', methods=['PUT'])
 def api_update_risk(risk_id):
     data = request.get_json(silent=True) or {}
