@@ -3219,7 +3219,7 @@
                             <div class="resource-hero-tile-value" style="color:#ffd18d;">${overloadedCount}</div>
                             <div class="resource-hero-tile-label">🔴 Overloaded · view owners</div>
                         </button>
-                        <button class="resource-hero-tile" onclick="event.stopPropagation();setResourceDrilldown('owners')"
+                        <button class="resource-hero-tile" onclick="event.stopPropagation();setResourceDrilldown('discipline')"
                                 style="${currentResourceDrilldown==='owners'?'border-color:#7ec8ff;':''}"
                                 onmouseover="this.style.borderColor='#7ec8ff'" onmouseout="this.style.borderColor='${currentResourceDrilldown==='owners'?'#7ec8ff':'#24355f'}'">
                             <div class="resource-hero-tile-value" style="color:#cdd9e5;">${ownerCount}</div>
@@ -3340,7 +3340,7 @@
 
             const backButtonHtml = `
                 <div class="resource-detail-actions">
-                    <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('summary')">Back to default</button>
+                    <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('discipline')">Back to default</button>
                 </div>
             `;
 
@@ -3394,7 +3394,7 @@
                                     <div style="font-size:1.6em;font-weight:700;color:#ffd18d;">${overloaded.length}</div>
                                     <div style="font-size:0.75em;color:#8899aa;">🔴 Overloaded · click to view</div>
                                 </button>
-                                <button onclick="setResourceDrilldown('owners')" style="background:#162030;border:1px solid #24355f;border-radius:6px;padding:10px 14px;cursor:pointer;text-align:left;transition:border-color 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='#7ec8ff';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#24355f';this.style.transform=''">
+                                <button onclick="setResourceDrilldown('discipline')" style="background:#162030;border:1px solid #24355f;border-radius:6px;padding:10px 14px;cursor:pointer;text-align:left;transition:border-color 0.2s,transform 0.15s;" onmouseover="this.style.borderColor='#7ec8ff';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#24355f';this.style.transform=''">
                                     <div style="font-size:1.6em;font-weight:700;color:#cdd9e5;">${ownerCount}</div>
                                     <div style="font-size:0.75em;color:#8899aa;">👥 Total owners · click to view</div>
                                 </button>
@@ -3428,7 +3428,7 @@
                 const backHtml = `
                     <div class="resource-detail-actions">
                         ${prevLabel ? `<button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('${prevLabel}')">← Back to ${prevLabel}</button>` : ''}
-                        <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('summary')" style="margin-left:8px;">Back to default</button>
+                        <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('discipline')" style="margin-left:8px;">Back to default</button>
                     </div>`;
                 if (actionsContainer) actionsContainer.innerHTML = backHtml;
 
