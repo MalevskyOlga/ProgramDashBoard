@@ -21,6 +21,12 @@ EXCEL_OUTPUT_FOLDER = BASE_DIR / 'exports'
 # Database settings
 DB_TIMEOUT = 30  # seconds
 
+# Resource load settings
+PM_LOAD_PER_PROJECT = 5       # task-equivalent weight per managed project for PM overhead
+FULL_TIME_CAPACITY_HRS = 37.5 # standard full-time weekly hours (used as baseline)
+OVERLOAD_TASK_THRESHOLD = 5   # concurrent tasks = overloaded at full capacity
+RESOURCE_LOAD_LOOKBACK_MONTHS = 6  # exclude tasks ending more than this many months ago
+
 # Excel parsing settings
 EXCEL_PROJECT_NAME_ROW = 3
 EXCEL_PROJECT_NAME_COL = 'C'

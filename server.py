@@ -942,7 +942,14 @@ def api_discipline_resource_load():
     for owner_lower, disc in owner_to_disc.items():
         disc_owners[disc] = disc_owners.get(disc, 0) + 1
 
-    # Load active tasks from dashboards.db
+    # Build date cutoff (same lookback window as owner resource load)
+    cutoff_year, cutoff_month = today.year, today.month - config.RESOURCE_LOAD_LOOKBACK_MONTHS
+    while cutoff_month <= 0:
+        cutoff_month += 12
+        cutoff_year  -= 1
+    cutoff_date = _date(cutoff_year, cutoff_month, 1).isoformat()
+
+    # Load active tasks from dashboards.db (only tasks ending within the lookback window)
     db_path = config.DATABASE_PATH
     t_conn = sqlite3.connect(str(db_path))
     tasks = t_conn.execute("""
@@ -951,7 +958,8 @@ def api_discipline_resource_load():
         WHERE status IN ('In Process','Planned')
           AND start_date IS NOT NULL AND start_date != ''
           AND end_date   IS NOT NULL AND end_date   != ''
-    """).fetchall()
+          AND end_date >= ?
+    """, (cutoff_date,)).fetchall()
     t_conn.close()
 
     # Compute monthly task counts per discipline
@@ -974,15 +982,15 @@ def api_discipline_resource_load():
             if start <= me and end >= ms:
                 disc_monthly[disc][bucket][i] += 1
 
-    # Inject PM overhead (+5/month per managed project) into discipline monthly counts
-    PM_LOAD_PER_PROJECT = 5
+    # Inject PM overhead (config.PM_LOAD_PER_PROJECT per month per managed project)
     pm_conn = sqlite3.connect(str(db_path))
     pm_conn.row_factory = sqlite3.Row
     pm_proj_rows = pm_conn.execute("""
         SELECT TRIM(p.manager) AS manager,
                MIN(CASE WHEN t.status IN ('In Process','Planned') THEN t.start_date ELSE NULL END) AS proj_start,
                MAX(CASE WHEN t.status IN ('In Process','Planned') THEN t.end_date   ELSE NULL END) AS proj_end,
-               SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks
+               SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks,
+               SUM(CASE WHEN t.status = 'In Process' THEN 1 ELSE 0 END) AS inprocess_tasks
         FROM projects p
         LEFT JOIN tasks t ON t.project_id = p.id
         WHERE TRIM(COALESCE(p.manager,'')) != ''
@@ -1010,12 +1018,14 @@ def api_discipline_resource_load():
             continue
         if disc not in disc_monthly:
             disc_monthly[disc] = {'In Process': [0]*len(months), 'Planned': [0]*len(months)}
+        # Bucket by whether the project has active In Process tasks (not just date vs today)
+        has_inprocess = (pr['inprocess_tasks'] or 0) > 0
         for i, ms in enumerate(months):
             last_day = calendar.monthrange(ms.year, ms.month)[1]
             me = _date(ms.year, ms.month, last_day)
             if pstart <= me and pend >= ms:
-                bucket = 'In Process' if ms <= today else 'Planned'
-                disc_monthly[disc][bucket][i] += PM_LOAD_PER_PROJECT
+                bucket = 'In Process' if (has_inprocess and ms <= today) else 'Planned'
+                disc_monthly[disc][bucket][i] += config.PM_LOAD_PER_PROJECT
 
     result = []
     for disc in sorted(disc_monthly):

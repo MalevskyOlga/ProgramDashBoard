@@ -2816,8 +2816,9 @@
 
         function getResourceLoadLabel(owner) {
             const ecl = owner.effective_concurrent_load ?? owner.concurrent_load;
-            if (ecl >= 5 || owner.active_today_count >= 4) return 'High';
-            if (ecl >= 3 || owner.active_today_count >= 2) return 'Medium';
+            const thr = owner.overload_threshold ?? 5;
+            if (ecl >= thr)               return 'High';
+            if (ecl >= Math.ceil(thr * 0.6)) return 'Medium';
             return 'Good';
         }
 
@@ -2834,11 +2835,16 @@
             const label = getResourceLoadLabel(owner);
             const barColor = label === 'High' ? '#ff6b6b' : label === 'Medium' ? '#ffa94d' : '#69db7c';
             const trackColor = 'rgba(255,255,255,0.07)';
+            const thr = owner.overload_threshold ?? 5;
+            const busyBadge = owner.active_today_count >= 2
+                ? `<span title="${owner.active_today_count} tasks active today" style="font-size:0.72em;background:#1e3a5f;color:#60a5fa;border-radius:4px;padding:1px 5px;margin-left:4px;white-space:nowrap;">⚡${owner.active_today_count}</span>`
+                : '';
             return `<div style="display:flex;align-items:center;gap:7px;min-width:110px;">
-                <div style="flex:1;background:${trackColor};border-radius:4px;height:8px;min-width:60px;overflow:hidden;">
+                <div style="flex:1;background:${trackColor};border-radius:4px;height:8px;min-width:60px;overflow:hidden;"
+                     title="${label} load (threshold: ${thr})">
                     <div style="width:${pct}%;background:${barColor};border-radius:4px;height:8px;transition:width 0.4s;"></div>
                 </div>
-                <span style="color:${barColor};font-size:0.82em;font-weight:600;white-space:nowrap;">${days}d</span>
+                <span style="color:${barColor};font-size:0.82em;font-weight:600;white-space:nowrap;">${days}d</span>${busyBadge}
             </div>`;
         }
 
@@ -3111,7 +3117,8 @@
 
             const rows = pms.map(o => {
                 const ecl = o.effective_concurrent_load ?? o.concurrent_load;
-                const loadColor = ecl >= 5 ? '#ff6b6b' : ecl >= 3 ? '#ffd18d' : '#9cf79a';
+                const thr = o.overload_threshold ?? 5;
+                const loadColor = ecl >= thr ? '#ff6b6b' : ecl >= Math.ceil(thr*0.6) ? '#ffd18d' : '#9cf79a';
                 const projectPills = o.managed_projects.map(p =>
                     `<span style="background:#1a2a3a;border:1px solid #24355f;border-radius:5px;padding:2px 8px;font-size:0.76em;color:#a0b0c0;white-space:nowrap;">
                         ${escapeHtml(p.name)} <span style="color:#ffd18d;font-weight:600;">${p.active_tasks}</span><span style="color:#6b7fa3;"> tasks</span>
@@ -3153,7 +3160,7 @@
             const delayedCount   = payload.summary.owners_with_delays || 0;
             const delayedPct     = Math.round((delayedCount / ownerCount) * 100);
             const onTrackCount   = ownerCount - delayedCount;
-            const overloadedCount = payload.owners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= 5 || o.active_today_count >= 4).length;
+            const overloadedCount = payload.owners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= (o.overload_threshold ?? 5)).length;
             const jugglingCount  = payload.owners.filter(o => o.active_today_count >= 2).length;
             const today_str = new Date().toISOString().slice(0, 10);
             const statusLagCount = payload.owners.flatMap(o => o.tasks).filter(t =>
@@ -3348,7 +3355,7 @@
                 const ownerCount   = payload.summary.owner_count || 1;
                 const delayedCount = payload.summary.owners_with_delays || 0;
                 const delayedPct   = Math.round((delayedCount / ownerCount) * 100);
-                const overloaded   = payload.owners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= 5 || o.active_today_count >= 4);
+                const overloaded   = payload.owners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= (o.overload_threshold ?? 5));
                 const onTrack      = ownerCount - delayedCount;
                 const ragStatus    = (delayedPct > 30 || overloaded.length >= 3) ? 'CRITICAL'
                                    : (delayedPct > 10 || overloaded.length > 0) ? 'AT RISK'
@@ -3551,8 +3558,9 @@
 
                 const severityColor = o => {
                     const ecl = o.effective_concurrent_load ?? o.concurrent_load;
-                    if (ecl >= 5 || o.active_today_count >= 4) return { bar: '#ff6b6b', dot: '#ff2442', label: '🔴', text: '#ff6b6b' };
-                    if (o.active_today_count >= 2 || ecl >= 3)  return { bar: '#ffa94d', dot: '#ff7c00', label: '🟠', text: '#ffa94d' };
+                    const thr = o.overload_threshold ?? 5;
+                    if (ecl >= thr)               return { bar: '#ff6b6b', dot: '#ff2442', label: '🔴', text: '#ff6b6b' };
+                    if (ecl >= Math.ceil(thr*0.6)) return { bar: '#ffa94d', dot: '#ff7c00', label: '🟠', text: '#ffa94d' };
                     return { bar: '#4a9eff', dot: '#1a7aff', label: '🔵', text: '#4a9eff' };
                 };
 
@@ -3587,8 +3595,8 @@
                     </div>`;
                 }).join('');
 
-                const overloadedCount = chartOwners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= 5 || o.active_today_count >= 4).length;
-                const jugglingCount   = chartOwners.filter(o => o.active_today_count >= 2 && (o.effective_concurrent_load ?? o.concurrent_load) < 5 && o.active_today_count < 4).length;
+                const overloadedCount = chartOwners.filter(o => (o.effective_concurrent_load ?? o.concurrent_load) >= (o.overload_threshold ?? 5)).length;
+                const jugglingCount   = chartOwners.filter(o => o.active_today_count >= 2 && (o.effective_concurrent_load ?? o.concurrent_load) < (o.overload_threshold ?? 5)).length;
 
                 detailContainer.innerHTML = `
                     <div style="display:flex;align-items:center;gap:20px;margin-bottom:14px;font-size:0.8em;color:#6b7fa3;">

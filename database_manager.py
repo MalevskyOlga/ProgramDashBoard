@@ -700,6 +700,14 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
 
+        from datetime import date as _date_cls
+        today_dt = datetime.now().date()
+        cutoff_year, cutoff_month = today_dt.year, today_dt.month - config.RESOURCE_LOAD_LOOKBACK_MONTHS
+        while cutoff_month <= 0:
+            cutoff_month += 12
+            cutoff_year  -= 1
+        cutoff_date = _date_cls(cutoff_year, cutoff_month, 1).isoformat()
+
         cursor.execute('''
             SELECT
                 p.name AS project_name,
@@ -720,8 +728,9 @@ class DatabaseManager:
               AND COALESCE(t.milestone, 0) = 0
               AND t.start_date IS NOT NULL
               AND t.end_date IS NOT NULL
+              AND t.end_date >= ?
             ORDER BY t.owner, t.start_date, p.name, t.name
-        ''')
+        ''', (cutoff_date,))
 
         task_rows = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -873,7 +882,7 @@ class DatabaseManager:
                         seen.add(p['name'])
 
         # Inject PM overhead into pm_date_points and add synthetic [PM] tasks
-        PM_LOAD_PER_PROJECT = 5  # 5 equivalent tasks per month per managed project
+        PM_LOAD_PER_PROJECT = config.PM_LOAD_PER_PROJECT
         today_str = today.isoformat()
         for owner_name, managed_projs in remapped_manager_projects.items():
             if owner_name not in owners:
@@ -923,6 +932,14 @@ class DatabaseManager:
                         'owner': owner_name
                     })
 
+        # Load per-owner capacity from resource_teams (case-insensitive match)
+        cap_conn = self.get_connection()
+        cap_rows = cap_conn.execute(
+            "SELECT TRIM(LOWER(owner_name)) AS k, capacity_hrs_per_week FROM resource_teams"
+        ).fetchall()
+        cap_conn.close()
+        capacity_map = {row[0]: row[1] for row in cap_rows}
+
         owner_rows = []
         for owner_name, owner_entry in owners.items():
             # Sweep real task date_points for direct concurrent load
@@ -942,6 +959,12 @@ class DatabaseManager:
                 if current_eff > effective_concurrent_load:
                     effective_concurrent_load = current_eff
 
+            # Capacity-aware overload threshold: scales linearly with capacity vs full-time
+            capacity_hrs = capacity_map.get(owner_name.lower(), config.FULL_TIME_CAPACITY_HRS)
+            overload_threshold = max(2, round(
+                (capacity_hrs / config.FULL_TIME_CAPACITY_HRS) * config.OVERLOAD_TASK_THRESHOLD
+            ))
+
             managed = remapped_manager_projects.get(owner_name, [])
 
             owner_entry['tasks'].sort(key=lambda item: (item['start_date'], item['end_date'], item['project_name'], item['task_name']))
@@ -959,6 +982,8 @@ class DatabaseManager:
                 'peak_parallel_tasks': concurrent_load,
                 'concurrent_load': concurrent_load,
                 'effective_concurrent_load': effective_concurrent_load,
+                'capacity_hrs_per_week': capacity_hrs,
+                'overload_threshold': overload_threshold,
                 'managed_projects': managed,
                 'has_delayed_tasks': owner_entry['delayed_task_count'] > 0,
                 'tasks': owner_entry['tasks']
