@@ -40,7 +40,7 @@ HDR_T = 325783
 HDR_H = 468173
 
 # ── Row layout ───────────────────────────────────────────────────────────────
-FIRST_ROW_T    = 837291
+FIRST_ROW_T    = 1050000
 ROW_H          = 1450000   # fixed row height
 ROWS_PER_SLIDE = 5
 
@@ -177,7 +177,7 @@ def _build_slide(prs, project_name, risks_batch, slide_num, total_slides):
 
         # Risk number (small) + title
         _textbox(slide, COL_RISK_L, row_top + 60000, 180000, ROW_H - 80000,
-                 f'#{i+1}', size_pt=8, color=RGBColor(0x94, 0xA3, 0xB8))
+                 f'{i+1}', size_pt=8, color=RGBColor(0x94, 0xA3, 0xB8))
         _textbox(slide, COL_RISK_L + 200000, row_top + 50000, COL_RISK_W - 220000, ROW_H - 80000,
                  risk.get('title', ''), size_pt=9.5, color=TEXT_DARK)
 
@@ -189,14 +189,6 @@ def _build_slide(prs, project_name, risks_batch, slide_num, total_slides):
         # Impact badge
         imp_rgb, imp_lbl = _badge_info(risk.get('impact', 'Medium'))
         _badge(slide, BADGE_IMP_L, badge_top, imp_lbl, imp_rgb)
-
-        # RPN score (small, below badges)
-        rv = _rpn(risk.get('probability', 'Medium'), risk.get('impact', 'Medium'))
-        rpn_color = (RGBColor(0xDC, 0x45, 0x45) if rv >= 16
-                     else RGBColor(0xE8, 0x9B, 0x1C) if rv >= 9
-                     else RGBColor(0x22, 0xC5, 0x5E))
-        _textbox(slide, BADGE_PROB_L, badge_top + BADGE_H + 40000, BADGE_IMP_L + BADGE_W - BADGE_PROB_L, 200000,
-                 f'RPN {rv}', size_pt=7.5, bold=True, color=rpn_color, align=PP_ALIGN.CENTER)
 
         # Mitigation / Action Plan text
         mit = risk.get('mitigation') or ''
