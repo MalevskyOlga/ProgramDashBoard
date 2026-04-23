@@ -241,6 +241,20 @@ class DatabaseManager:
                 pass
         conn.commit()
 
+        # Migrate new risk fields (v2 — Excel-aligned)
+        for _col, _typedef in [
+            ('strategy',              "TEXT DEFAULT 'Mitigate'"),
+            ('risk_type',             "TEXT DEFAULT 'Type 1'"),
+            ('outcome',               'TEXT'),
+            ('date_closed',           'DATE'),
+            ('schedule_impact_weeks', 'REAL'),
+        ]:
+            try:
+                cursor.execute(f'ALTER TABLE risks ADD COLUMN {_col} {_typedef}')
+            except Exception:
+                pass
+        conn.commit()
+
         conn.close()
 
         print(f"✓ Database initialized: {self.db_path}")
@@ -1433,7 +1447,8 @@ class DatabaseManager:
         conn.close()
         return rows
 
-    def create_risk(self, project_name, title, category, probability, impact, owner, mitigation, status, due_date):
+    def create_risk(self, project_name, title, category, probability, impact, owner, mitigation, status, due_date,
+                    strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM projects WHERE name = ?', (project_name,))
@@ -1444,22 +1459,27 @@ class DatabaseManager:
         project_id = row['id']
         now = datetime.now().isoformat()
         cursor.execute('''
-            INSERT INTO risks (project_id, title, category, probability, impact, owner, mitigation, status, due_date, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (project_id, title, category, probability, impact, owner, mitigation, status, due_date, now, now))
+            INSERT INTO risks (project_id, title, category, probability, impact, owner, mitigation, status, due_date,
+                               strategy, risk_type, schedule_impact_weeks, outcome, date_closed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (project_id, title, category, probability, impact, owner, mitigation, status, due_date,
+              strategy, risk_type, schedule_impact_weeks, outcome, date_closed, now, now))
         risk_id = cursor.lastrowid
         conn.commit()
         conn.close()
         return risk_id
 
-    def update_risk(self, risk_id, title, category, probability, impact, owner, mitigation, status, due_date):
+    def update_risk(self, risk_id, title, category, probability, impact, owner, mitigation, status, due_date,
+                    strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None):
         conn = self.get_connection()
         cursor = conn.cursor()
         now = datetime.now().isoformat()
         cursor.execute('''
-            UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?, status=?, due_date=?, updated_at=?
+            UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?, status=?, due_date=?,
+                             strategy=?, risk_type=?, schedule_impact_weeks=?, outcome=?, date_closed=?, updated_at=?
             WHERE id=?
-        ''', (title, category, probability, impact, owner, mitigation, status, due_date, now, risk_id))
+        ''', (title, category, probability, impact, owner, mitigation, status, due_date,
+              strategy, risk_type, schedule_impact_weeks, outcome, date_closed, now, risk_id))
         success = cursor.rowcount > 0
         conn.commit()
         conn.close()
@@ -1485,18 +1505,30 @@ class DatabaseManager:
         conn.close()
         return rows
 
-    def create_pipeline_risk(self, pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date):
+    def create_pipeline_risk(self, pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date,
+                             strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None):
         conn = self.get_connection()
         cursor = conn.cursor()
         now = datetime.now().isoformat()
         cursor.execute('''
-            INSERT INTO risks (pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date, now, now))
+            INSERT INTO risks (pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date,
+                               strategy, risk_type, schedule_impact_weeks, outcome, date_closed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date,
+              strategy, risk_type, schedule_impact_weeks, outcome, date_closed, now, now))
         risk_id = cursor.lastrowid
         conn.commit()
         conn.close()
         return risk_id
+
+    _PROB_SCORE   = {'Low': 2, 'Medium': 3, 'High': 4, 'Very High': 5}
+    _IMPACT_SCORE = {'Low': 2, 'Medium': 3, 'High': 4, 'Very High': 5}
+
+    @staticmethod
+    def _rpn(prob, impact):
+        p = DatabaseManager._PROB_SCORE.get(prob, 3)
+        i = DatabaseManager._IMPACT_SCORE.get(impact, 3)
+        return p * i
 
     def get_risk_counts_all_projects(self):
         """Returns {project_id: {...}} for Gantt projects and badge display."""
@@ -1516,11 +1548,13 @@ class DatabaseManager:
             if pid not in counts:
                 counts[pid] = {'open': 0, 'high': 0, 'medium': 0, 'total': 0}
             counts[pid]['total'] += 1
-            if row['status'] == 'Open':
+            st = (row['status'] or '').strip()
+            if st not in ('Closed',):
                 counts[pid]['open'] += 1
-                if row['probability'] == 'High' or row['impact'] == 'High':
+                rpn = self._rpn(row['probability'], row['impact'])
+                if rpn >= 16:
                     counts[pid]['high'] += 1
-                elif row['probability'] == 'Medium' or row['impact'] == 'Medium':
+                elif rpn >= 9:
                     counts[pid]['medium'] += 1
         return counts
 
@@ -1540,11 +1574,13 @@ class DatabaseManager:
             if pid not in counts:
                 counts[pid] = {'open': 0, 'high': 0, 'medium': 0, 'total': 0}
             counts[pid]['total'] += 1
-            if row['status'] == 'Open':
+            st = (row['status'] or '').strip()
+            if st not in ('Closed',):
                 counts[pid]['open'] += 1
-                if row['probability'] == 'High' or row['impact'] == 'High':
+                rpn = self._rpn(row['probability'], row['impact'])
+                if rpn >= 16:
                     counts[pid]['high'] += 1
-                elif row['probability'] == 'Medium' or row['impact'] == 'Medium':
+                elif rpn >= 9:
                     counts[pid]['medium'] += 1
         return counts
 

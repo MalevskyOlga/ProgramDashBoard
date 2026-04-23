@@ -1198,6 +1198,11 @@ def api_create_risk(project_name):
         mitigation=data.get('mitigation', '').strip(),
         status=data.get('status', 'Open'),
         due_date=data.get('due_date') or None,
+        strategy=data.get('strategy', 'Mitigate'),
+        risk_type=data.get('risk_type', 'Type 1'),
+        schedule_impact_weeks=data.get('schedule_impact_weeks') or None,
+        outcome=data.get('outcome', '').strip() or None,
+        date_closed=data.get('date_closed') or None,
     )
     if risk_id is None:
         return jsonify({'error': 'Project not found'}), 404
@@ -1217,6 +1222,11 @@ def api_update_risk(risk_id):
         mitigation=data.get('mitigation', '').strip(),
         status=data.get('status', 'Open'),
         due_date=data.get('due_date') or None,
+        strategy=data.get('strategy', 'Mitigate'),
+        risk_type=data.get('risk_type', 'Type 1'),
+        schedule_impact_weeks=data.get('schedule_impact_weeks') or None,
+        outcome=data.get('outcome', '').strip() or None,
+        date_closed=data.get('date_closed') or None,
     )
     if not success:
         return jsonify({'error': 'Risk not found'}), 404
@@ -1262,6 +1272,11 @@ def api_create_pipeline_risk(pipeline_project_id):
         mitigation=data.get('mitigation', '').strip(),
         status=data.get('status', 'Open'),
         due_date=data.get('due_date') or None,
+        strategy=data.get('strategy', 'Mitigate'),
+        risk_type=data.get('risk_type', 'Type 1'),
+        schedule_impact_weeks=data.get('schedule_impact_weeks') or None,
+        outcome=data.get('outcome', '').strip() or None,
+        date_closed=data.get('date_closed') or None,
     )
     return jsonify({'id': risk_id}), 201
 

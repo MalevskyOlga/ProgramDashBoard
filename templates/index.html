@@ -5119,74 +5119,111 @@
     </div>
 <!-- ── Risk Panel ─────────────────────────────────────────────────────── -->
 <div id="riskPanelOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;" onclick="closeRiskPanel()"></div>
-<div id="riskPanel" style="display:none;position:fixed;top:0;right:0;width:760px;max-width:100vw;height:100vh;background:#fff;z-index:9001;box-shadow:-4px 0 24px rgba(0,0,0,0.18);flex-direction:column;overflow:hidden;">
-    <div style="background:#1e3a5f;color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+<div id="riskPanel" style="display:none;position:fixed;top:0;right:0;width:min(1300px,98vw);height:100vh;background:#fff;z-index:9001;box-shadow:-4px 0 28px rgba(0,0,0,0.22);flex-direction:column;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="background:#1e3a5f;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
         <div>
             <div style="font-size:1.1em;font-weight:700;">⚠ Risk Register</div>
             <div id="riskPanelProjectName" style="font-size:0.85em;opacity:0.8;margin-top:2px;"></div>
         </div>
-        <button onclick="closeRiskPanel()" style="background:none;border:none;color:#fff;font-size:1.4em;cursor:pointer;padding:4px 8px;">✕</button>
-    </div>
-
-    <div style="padding:14px 20px;border-bottom:1px solid #e5e7eb;flex-shrink:0;">
-        <button onclick="openRiskForm(null)" style="background:#1e3a5f;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:0.88em;font-weight:600;cursor:pointer;">+ Add Risk</button>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button onclick="openRiskForm(null)" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:0.88em;font-weight:600;cursor:pointer;">+ Add Risk</button>
+            <button onclick="closeRiskPanel()" style="background:none;border:none;color:#fff;font-size:1.4em;cursor:pointer;padding:4px 8px;">✕</button>
+        </div>
     </div>
 
     <!-- Risk form (hidden by default) -->
-    <div id="riskForm" style="display:none;padding:16px 20px;background:#f8fafc;border-bottom:2px solid #e2e8f0;flex-shrink:0;">
-        <div style="font-weight:700;margin-bottom:12px;color:#1e3a5f;" id="riskFormTitle">New Risk</div>
+    <div id="riskForm" style="display:none;padding:14px 20px;background:#f8fafc;border-bottom:2px solid #e2e8f0;flex-shrink:0;">
+        <div style="font-weight:700;margin-bottom:10px;color:#1e3a5f;font-size:0.95em;" id="riskFormTitle">New Risk</div>
         <input type="hidden" id="riskFormId">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+            <!-- Row 1: title full width -->
             <div style="grid-column:1/-1;">
-                <label style="font-size:0.8em;font-weight:600;color:#374151;">Title *</label>
-                <input id="riskTitle" type="text" placeholder="Short risk description" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:0.88em;box-sizing:border-box;">
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Risk Statement *</label>
+                <input id="riskTitle" type="text" placeholder="Describe the risk" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.86em;box-sizing:border-box;">
             </div>
+            <!-- Row 2: category, strategy, risk_type, owner -->
             <div>
-                <label style="font-size:0.8em;font-weight:600;color:#374151;">Category</label>
-                <select id="riskCategory" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:0.88em;">
-                    <option>Engineering</option><option>Schedule</option><option>Marketing</option>
-                    <option>Design</option><option>Supply Chain</option><option>Regulatory</option><option>Other</option>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Category</label>
+                <select id="riskCategory" style="width:100%;margin-top:2px;padding:5px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;">
+                    <option>Technical</option><option>Schedule</option><option>Cost / Quality</option>
+                    <option>Supply Chain</option><option>Regulatory</option><option>Marketing</option>
+                    <option>Design</option><option>Other</option>
                 </select>
             </div>
             <div>
-                <label style="font-size:0.8em;font-weight:600;color:#374151;">Owner</label>
-                <input id="riskOwner" type="text" placeholder="Name" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:0.88em;box-sizing:border-box;">
-            </div>
-            <div>
-                <label style="font-size:0.8em;font-weight:600;color:#374151;">Probability</label>
-                <select id="riskProbability" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:0.88em;">
-                    <option>Low</option><option selected>Medium</option><option>High</option>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Strategy</label>
+                <select id="riskStrategy" style="width:100%;margin-top:2px;padding:5px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;">
+                    <option>Mitigate</option><option>Accept</option><option>Transfer</option><option>Avoid</option><option>Watch</option>
                 </select>
             </div>
             <div>
-                <label style="font-size:0.8em;font-weight:600;color:#374151;">Impact</label>
-                <select id="riskImpact" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:0.88em;">
-                    <option>Low</option><option selected>Medium</option><option>High</option>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Risk Type</label>
+                <select id="riskType" style="width:100%;margin-top:2px;padding:5px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;">
+                    <option>Type 1</option><option>Type 2</option><option>Type 3</option>
                 </select>
             </div>
             <div>
-                <label style="font-size:0.8em;font-weight:600;color:#374151;">Status</label>
-                <select id="riskStatus" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:0.88em;">
-                    <option>Open</option><option>Mitigated</option><option>Closed</option>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Owner</label>
+                <input id="riskOwner" type="text" placeholder="Name" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;box-sizing:border-box;">
+            </div>
+            <!-- Row 3: prob, impact, sched impact, status -->
+            <div>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Probability</label>
+                <select id="riskProbability" style="width:100%;margin-top:2px;padding:5px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;">
+                    <option>Low</option><option selected>Medium</option><option>High</option><option>Very High</option>
                 </select>
             </div>
             <div>
-                <label style="font-size:0.8em;font-weight:600;color:#374151;">Mitigation Due Date</label>
-                <input id="riskDueDate" type="date" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:0.88em;box-sizing:border-box;">
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Impact</label>
+                <select id="riskImpact" style="width:100%;margin-top:2px;padding:5px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;">
+                    <option>Low</option><option selected>Medium</option><option>High</option><option>Very High</option>
+                </select>
             </div>
+            <div>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Sched. Impact (wks)</label>
+                <input id="riskSchedImpact" type="number" min="0" step="0.5" placeholder="0" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Status</label>
+                <select id="riskStatus" style="width:100%;margin-top:2px;padding:5px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;">
+                    <option>Open</option><option>Assigned</option><option>In Process</option><option>Mitigated</option><option>Closed</option>
+                </select>
+            </div>
+            <!-- Row 4: due date, date closed -->
+            <div>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Due Date</label>
+                <input id="riskDueDate" type="date" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Date Closed</label>
+                <input id="riskDateClosed" type="date" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;box-sizing:border-box;">
+            </div>
+            <!-- Row 4 remaining: RPN display (read-only) -->
+            <div style="display:flex;flex-direction:column;justify-content:flex-end;">
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">RPN (auto)</label>
+                <div id="riskRpnDisplay" style="margin-top:2px;padding:5px 10px;border-radius:4px;font-size:0.92em;font-weight:700;text-align:center;background:#f1f5f9;color:#374151;">—</div>
+            </div>
+            <!-- Row 5: action plan full width -->
             <div style="grid-column:1/-1;">
-                <label style="font-size:0.8em;font-weight:600;color:#374151;">Mitigation Plan</label>
-                <textarea id="riskMitigation" rows="2" placeholder="What is being done to mitigate this risk?" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:0.88em;resize:vertical;box-sizing:border-box;"></textarea>
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Action Plan</label>
+                <textarea id="riskMitigation" rows="2" placeholder="Steps to mitigate or respond to this risk" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;resize:vertical;box-sizing:border-box;"></textarea>
+            </div>
+            <!-- Row 6: outcome full width -->
+            <div style="grid-column:1/-1;">
+                <label style="font-size:0.78em;font-weight:600;color:#374151;">Outcome <span style="font-weight:400;color:#6b7280;">(fill when closed)</span></label>
+                <input id="riskOutcome" type="text" placeholder="What happened?" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:0.84em;box-sizing:border-box;">
             </div>
         </div>
-        <div style="display:flex;gap:8px;margin-top:12px;">
-            <button onclick="saveRisk()" style="background:#1e3a5f;color:#fff;border:none;border-radius:5px;padding:7px 18px;font-size:0.88em;font-weight:600;cursor:pointer;">💾 Save</button>
-            <button onclick="cancelRiskForm()" style="background:#f1f5f9;border:1px solid #d1d5db;border-radius:5px;padding:7px 14px;font-size:0.88em;cursor:pointer;">Cancel</button>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+            <button onclick="saveRisk()" style="background:#1e3a5f;color:#fff;border:none;border-radius:5px;padding:6px 18px;font-size:0.88em;font-weight:600;cursor:pointer;">💾 Save</button>
+            <button onclick="cancelRiskForm()" style="background:#f1f5f9;border:1px solid #d1d5db;border-radius:5px;padding:6px 14px;font-size:0.88em;cursor:pointer;">Cancel</button>
         </div>
     </div>
 
     <!-- Risk table -->
-    <div style="flex:1;overflow-y:auto;padding:16px 20px;">
+    <div style="flex:1;overflow-y:auto;overflow-x:auto;padding:12px 16px;">
         <div id="riskTableContainer"></div>
     </div>
 </div>
@@ -5195,9 +5232,24 @@
 let _projectRiskCountsByName = {};
 
 (function() {
-    let _riskMode = 'gantt';       // 'gantt' | 'pipeline'
+    let _riskMode = 'gantt';
     let _riskProjectName = null;
     let _riskPipelineId  = null;
+
+    const SCORE = {Low:2, Medium:3, High:4, 'Very High':5};
+    function rpn(p, i)    { return (SCORE[p]||3) * (SCORE[i]||3); }
+    function rpnBg(v)     { return v >= 16 ? '#fee2e2' : v >= 9 ? '#fef3c7' : '#f0fdf4'; }
+    function rpnColor(v)  { return v >= 16 ? '#991b1b' : v >= 9 ? '#92400e' : '#166534'; }
+
+    function _updateRpnDisplay() {
+        const p = document.getElementById('riskProbability').value;
+        const i = document.getElementById('riskImpact').value;
+        const v = rpn(p, i);
+        const el = document.getElementById('riskRpnDisplay');
+        el.textContent = v;
+        el.style.background = rpnBg(v);
+        el.style.color = rpnColor(v);
+    }
 
     function _openPanel(title) {
         document.getElementById('riskPanelProjectName').textContent = title;
@@ -5236,42 +5288,57 @@ let _projectRiskCountsByName = {};
     window.openRiskForm = function(risk) {
         document.getElementById('riskForm').style.display = 'block';
         document.getElementById('riskFormTitle').textContent = risk ? 'Edit Risk' : 'New Risk';
-        document.getElementById('riskFormId').value = risk ? risk.id : '';
-        document.getElementById('riskTitle').value = risk ? risk.title : '';
-        document.getElementById('riskCategory').value = risk ? risk.category : 'Other';
-        document.getElementById('riskOwner').value = risk ? (risk.owner || '') : '';
-        document.getElementById('riskProbability').value = risk ? risk.probability : 'Medium';
-        document.getElementById('riskImpact').value = risk ? risk.impact : 'Medium';
-        document.getElementById('riskStatus').value = risk ? risk.status : 'Open';
-        document.getElementById('riskDueDate').value = risk ? (risk.due_date || '') : '';
-        document.getElementById('riskMitigation').value = risk ? (risk.mitigation || '') : '';
+        document.getElementById('riskFormId').value        = risk ? risk.id : '';
+        document.getElementById('riskTitle').value         = risk ? risk.title : '';
+        document.getElementById('riskCategory').value      = risk ? (risk.category || 'Other') : 'Other';
+        document.getElementById('riskStrategy').value      = risk ? (risk.strategy || 'Mitigate') : 'Mitigate';
+        document.getElementById('riskType').value          = risk ? (risk.risk_type || 'Type 1') : 'Type 1';
+        document.getElementById('riskOwner').value         = risk ? (risk.owner || '') : '';
+        document.getElementById('riskProbability').value   = risk ? (risk.probability || 'Medium') : 'Medium';
+        document.getElementById('riskImpact').value        = risk ? (risk.impact || 'Medium') : 'Medium';
+        document.getElementById('riskSchedImpact').value   = risk ? (risk.schedule_impact_weeks ?? '') : '';
+        document.getElementById('riskStatus').value        = risk ? (risk.status || 'Open') : 'Open';
+        document.getElementById('riskDueDate').value       = risk ? (risk.due_date || '') : '';
+        document.getElementById('riskDateClosed').value    = risk ? (risk.date_closed || '') : '';
+        document.getElementById('riskMitigation').value    = risk ? (risk.mitigation || '') : '';
+        document.getElementById('riskOutcome').value       = risk ? (risk.outcome || '') : '';
+        _updateRpnDisplay();
         document.getElementById('riskTitle').focus();
     };
+
+    document.getElementById('riskProbability').addEventListener('change', _updateRpnDisplay);
+    document.getElementById('riskImpact').addEventListener('change', _updateRpnDisplay);
 
     window.cancelRiskForm = function() {
         document.getElementById('riskForm').style.display = 'none';
     };
 
     window.saveRisk = async function() {
-        const id = document.getElementById('riskFormId').value;
+        const id    = document.getElementById('riskFormId').value;
         const title = document.getElementById('riskTitle').value.trim();
-        if (!title) { alert('Title is required.'); return; }
+        if (!title) { alert('Risk Statement is required.'); return; }
+        const schedVal = document.getElementById('riskSchedImpact').value;
         const body = {
             title,
-            category:    document.getElementById('riskCategory').value,
-            owner:       document.getElementById('riskOwner').value.trim(),
-            probability: document.getElementById('riskProbability').value,
-            impact:      document.getElementById('riskImpact').value,
-            status:      document.getElementById('riskStatus').value,
-            due_date:    document.getElementById('riskDueDate').value || null,
-            mitigation:  document.getElementById('riskMitigation').value.trim(),
+            category:               document.getElementById('riskCategory').value,
+            strategy:               document.getElementById('riskStrategy').value,
+            risk_type:              document.getElementById('riskType').value,
+            owner:                  document.getElementById('riskOwner').value.trim(),
+            probability:            document.getElementById('riskProbability').value,
+            impact:                 document.getElementById('riskImpact').value,
+            schedule_impact_weeks:  schedVal !== '' ? parseFloat(schedVal) : null,
+            status:                 document.getElementById('riskStatus').value,
+            due_date:               document.getElementById('riskDueDate').value || null,
+            date_closed:            document.getElementById('riskDateClosed').value || null,
+            mitigation:             document.getElementById('riskMitigation').value.trim(),
+            outcome:                document.getElementById('riskOutcome').value.trim(),
         };
         const postUrl = _riskMode === 'pipeline'
             ? `/api/pipeline-project/${_riskPipelineId}/risks`
             : `/api/project/${encodeURIComponent(_riskProjectName)}/risks`;
-        const url = id ? `/api/risk/${id}` : postUrl;
+        const url    = id ? `/api/risk/${id}` : postUrl;
         const method = id ? 'PUT' : 'POST';
-        const resp = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const resp   = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
         if (!resp.ok) { alert('Save failed'); return; }
         cancelRiskForm();
         await refreshRiskTable();
@@ -5293,44 +5360,54 @@ let _projectRiskCountsByName = {};
             container.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:40px 0;font-size:0.92em;">No risks recorded yet. Click "+ Add Risk" to start.</div>';
             return;
         }
-        const severityColor = (p, i) => {
-            if (p === 'High' || i === 'High') return '#fee2e2';
-            if (p === 'Medium' || i === 'Medium') return '#fef3c7';
-            return '#f0fdf4';
-        };
         const statusBadge = s => {
-            const colors = { Open: '#fee2e2;color:#b91c1c', Mitigated: '#fef3c7;color:#92400e', Closed: '#dcfce7;color:#15803d' };
-            return `<span style="background:${colors[s]||'#f1f5f9;color:#64748b'};padding:2px 8px;border-radius:10px;font-size:0.78em;font-weight:600;">${s}</span>`;
+            const map = {Open:'#fee2e2;color:#b91c1c', Assigned:'#dbeafe;color:#1e40af',
+                         'In Process':'#fef3c7;color:#92400e', Mitigated:'#ede9fe;color:#5b21b6', Closed:'#dcfce7;color:#15803d'};
+            return `<span style="background:${map[s]||'#f1f5f9;color:#64748b'};padding:2px 7px;border-radius:10px;font-size:0.77em;font-weight:600;white-space:nowrap;">${s}</span>`;
         };
+        const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+        const th = (t, w) => `<th style="padding:7px 8px;white-space:nowrap;font-size:0.8em;background:#1e3a5f;color:#fff;${w?'width:'+w+';':''}border-right:1px solid #2d5080;">${t}</th>`;
         container.innerHTML = `
-            <table style="width:100%;border-collapse:collapse;font-size:0.82em;">
-                <thead>
-                    <tr style="background:#f1f5f9;text-align:left;">
-                        <th style="padding:8px 10px;">Title</th>
-                        <th style="padding:8px 6px;">Category</th>
-                        <th style="padding:8px 6px;">P × I</th>
-                        <th style="padding:8px 6px;">Owner</th>
-                        <th style="padding:8px 6px;">Status</th>
-                        <th style="padding:8px 6px;">Due</th>
-                        <th style="padding:8px 6px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${risks.map(r => `
-                    <tr style="border-bottom:1px solid #e5e7eb;background:${severityColor(r.probability, r.impact)};">
-                        <td style="padding:8px 10px;font-weight:600;" title="${(r.mitigation||'').replace(/"/g,'&quot;')}">${r.title}</td>
-                        <td style="padding:8px 6px;color:#475569;">${r.category}</td>
-                        <td style="padding:8px 6px;">${r.probability[0]}×${r.impact[0]}</td>
-                        <td style="padding:8px 6px;">${r.owner||'—'}</td>
-                        <td style="padding:8px 6px;">${statusBadge(r.status)}</td>
-                        <td style="padding:8px 6px;white-space:nowrap;">${r.due_date||'—'}</td>
-                        <td style="padding:6px 6px;white-space:nowrap;">
-                            <button onclick="openRiskForm(${JSON.stringify(r).replace(/"/g,'&quot;')})" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:5px;padding:4px 10px;cursor:pointer;font-size:0.82em;font-weight:600;">✏️ Edit</button>
-                            <button onclick="deleteRisk(${r.id})" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:5px;padding:4px 10px;cursor:pointer;font-size:0.82em;font-weight:600;margin-left:5px;">🗑 Delete</button>
-                        </td>
-                    </tr>`).join('')}
-                </tbody>
-            </table>`;
+        <table style="border-collapse:collapse;font-size:0.81em;min-width:1200px;width:100%;">
+            <thead><tr>
+                ${th('#','32px')}${th('Date','80px')}${th('Category','90px')}
+                ${th('Risk Statement','')}${th('Prob','65px')}${th('Impact','65px')}
+                ${th('RPN','52px')}${th('Sched (wks)','70px')}${th('Type','65px')}
+                ${th('Strategy','80px')}${th('Action Plan','160px')}${th('Owner','90px')}
+                ${th('Status','90px')}${th('Outcome','110px')}${th('','100px')}
+            </tr></thead>
+            <tbody>
+            ${risks.map((r, idx) => {
+                const rv = rpn(r.probability, r.impact);
+                const bg = rpnBg(rv);
+                const rc = rpnColor(rv);
+                const rj = esc(JSON.stringify(r));
+                const dt = r.created_at ? r.created_at.substring(0,10) : '—';
+                const ap = r.mitigation ? `<span title="${esc(r.mitigation)}" style="display:block;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.mitigation)}</span>` : '—';
+                const oc = r.outcome ? `<span title="${esc(r.outcome)}" style="display:block;max-width:105px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.outcome)}</span>` : '—';
+                return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:6px 8px;text-align:center;font-weight:700;color:#6b7280;">${idx+1}</td>
+                    <td style="padding:6px 8px;white-space:nowrap;color:#6b7280;">${dt}</td>
+                    <td style="padding:6px 8px;color:#475569;">${esc(r.category||'')}</td>
+                    <td style="padding:6px 8px;font-weight:600;">${esc(r.title)}</td>
+                    <td style="padding:6px 8px;text-align:center;">${esc(r.probability||'')}</td>
+                    <td style="padding:6px 8px;text-align:center;">${esc(r.impact||'')}</td>
+                    <td style="padding:6px 8px;text-align:center;font-weight:800;color:${rc};">${rv}</td>
+                    <td style="padding:6px 8px;text-align:center;">${r.schedule_impact_weeks != null ? r.schedule_impact_weeks : '—'}</td>
+                    <td style="padding:6px 8px;color:#6b7280;">${esc(r.risk_type||'')}</td>
+                    <td style="padding:6px 8px;">${esc(r.strategy||'')}</td>
+                    <td style="padding:6px 8px;">${ap}</td>
+                    <td style="padding:6px 8px;">${esc(r.owner||'—')}</td>
+                    <td style="padding:6px 8px;">${statusBadge(r.status)}</td>
+                    <td style="padding:6px 8px;">${oc}</td>
+                    <td style="padding:5px 6px;white-space:nowrap;text-align:center;">
+                        <button onclick='openRiskForm(${rj})' style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:600;">✏️</button>
+                        <button onclick="deleteRisk(${r.id})" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:600;margin-left:3px;">🗑</button>
+                    </td>
+                </tr>`;
+            }).join('')}
+            </tbody>
+        </table>`;
     }
 })();
 </script>
