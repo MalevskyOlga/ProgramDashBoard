@@ -5395,15 +5395,15 @@ let _projectRiskCountsByName = {};
             return `<span style="background:${map[s]||'#f1f5f9;color:#64748b'};padding:2px 7px;border-radius:10px;font-size:0.77em;font-weight:600;white-space:nowrap;">${s}</span>`;
         };
         const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-        const th = (t, w) => `<th style="padding:7px 8px;white-space:nowrap;font-size:0.8em;background:#1e3a5f;color:#fff;${w?'width:'+w+';':''}border-right:1px solid #2d5080;">${t}</th>`;
+        const th = (t, w, mw) => `<th style="padding:7px 8px;white-space:nowrap;font-size:0.8em;background:#1e3a5f;color:#fff;${w?'width:'+w+';':''}${mw?'min-width:'+mw+';':''}border-right:1px solid #2d5080;">${t}</th>`;
         container.innerHTML = `
-        <table style="border-collapse:collapse;font-size:0.81em;min-width:1200px;width:100%;">
+        <table style="border-collapse:collapse;font-size:0.81em;width:100%;table-layout:auto;">
             <thead><tr>
                 ${th('#','32px')}${th('Date','80px')}${th('Category','90px')}
-                ${th('Risk Statement','')}${th('Prob','65px')}${th('Impact','65px')}
-                ${th('RPN','52px')}${th('Sched (wks)','70px')}${th('Type','65px')}
-                ${th('Strategy','80px')}${th('Action Plan','160px')}${th('Owner','90px')}
-                ${th('Status','90px')}${th('Outcome','110px')}${th('','100px')}
+                ${th('Risk Statement','','240px')}${th('Prob','62px')}${th('Impact','62px')}
+                ${th('RPN','50px')}${th('Sched (wks)','68px')}${th('Type','62px')}
+                ${th('Strategy','78px')}${th('Action Plan','','260px')}${th('Owner','88px')}
+                ${th('Status','88px')}${th('Outcome','','140px')}${th('','92px')}
             </tr></thead>
             <tbody>
             ${risks.map((r, idx) => {
@@ -5412,23 +5412,23 @@ let _projectRiskCountsByName = {};
                 const rc = rpnColor(rv);
                 const rj = esc(JSON.stringify(r));
                 const dt = r.created_at ? r.created_at.substring(0,10) : '—';
-                const ap = r.mitigation ? `<span title="${esc(r.mitigation)}" style="display:block;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.mitigation)}</span>` : '—';
-                const oc = r.outcome ? `<span title="${esc(r.outcome)}" style="display:block;max-width:105px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.outcome)}</span>` : '—';
-                return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;">
+                const ap = r.mitigation ? `<span style="white-space:pre-wrap;word-break:break-word;">${esc(r.mitigation)}</span>` : '—';
+                const oc = r.outcome ? `<span style="white-space:pre-wrap;word-break:break-word;">${esc(r.outcome)}</span>` : '—';
+                return `<tr style="background:${bg};border-bottom:1px solid #e2e8f0;vertical-align:top;">
                     <td style="padding:6px 8px;text-align:center;font-weight:700;color:#6b7280;">${idx+1}</td>
                     <td style="padding:6px 8px;white-space:nowrap;color:#6b7280;">${dt}</td>
                     <td style="padding:6px 8px;color:#475569;">${esc(r.category||'')}</td>
-                    <td style="padding:6px 8px;font-weight:600;">${esc(r.title)}</td>
+                    <td style="padding:6px 8px;font-weight:600;word-break:break-word;">${esc(r.title)}</td>
                     <td style="padding:6px 8px;text-align:center;">${esc(r.probability||'')}</td>
                     <td style="padding:6px 8px;text-align:center;">${esc(r.impact||'')}</td>
                     <td style="padding:6px 8px;text-align:center;font-weight:800;color:${rc};">${rv}</td>
                     <td style="padding:6px 8px;text-align:center;">${r.schedule_impact_weeks != null ? r.schedule_impact_weeks : '—'}</td>
                     <td style="padding:6px 8px;color:#6b7280;">${esc(r.risk_type||'')}</td>
                     <td style="padding:6px 8px;">${esc(r.strategy||'')}</td>
-                    <td style="padding:6px 8px;">${ap}</td>
+                    <td style="padding:6px 10px;line-height:1.45;">${ap}</td>
                     <td style="padding:6px 8px;">${esc(r.owner||'—')}</td>
                     <td style="padding:6px 8px;">${statusBadge(r.status)}</td>
-                    <td style="padding:6px 8px;">${oc}</td>
+                    <td style="padding:6px 8px;line-height:1.45;">${oc}</td>
                     <td style="padding:5px 6px;white-space:nowrap;text-align:center;">
                         <button onclick='openRiskForm(${rj})' style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:600;">✏️</button>
                         <button onclick="deleteRisk(${r.id})" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:4px;padding:3px 9px;cursor:pointer;font-size:0.8em;font-weight:600;margin-left:3px;">🗑</button>
