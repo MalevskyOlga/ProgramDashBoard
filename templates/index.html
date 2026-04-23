@@ -2222,9 +2222,13 @@
                     fetchFresh('/api/risks/counts').then(r => r.json()).catch(() => ({}))
                 ]);
                 currentProjectsPayload = projects;
-                
+
+                // Build name-keyed map so F&G Pipeline badges can look up by dashboard_name
+                _projectRiskCountsByName = {};
+                projects.forEach(p => { if (riskCounts[p.id]) _projectRiskCountsByName[p.name] = riskCounts[p.id]; });
+
                 const container = document.getElementById('projectsContainer');
-                
+
                 if (projects.length === 0) {
                     container.innerHTML = `
                         <div class="empty-state">
@@ -4549,14 +4553,22 @@
             const section = document.getElementById('priorityListSection');
             if (!section) return;
             try {
-                const [pRes, aRes, rcRes] = await Promise.all([
+                const [pRes, aRes, rcPipeRes, rcGanttRes, ganttProjRes] = await Promise.all([
                     fetchFresh('/api/priority-projects'),
                     fetchFresh('/api/archived-projects'),
-                    fetchFresh('/api/risks/counts/pipeline').catch(() => ({ json: async () => ({}) }))
+                    fetchFresh('/api/risks/counts/pipeline').catch(() => ({ json: async () => ({}) })),
+                    fetchFresh('/api/risks/counts').catch(() => ({ json: async () => ({}) })),
+                    fetchFresh('/api/projects').catch(() => ({ json: async () => [] }))
                 ]);
-                const projects = await pRes.json();
-                const archived = await aRes.json();
-                _pipelineRiskCounts = await rcRes.json().catch(() => ({}));
+                const projects     = await pRes.json();
+                const archived     = await aRes.json();
+                _pipelineRiskCounts = await rcPipeRes.json().catch(() => ({}));
+                const ganttCounts  = await rcGanttRes.json().catch(() => ({}));
+                const ganttProjects = await ganttProjRes.json().catch(() => []);
+                // Build name-keyed map so linked-Gantt pipeline rows show correct counts
+                ganttProjects.forEach(p => {
+                    if (ganttCounts[p.id]) _projectRiskCountsByName[p.name] = ganttCounts[p.id];
+                });
                 if (projects.error) throw new Error(projects.error);
                 renderPrioritySection(projects, Array.isArray(archived) ? archived : []);
             } catch (err) {
