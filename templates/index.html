@@ -5127,8 +5127,11 @@
             <div style="font-size:1.1em;font-weight:700;">⚠ Risk Register</div>
             <div id="riskPanelProjectName" style="font-size:0.85em;opacity:0.8;margin-top:2px;"></div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
+        <div style="display:flex;align-items:center;gap:10px;">
             <button onclick="openRiskForm(null)" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:0.88em;font-weight:600;cursor:pointer;">+ Add Risk</button>
+            <button onclick="document.getElementById('riskImportFile').click()" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:0.88em;font-weight:600;cursor:pointer;" title="Import risks from Excel Risk Register template">📂 Import Excel</button>
+            <input type="file" id="riskImportFile" accept=".xlsx" style="display:none;" onchange="importRisksFromExcel(this)">
+            <span id="riskImportStatus" style="font-size:0.82em;opacity:0.85;"></span>
             <button onclick="closeRiskPanel()" style="background:none;border:none;color:#fff;font-size:1.4em;cursor:pointer;padding:4px 8px;">✕</button>
         </div>
     </div>
@@ -5348,6 +5351,32 @@ let _projectRiskCountsByName = {};
         if (!confirm('Delete this risk?')) return;
         await fetch(`/api/risk/${id}`, { method: 'DELETE' });
         await refreshRiskTable();
+    };
+
+    window.importRisksFromExcel = async function(input) {
+        const file = input.files[0];
+        if (!file) return;
+        input.value = '';
+        const statusEl = document.getElementById('riskImportStatus');
+        statusEl.textContent = '⏳ Importing…';
+        const formData = new FormData();
+        formData.append('file', file);
+        const url = _riskMode === 'pipeline'
+            ? `/api/pipeline-project/${_riskPipelineId}/risks/import`
+            : `/api/project/${encodeURIComponent(_riskProjectName)}/risks/import`;
+        try {
+            const resp = await fetch(url, { method: 'POST', body: formData });
+            const data = await resp.json();
+            if (!resp.ok) {
+                statusEl.textContent = `❌ ${data.error || 'Import failed'}`;
+            } else {
+                statusEl.textContent = `✅ ${data.imported} risk${data.imported !== 1 ? 's' : ''} imported`;
+                await refreshRiskTable();
+            }
+        } catch (e) {
+            statusEl.textContent = '❌ Upload error';
+        }
+        setTimeout(() => { statusEl.textContent = ''; }, 4000);
     };
 
     async function refreshRiskTable() {

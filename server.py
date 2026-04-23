@@ -8,6 +8,8 @@ import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from io import BytesIO
+import openpyxl
 
 # Ensure stdout/stderr use UTF-8 so Unicode characters (✓ ✗ etc.) don't crash on Windows
 if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
@@ -1279,6 +1281,92 @@ def api_create_pipeline_risk(pipeline_project_id):
         date_closed=data.get('date_closed') or None,
     )
     return jsonify({'id': risk_id}), 201
+
+
+# ── Risk Excel Import ─────────────────────────────────────────────────────────
+
+def _parse_risks_from_excel(file_bytes):
+    """Parse risks from the standard Excel Risk Register template (Risk Input sheet).
+    Returns list of risk dicts ready for DB insertion.
+    Excel columns (1-based): 4=Category, 5=Risk Statement, 6=Prob, 7=Impact,
+    9=Sched Impact(wks), 10=Risk Type, 12=Strategy, 13=Action Plan,
+    14=Owner, 15=Status, 16=Outcome, 17=Date Closed. Data starts row 5.
+    """
+    wb = openpyxl.load_workbook(BytesIO(file_bytes), data_only=True)
+    sheet_name = next((s for s in wb.sheetnames if 'risk input' in s.lower()), None)
+    if sheet_name is None:
+        raise ValueError("No 'Risk Input' sheet found in workbook")
+    ws = wb[sheet_name]
+
+    PROB_MAP   = {'low':'Low','medium':'Medium','high':'High','very high':'Very High'}
+    STATUS_MAP = {'not assigned':'Open','assigned':'Assigned','in process':'In Process',
+                  'closed':'Closed','mitigated':'Mitigated','open':'Open'}
+
+    def _norm_prob(v):
+        return PROB_MAP.get((v or '').strip().lower(), 'Medium')
+
+    def _norm_status(v):
+        return STATUS_MAP.get((v or '').strip().lower(), 'Open')
+
+    def _norm_date(v):
+        if v is None:
+            return None
+        if hasattr(v, 'date'):
+            return v.date().isoformat()
+        s = str(v).strip()[:10]
+        return s if len(s) == 10 else None
+
+    risks = []
+    for row in ws.iter_rows(min_row=5, values_only=True):
+        title = str(row[4] or '').strip()   # col 5
+        if not title:
+            continue
+        sched = row[8]  # col 9
+        try:
+            sched_weeks = float(sched) if sched not in (None, '') else None
+        except (TypeError, ValueError):
+            sched_weeks = None
+
+        risks.append({
+            'title':                 title,
+            'category':              str(row[3] or 'Other').strip(),   # col 4
+            'probability':           _norm_prob(row[5]),                # col 6
+            'impact':                _norm_prob(row[6]),                # col 7
+            'schedule_impact_weeks': sched_weeks,
+            'risk_type':             str(row[9] or 'Type 1').strip(),  # col 10
+            'strategy':              str(row[11] or 'Mitigate').strip(), # col 12
+            'mitigation':            str(row[12] or '').strip(),        # col 13
+            'owner':                 str(row[13] or '').strip(),        # col 14
+            'status':                _norm_status(row[14]),             # col 15
+            'outcome':               str(row[15] or '').strip() or None, # col 16
+            'date_closed':           _norm_date(row[16]),               # col 17
+            'due_date':              None,
+        })
+    return risks
+
+
+@app.route('/api/project/<project_name>/risks/import', methods=['POST'])
+def api_import_risks(project_name):
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    try:
+        risks = _parse_risks_from_excel(request.files['file'].read())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    count = db_manager.bulk_import_risks(project_name=project_name, risks=risks)
+    return jsonify({'imported': count})
+
+
+@app.route('/api/pipeline-project/<int:pipeline_project_id>/risks/import', methods=['POST'])
+def api_import_pipeline_risks(pipeline_project_id):
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    try:
+        risks = _parse_risks_from_excel(request.files['file'].read())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+    count = db_manager.bulk_import_risks(pipeline_project_id=pipeline_project_id, risks=risks)
+    return jsonify({'imported': count})
 
 
 if __name__ == '__main__':

@@ -1584,6 +1584,41 @@ class DatabaseManager:
                     counts[pid]['medium'] += 1
         return counts
 
+    def bulk_import_risks(self, risks, project_name=None, pipeline_project_id=None):
+        """Insert a list of risk dicts. Returns count of inserted rows."""
+        if not risks:
+            return 0
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        project_id = None
+        if project_name:
+            cursor.execute('SELECT id FROM projects WHERE name = ?', (project_name,))
+            row = cursor.fetchone()
+            if not row:
+                conn.close()
+                return 0
+            project_id = row['id']
+        now = datetime.now().isoformat()
+        count = 0
+        for r in risks:
+            cursor.execute('''
+                INSERT INTO risks (project_id, pipeline_project_id, title, category, probability, impact,
+                                   owner, mitigation, status, due_date, strategy, risk_type,
+                                   schedule_impact_weeks, outcome, date_closed, created_at, updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ''', (project_id, pipeline_project_id,
+                  r.get('title'), r.get('category','Other'),
+                  r.get('probability','Medium'), r.get('impact','Medium'),
+                  r.get('owner',''), r.get('mitigation',''),
+                  r.get('status','Open'), r.get('due_date'),
+                  r.get('strategy','Mitigate'), r.get('risk_type','Type 1'),
+                  r.get('schedule_impact_weeks'), r.get('outcome'),
+                  r.get('date_closed'), now, now))
+            count += 1
+        conn.commit()
+        conn.close()
+        return count
+
     # Gate Sign-Off Management
 
     def get_gate_sign_offs(self, project_name):
