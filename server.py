@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from io import BytesIO
 import openpyxl
+from risk_ppt_exporter import export_risks_to_pptx
 
 # Ensure stdout/stderr use UTF-8 so Unicode characters (✓ ✗ etc.) don't crash on Windows
 if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
@@ -1367,6 +1368,30 @@ def api_import_pipeline_risks(pipeline_project_id):
         return jsonify({'error': str(e)}), 400
     count = db_manager.bulk_import_risks(pipeline_project_id=pipeline_project_id, risks=risks)
     return jsonify({'imported': count})
+
+
+@app.route('/api/project/<project_name>/risks/export-ppt')
+def api_export_risks_ppt(project_name):
+    risks = db_manager.get_risks(project_name=project_name)
+    buf = export_risks_to_pptx(project_name, risks)
+    safe_name = project_name.replace('/', '_').replace('\\', '_')
+    return send_file(buf, as_attachment=True,
+                     download_name=f'{safe_name}_Risks.pptx',
+                     mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+
+
+@app.route('/api/pipeline-project/<int:pipeline_project_id>/risks/export-ppt')
+def api_export_pipeline_risks_ppt(pipeline_project_id):
+    conn = _ensure_priority_tables()
+    row = conn.execute('SELECT name FROM priority_projects WHERE id = ?', (pipeline_project_id,)).fetchone()
+    conn.close()
+    project_name = row['name'] if row else f'Project {pipeline_project_id}'
+    risks = db_manager.get_pipeline_risks(pipeline_project_id)
+    buf = export_risks_to_pptx(project_name, risks)
+    safe_name = project_name.replace('/', '_').replace('\\', '_')
+    return send_file(buf, as_attachment=True,
+                     download_name=f'{safe_name}_Risks.pptx',
+                     mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
 
 
 if __name__ == '__main__':

@@ -5143,6 +5143,7 @@
             <button onclick="openRiskForm(null)" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:0.88em;font-weight:600;cursor:pointer;">+ Add Risk</button>
             <button onclick="document.getElementById('riskImportFile').click()" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:0.88em;font-weight:600;cursor:pointer;" title="Import risks from Excel Risk Register template">📂 Import Excel</button>
             <input type="file" id="riskImportFile" accept=".xlsx" style="display:none;" onchange="importRisksFromExcel(this)">
+            <button onclick="exportRisksPpt()" style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:0.88em;font-weight:600;cursor:pointer;" title="Export risks as PowerPoint slide deck">📊 Export PPT</button>
             <span id="riskImportStatus" style="font-size:0.82em;opacity:0.85;"></span>
             <button onclick="closeRiskPanel()" style="background:none;border:none;color:#fff;font-size:1.4em;cursor:pointer;padding:4px 8px;">✕</button>
         </div>
@@ -5389,6 +5390,13 @@ let _projectRiskCountsByName = {};
             statusEl.textContent = '❌ Upload error';
         }
         setTimeout(() => { statusEl.textContent = ''; }, 4000);
+    };
+
+    window.exportRisksPpt = function() {
+        const url = _riskMode === 'pipeline'
+            ? `/api/pipeline-project/${_riskPipelineId}/risks/export-ppt`
+            : `/api/project/${encodeURIComponent(_riskProjectName)}/risks/export-ppt`;
+        window.location.href = url;
     };
 
     async function refreshRiskTable() {
