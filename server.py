@@ -310,14 +310,54 @@ def api_upload_excel():
                     db_manager.create_dependency(project_info['name'], predecessor['id'], successor['id'])
                     dep_count += 1
         print(f"  ✓ Detected {dep_count} task dependencies (Finish-to-Start, delta <= {DEP_DELTA_DAYS} days)")
-        
+
+        # Check for owners not in resource_teams — warn user about unmapped names
+        known_conn = db_manager.get_connection()
+        known_rows = known_conn.execute("SELECT TRIM(owner_name) FROM resource_teams").fetchall()
+        known_conn.close()
+        known_lower = {r[0].lower(): r[0] for r in known_rows}  # lower → canonical
+
+        task_owners = set()
+        for t in all_tasks_for_project:
+            o = (t.get('owner') or '').strip()
+            if o:
+                task_owners.add(o)
+
+        def _fuzzy_suggestions(name, known_map, max_n=3):
+            nl = name.lower()
+            np = set(nl.split())
+            scored = []
+            for kl, kcanon in known_map.items():
+                kp = set(kl.split())
+                word_overlap   = len(np & kp)
+                first_match    = bool(nl.split() and kl.split() and nl.split()[0] == kl.split()[0])
+                contains       = nl in kl or kl in nl
+                char_overlap   = sum(1 for c in nl if c in kl) / max(len(nl), 1)
+                score = word_overlap * 3 + (2 if first_match else 0) + (2 if contains else 0) + char_overlap
+                if score > 0.5:
+                    scored.append((score, kcanon))
+            scored.sort(reverse=True)
+            return [s[1] for s in scored[:max_n]]
+
+        unmatched = []
+        for owner in sorted(task_owners):
+            if owner.lower() not in known_lower:
+                unmatched.append({
+                    'name': owner,
+                    'suggestions': _fuzzy_suggestions(owner, known_lower)
+                })
+
+        if unmatched:
+            print(f"  ⚠ {len(unmatched)} owner(s) not in discipline map: {[u['name'] for u in unmatched]}")
+
         return jsonify({
             'success': True,
             'message': f'Successfully imported {filename}',
             'project_name': project_info['name'],
             'tasks_imported': imported_count,
             'dependencies_detected': dep_count,
-            'filename': filename
+            'filename': filename,
+            'unmatched_owners': unmatched,
         }), 200
             
     except Exception as e:
@@ -476,8 +516,10 @@ def api_get_stats():
 
 _PRIORITY_ALLOWED_FIELDS = {
     'priority', 'name', 'leader', 'process_type',
-    'next_gate', 'launch_date', 'objective', 'segment', 'linked_dashboard'
+    'next_gate', 'launch_date', 'objective', 'segment', 'linked_dashboard', 'category'
 }
+
+_PRIORITY_CATEGORIES = {'active_big', 'active_small', 'planned_hold', 'proposed'}
 
 
 def _ensure_priority_tables():
@@ -513,12 +555,19 @@ def _ensure_priority_tables():
         )
     """)
     conn.commit()
-    # Migration: add linked_dashboard column if it doesn't exist yet
-    try:
-        conn.execute("ALTER TABLE priority_projects ADD COLUMN linked_dashboard TEXT DEFAULT NULL")
-        conn.commit()
-    except Exception:
-        pass  # column already exists
+    for migration in [
+        "ALTER TABLE priority_projects ADD COLUMN linked_dashboard TEXT DEFAULT NULL",
+        "ALTER TABLE priority_projects ADD COLUMN always_staffed INTEGER DEFAULT 0",
+        "ALTER TABLE priority_projects ADD COLUMN category TEXT DEFAULT 'active_big'",
+    ]:
+        try:
+            conn.execute(migration)
+            conn.commit()
+        except Exception:
+            pass
+    # Ensure all existing rows have a category set
+    conn.execute("UPDATE priority_projects SET category='active_big' WHERE category IS NULL OR category=''")
+    conn.commit()
     return conn
 
 
@@ -596,6 +645,10 @@ def api_get_priority_projects():
 def api_create_priority_project():
     """Append a blank project row at max priority + 1."""
     try:
+        data = request.json or {}
+        category = data.get('category', 'active_big')
+        if category not in _PRIORITY_CATEGORIES:
+            category = 'active_big'
         conn = _ensure_priority_tables()
         max_p = conn.execute(
             "SELECT COALESCE(MAX(priority), 0) FROM priority_projects"
@@ -603,9 +656,9 @@ def api_create_priority_project():
         new_p = max_p + 1
         row_id = conn.execute("""
             INSERT INTO priority_projects
-                (priority, name, leader, process_type, next_gate, launch_date, objective, segment)
-            VALUES (?, '', '', '', '', '', '', '')
-        """, (new_p,)).lastrowid
+                (priority, name, leader, process_type, next_gate, launch_date, objective, segment, category)
+            VALUES (?, '', '', '', '', '', '', '', ?)
+        """, (new_p, category)).lastrowid
         conn.commit()
         conn.close()
         return jsonify({'success': True, 'id': row_id, 'priority': new_p}), 201
@@ -696,6 +749,52 @@ def api_delete_priority_project(proj_id):
         conn.commit()
         conn.close()
         return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/priority-projects/<int:proj_id>/move', methods=['POST'])
+def api_move_priority_project(proj_id):
+    """Swap this project's priority with its neighbor within the same category."""
+    try:
+        direction = (request.json or {}).get('direction', 'up')
+        conn = _ensure_priority_tables()
+        row = conn.execute(
+            "SELECT id, priority, category FROM priority_projects WHERE id = ?", (proj_id,)
+        ).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'error': 'Project not found'}), 404
+        curr_priority, category = row['priority'], row['category']
+
+        siblings = conn.execute(
+            "SELECT id, priority FROM priority_projects WHERE category = ? ORDER BY priority, id",
+            (category,)
+        ).fetchall()
+        ids = [r['id'] for r in siblings]
+        idx = ids.index(proj_id) if proj_id in ids else -1
+        if idx < 0:
+            conn.close()
+            return jsonify({'error': 'Project not in category'}), 400
+        neighbor_idx = idx - 1 if direction == 'up' else idx + 1
+        if neighbor_idx < 0 or neighbor_idx >= len(siblings):
+            conn.close()
+            return jsonify({'success': True, 'projects': _build_priority_response(conn)})
+
+        neighbor = siblings[neighbor_idx]
+        p_curr = siblings[idx]['priority']
+        p_neighbor = neighbor['priority']
+        # Ensure distinct priorities for a clean swap
+        if p_curr == p_neighbor:
+            p_curr = idx + 1
+            p_neighbor = neighbor_idx + 1
+
+        conn.execute("UPDATE priority_projects SET priority=?, updated_at=datetime('now') WHERE id=?", (p_neighbor, proj_id))
+        conn.execute("UPDATE priority_projects SET priority=?, updated_at=datetime('now') WHERE id=?", (p_curr, neighbor['id']))
+        conn.commit()
+        result = _build_priority_response(conn)
+        conn.close()
+        return jsonify({'success': True, 'projects': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -917,11 +1016,104 @@ def api_resource_teams_bulk():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/resource-project-matrix')
+def api_resource_project_matrix():
+    """Projects × Disciplines task-count matrix for the F&G priority list."""
+    import calendar
+    from datetime import date as _date
+    today = _date.today()
+    # Window: today → +2 months
+    m2 = today.month + 2
+    y2 = today.year + (m2 - 1) // 12
+    m2 = (m2 - 1) % 12 + 1
+    window_end = _date(y2, m2, calendar.monthrange(y2, m2)[1]).isoformat()
+    today_str = today.isoformat()
+
+    # Load discipline mappings
+    conn = db_manager.get_connection()
+    mappings = conn.execute("SELECT TRIM(owner_name), team_name FROM resource_teams").fetchall()
+    conn.close()
+    owner_to_disc = {row[0].lower(): row[1] for row in mappings}
+    all_disciplines = sorted(set(row[1] for row in mappings))
+
+    # Count tasks per (project, owner) in the active window
+    db_path = config.DATABASE_PATH
+    t_conn = sqlite3.connect(str(db_path))
+    t_conn.row_factory = sqlite3.Row
+    task_rows = t_conn.execute("""
+        SELECT p.name AS project_name, TRIM(t.owner) AS owner, COUNT(*) AS cnt
+        FROM tasks t
+        JOIN projects p ON t.project_id = p.id
+        WHERE t.status IN ('In Process','Planned')
+          AND t.start_date IS NOT NULL AND t.start_date != ''
+          AND t.end_date   IS NOT NULL AND t.end_date   != ''
+          AND t.end_date   >= ?
+          AND t.start_date <= ?
+          AND COALESCE(t.milestone, 0) = 0
+          AND (p.is_deleted = 0 OR p.is_deleted IS NULL)
+        GROUP BY p.name, TRIM(t.owner)
+    """, (today_str, window_end)).fetchall()
+    t_conn.close()
+
+    # Build {project_name_lower: {discipline: count}}
+    proj_disc_map = {}
+    for row in task_rows:
+        pname = (row['project_name'] or '').strip().lower()
+        owner = (row['owner'] or '').lower()
+        disc  = owner_to_disc.get(owner)
+        if not disc:
+            continue
+        proj_disc_map.setdefault(pname, {})
+        proj_disc_map[pname][disc] = proj_disc_map[pname].get(disc, 0) + row['cnt']
+
+    # Get priority projects (creates tables if needed)
+    conn2 = _ensure_priority_tables()
+    prio_rows = conn2.execute("SELECT * FROM priority_projects WHERE category='active_big' ORDER BY priority, id").fetchall()
+    existing  = {p['name'].strip().lower(): p['name'] for p in db_manager.get_all_projects()}
+    conn2.close()
+
+    projects_result = []
+    for row in prio_rows:
+        d = dict(row)
+        linked = d.get('linked_dashboard')
+        if linked == '__none__':
+            dashboard_name = None
+        elif linked and linked.strip().lower() in existing:
+            dashboard_name = linked
+        else:
+            dashboard_name = existing.get((d.get('name') or '').strip().lower())
+
+        disc_counts = {}
+        total = 0
+        if dashboard_name:
+            disc_counts = proj_disc_map.get(dashboard_name.strip().lower(), {})
+            total = sum(disc_counts.values())
+
+        projects_result.append({
+            'id':             d['id'],
+            'priority':       d['priority'],
+            'name':           d['name'],
+            'leader':         d.get('leader', ''),
+            'dashboard_name': dashboard_name,
+            'disciplines':    disc_counts,
+            'total':          total,
+            'always_staffed': bool(d.get('always_staffed', 0)),
+        })
+
+    return jsonify({
+        'disciplines':   all_disciplines,
+        'projects':      projects_result,
+        'window_start':  today_str,
+        'window_end':    window_end,
+    })
+
+
 @app.route('/api/discipline-resource-load')
 def api_discipline_resource_load():
     import calendar
     from datetime import date as _date
     today = _date.today()
+    project_name_filter = request.args.get('project_name', '').strip()
 
     # Build 13-month window: 1 past + current + 11 future
     months = []
@@ -949,17 +1141,29 @@ def api_discipline_resource_load():
         cutoff_year  -= 1
     cutoff_date = _date(cutoff_year, cutoff_month, 1).isoformat()
 
-    # Load active tasks from dashboards.db (only tasks ending within the lookback window)
+    # Load active tasks — optionally filtered to one project
     db_path = config.DATABASE_PATH
     t_conn = sqlite3.connect(str(db_path))
-    tasks = t_conn.execute("""
-        SELECT TRIM(owner), start_date, end_date, status
-        FROM tasks
-        WHERE status IN ('In Process','Planned')
-          AND start_date IS NOT NULL AND start_date != ''
-          AND end_date   IS NOT NULL AND end_date   != ''
-          AND end_date >= ?
-    """, (cutoff_date,)).fetchall()
+    if project_name_filter:
+        tasks = t_conn.execute("""
+            SELECT TRIM(t.owner), t.start_date, t.end_date, t.status
+            FROM tasks t
+            JOIN projects p ON t.project_id = p.id
+            WHERE t.status IN ('In Process','Planned')
+              AND t.start_date IS NOT NULL AND t.start_date != ''
+              AND t.end_date   IS NOT NULL AND t.end_date   != ''
+              AND t.end_date >= ?
+              AND p.name = ?
+        """, (cutoff_date, project_name_filter)).fetchall()
+    else:
+        tasks = t_conn.execute("""
+            SELECT TRIM(owner), start_date, end_date, status
+            FROM tasks
+            WHERE status IN ('In Process','Planned')
+              AND start_date IS NOT NULL AND start_date != ''
+              AND end_date   IS NOT NULL AND end_date   != ''
+              AND end_date >= ?
+        """, (cutoff_date,)).fetchall()
     t_conn.close()
 
     # Compute monthly task counts per discipline
@@ -982,50 +1186,49 @@ def api_discipline_resource_load():
             if start <= me and end >= ms:
                 disc_monthly[disc][bucket][i] += 1
 
-    # Inject PM overhead (config.PM_LOAD_PER_PROJECT per month per managed project)
-    pm_conn = sqlite3.connect(str(db_path))
-    pm_conn.row_factory = sqlite3.Row
-    pm_proj_rows = pm_conn.execute("""
-        SELECT TRIM(p.manager) AS manager,
-               MIN(CASE WHEN t.status IN ('In Process','Planned') THEN t.start_date ELSE NULL END) AS proj_start,
-               MAX(CASE WHEN t.status IN ('In Process','Planned') THEN t.end_date   ELSE NULL END) AS proj_end,
-               SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks,
-               SUM(CASE WHEN t.status = 'In Process' THEN 1 ELSE 0 END) AS inprocess_tasks
-        FROM projects p
-        LEFT JOIN tasks t ON t.project_id = p.id
-        WHERE TRIM(COALESCE(p.manager,'')) != ''
-        GROUP BY p.id, p.name, p.manager
-        HAVING active_tasks > 0
-    """).fetchall()
-    pm_conn.close()
+    # Inject PM overhead (skip for single-project view — overhead is portfolio-level)
+    if not project_name_filter:
+        pm_conn = sqlite3.connect(str(db_path))
+        pm_conn.row_factory = sqlite3.Row
+        pm_proj_rows = pm_conn.execute("""
+            SELECT TRIM(p.manager) AS manager,
+                   MIN(CASE WHEN t.status IN ('In Process','Planned') THEN t.start_date ELSE NULL END) AS proj_start,
+                   MAX(CASE WHEN t.status IN ('In Process','Planned') THEN t.end_date   ELSE NULL END) AS proj_end,
+                   SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks,
+                   SUM(CASE WHEN t.status = 'In Process' THEN 1 ELSE 0 END) AS inprocess_tasks
+            FROM projects p
+            LEFT JOIN tasks t ON t.project_id = p.id
+            WHERE TRIM(COALESCE(p.manager,'')) != ''
+            GROUP BY p.id, p.name, p.manager
+            HAVING active_tasks > 0
+        """).fetchall()
+        pm_conn.close()
 
-    for pr in pm_proj_rows:
-        manager   = (pr['manager'] or '').strip()
-        pstart_s  = pr['proj_start']
-        pend_s    = pr['proj_end']
-        if not manager or not pstart_s or not pend_s:
-            continue
-        # Resolve manager name → discipline (exact, then first-name)
-        disc = owner_to_disc.get(manager.lower())
-        if not disc:
-            disc = owner_to_disc.get(manager.split()[0].lower())
-        if not disc:
-            continue
-        try:
-            pstart = _date.fromisoformat(pstart_s[:10])
-            pend   = _date.fromisoformat(pend_s[:10])
-        except Exception:
-            continue
-        if disc not in disc_monthly:
-            disc_monthly[disc] = {'In Process': [0]*len(months), 'Planned': [0]*len(months)}
-        # Bucket by whether the project has active In Process tasks (not just date vs today)
-        has_inprocess = (pr['inprocess_tasks'] or 0) > 0
-        for i, ms in enumerate(months):
-            last_day = calendar.monthrange(ms.year, ms.month)[1]
-            me = _date(ms.year, ms.month, last_day)
-            if pstart <= me and pend >= ms:
-                bucket = 'In Process' if (has_inprocess and ms <= today) else 'Planned'
-                disc_monthly[disc][bucket][i] += config.PM_LOAD_PER_PROJECT
+        for pr in pm_proj_rows:
+            manager   = (pr['manager'] or '').strip()
+            pstart_s  = pr['proj_start']
+            pend_s    = pr['proj_end']
+            if not manager or not pstart_s or not pend_s:
+                continue
+            disc = owner_to_disc.get(manager.lower())
+            if not disc:
+                disc = owner_to_disc.get(manager.split()[0].lower())
+            if not disc:
+                continue
+            try:
+                pstart = _date.fromisoformat(pstart_s[:10])
+                pend   = _date.fromisoformat(pend_s[:10])
+            except Exception:
+                continue
+            if disc not in disc_monthly:
+                disc_monthly[disc] = {'In Process': [0]*len(months), 'Planned': [0]*len(months)}
+            has_inprocess = (pr['inprocess_tasks'] or 0) > 0
+            for i, ms in enumerate(months):
+                last_day = calendar.monthrange(ms.year, ms.month)[1]
+                me = _date(ms.year, ms.month, last_day)
+                if pstart <= me and pend >= ms:
+                    bucket = 'In Process' if (has_inprocess and ms <= today) else 'Planned'
+                    disc_monthly[disc][bucket][i] += config.PM_LOAD_PER_PROJECT
 
     result = []
     for disc in sorted(disc_monthly):
@@ -1052,6 +1255,33 @@ def api_discipline_resource_load():
         'today_month': today.strftime('%Y-%m'),
         'disciplines': result,
     })
+
+
+@app.route('/api/known-owners')
+def api_known_owners():
+    """Return all owners from the discipline registry (resource_teams)."""
+    conn = db_manager.get_connection()
+    rows = conn.execute(
+        "SELECT owner_name, team_name FROM resource_teams ORDER BY owner_name"
+    ).fetchall()
+    conn.close()
+    return jsonify([{'owner_name': r[0], 'team_name': r[1]} for r in rows])
+
+
+@app.route('/api/rename-owner', methods=['POST'])
+def api_rename_owner():
+    """Rename an owner across all tasks (used after import warning)."""
+    data = request.get_json(silent=True) or {}
+    old_name = (data.get('old_name') or '').strip()
+    new_name = (data.get('new_name') or '').strip()
+    if not old_name or not new_name:
+        return jsonify({'error': 'old_name and new_name are required'}), 400
+    conn = db_manager.get_connection()
+    conn.execute('UPDATE tasks SET owner = ? WHERE TRIM(owner) = ?', (new_name, old_name))
+    updated = conn.total_changes
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'updated': updated})
 
 
 @app.route('/api/dependency/<int:dep_id>', methods=['DELETE'])

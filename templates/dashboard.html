@@ -1516,7 +1516,20 @@
 
                 <div class="form-group">
                     <label>Owner *</label>
-                    <input type="text" id="taskOwner" required>
+                    <input type="text" id="taskOwner" required
+                        list="knownOwnersList"
+                        autocomplete="off"
+                        placeholder="Type or pick from team…"
+                        oninput="onOwnerInput(this)"
+                        onblur="onOwnerBlur(this)">
+                    <datalist id="knownOwnersList"></datalist>
+                    <div id="ownerAddPrompt" style="display:none;margin-top:6px;padding:8px 10px;background:#1a2a0a;border:1px solid #4ade8044;border-radius:6px;font-size:0.82em;">
+                        <span style="color:#ffd18d;">⚠ <span id="ownerAddName"></span> is not in the discipline map.</span>
+                        <span style="color:#6b7fa3;margin-left:6px;">Add as:</span>
+                        <select id="ownerAddDisc" style="margin-left:6px;background:#0f1d35;border:1px solid #24355f;color:#cdd9e5;border-radius:4px;padding:2px 6px;font-size:0.85em;"></select>
+                        <button type="button" onclick="addOwnerToMap()" style="margin-left:8px;background:#4a9eff;color:#fff;border:none;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:0.82em;font-weight:600;">Add to map</button>
+                        <button type="button" onclick="dismissOwnerPrompt()" style="margin-left:4px;background:none;border:none;color:#445566;cursor:pointer;font-size:0.9em;">✕</button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -7496,6 +7509,104 @@
         });
 
         // Initialize on page load
+        // ── Owner autocomplete + add-to-map prompt ───────────────
+        let knownOwners = [];  // [{owner_name, team_name}]
+
+        const CANONICAL_DISCIPLINES = [
+            'ATE','Electrical Eng.','FCT','Manufacturing','Mechanical','NPI',
+            'Optics','Proj. Mgmt','Product Manager','Purchasing','R&D QA (inc. SW test)',
+            'RSK Cert.','RSK GMS','RSK Ops','Sderot Cert.','SW','Supply Chain',
+            'Supply Chain RSK'
+        ];
+
+        async function loadKnownOwners() {
+            try {
+                const data = await fetch('/api/known-owners').then(r => r.json());
+                knownOwners = data;
+                const dl = document.getElementById('knownOwnersList');
+                if (dl) {
+                    dl.innerHTML = data.map(o =>
+                        `<option value="${o.owner_name.replace(/"/g,'&quot;')}" data-disc="${(o.team_name||'').replace(/"/g,'&quot;')}">`
+                    ).join('');
+                }
+                // Populate discipline select in add-prompt
+                const sel = document.getElementById('ownerAddDisc');
+                if (sel) {
+                    const existingDiscs = [...new Set(data.map(o => o.team_name).filter(Boolean))];
+                    const allDiscs = [...new Set([...CANONICAL_DISCIPLINES, ...existingDiscs])].sort();
+                    sel.innerHTML = allDiscs.map(d => `<option value="${d.replace(/"/g,'&quot;')}">${d}</option>`).join('');
+                }
+            } catch(e) { /* non-critical */ }
+        }
+
+        function onOwnerInput(input) {
+            // Hide prompt while user is typing
+            document.getElementById('ownerAddPrompt').style.display = 'none';
+        }
+
+        function onOwnerBlur(input) {
+            const val = input.value.trim();
+            if (!val) return;
+            const known = knownOwners.map(o => o.owner_name.toLowerCase());
+            if (!known.includes(val.toLowerCase())) {
+                document.getElementById('ownerAddName').textContent = val;
+                // Pre-select discipline if fuzzy match exists
+                const guessed = guessDiscipline(val);
+                const sel = document.getElementById('ownerAddDisc');
+                if (guessed && sel) {
+                    for (let opt of sel.options) {
+                        if (opt.value === guessed) { sel.value = guessed; break; }
+                    }
+                }
+                document.getElementById('ownerAddPrompt').style.display = 'block';
+            } else {
+                document.getElementById('ownerAddPrompt').style.display = 'none';
+            }
+        }
+
+        function guessDiscipline(name) {
+            // Try to match partial name to existing entry
+            const nl = name.toLowerCase();
+            for (const o of knownOwners) {
+                const kl = o.owner_name.toLowerCase();
+                if (kl.includes(nl) || nl.includes(kl)) return o.team_name;
+            }
+            return '';
+        }
+
+        function dismissOwnerPrompt() {
+            document.getElementById('ownerAddPrompt').style.display = 'none';
+        }
+
+        async function addOwnerToMap() {
+            const name = document.getElementById('ownerAddName').textContent.trim();
+            const disc = document.getElementById('ownerAddDisc').value.trim();
+            if (!name || !disc) return;
+            try {
+                // Add to resource_teams via bulk endpoint (merge with existing)
+                const existing = knownOwners.map(o => ({ owner_name: o.owner_name, team_name: o.team_name }));
+                existing.push({ owner_name: name, team_name: disc });
+                const res = await fetch('/api/v1/admin/resource-teams/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(existing)
+                });
+                if (!res.ok) throw new Error('Save failed');
+                // Update local cache + datalist
+                knownOwners.push({ owner_name: name, team_name: disc });
+                const dl = document.getElementById('knownOwnersList');
+                if (dl) dl.innerHTML += `<option value="${name.replace(/"/g,'&quot;')}" data-disc="${disc.replace(/"/g,'&quot;')}">`;
+                document.getElementById('ownerAddPrompt').style.display = 'none';
+                // Show brief confirmation
+                const prompt = document.getElementById('ownerAddPrompt');
+                prompt.style.display = 'block';
+                prompt.innerHTML = `<span style="color:#9cf79a;">✓ ${name} added to discipline map as ${disc}</span>`;
+                setTimeout(() => { prompt.style.display = 'none'; }, 2500);
+            } catch(e) {
+                alert('Could not add to discipline map: ' + e.message);
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             await loadFromAPI();
             await initializeGateBaselines(); // Initialize baselines on first load
@@ -7503,6 +7614,7 @@
             populateOwnerFilter();
             populatePhaseFilter();
             applyFilters();
+            loadKnownOwners();
             
             // Setup gantt view toggle
             document.querySelectorAll('.gantt-view-btn').forEach(btn => {

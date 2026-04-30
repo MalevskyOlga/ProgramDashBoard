@@ -1994,6 +1994,8 @@
         .priority-action-btn:hover { opacity: 0.75; }
         .priority-btn-complete { background: #dcfce7; color: #166534; }
         .priority-btn-delete   { background: #fee2e2; color: #991b1b; }
+        .priority-btn-up, .priority-btn-down { background: #e0e7ff; color: #3730a3; padding: 3px 5px; }
+        .priority-btn-up:disabled, .priority-btn-down:disabled { opacity: 0.2; cursor: default; }
         .priority-add-btn {
             margin-top: 8px; width: 100%;
             border: 2px dashed #93c5fd; background: transparent;
@@ -2003,6 +2005,18 @@
         }
         .priority-add-btn:hover { background: #eff6ff; }
         .priority-row-new td { background: #fffbeb !important; }
+        .pipe-cat-tabs {
+            display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap;
+        }
+        .pipe-cat-tab {
+            padding: 6px 14px; border-radius: 20px; border: 1px solid #d1d5db;
+            background: #f9fafb; color: #4b5563; font-size: 0.82em; font-weight: 500;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .pipe-cat-tab:hover { background: #e5e7eb; }
+        .pipe-cat-tab.pipe-cat-active {
+            background: #1d4ed8; color: #fff; border-color: #1d4ed8; font-weight: 600;
+        }
 
         /* Archive section */
         .archive-section { margin-top: 22px; }
@@ -2158,6 +2172,8 @@
         let currentCriticalPayload = null;
         let currentCriticalExpanded = false;
         let disciplineDataCache = null;
+        let projectMatrixCache  = null;
+        let currentProjectDetail = null;
         let currentDashboardTab = 'schedule';
         const dashboardTabStorageKey = 'overall-dashboard-active-tab';
 
@@ -2991,6 +3007,97 @@
             </div>`;
         }
 
+        function drillToProject(proj) {
+            currentProjectDetail = proj;
+            setResourceDrilldown('project-detail');
+        }
+
+        function buildProjectMatrixView(data) {
+            const { disciplines, projects, window_start, window_end } = data;
+            if (!projects || !projects.length) {
+                return `<div class="resource-detail-empty">No priority projects found. Add projects to the F&G pipeline first.</div>`;
+            }
+
+            function cellStatus(count, hasProject) {
+                if (!hasProject) return { bg: '#0d1b2e', text: '#1a2740', label: '', title: '' };
+                if (!count)      return { bg: '#1a1f2e', text: '#445566', label: 'N/A',       title: '0 tasks' };
+                if (count <= 30) return { bg: '#0d3320', text: '#4ade80', label: 'Fully',     title: count + ' tasks' };
+                if (count <= 35) return { bg: '#3a2d00', text: '#fbbf24', label: 'Partially', title: count + ' tasks' };
+                return             { bg: '#3a0000', text: '#f87171', label: 'No',          title: count + ' tasks' };
+            }
+
+            const visibleDiscs = disciplines.length ? disciplines : [];
+            const headerCells = visibleDiscs.map(d =>
+                `<th style="position:sticky;top:0;z-index:3;background:#0d1b2e;padding:4px 6px;font-size:0.72em;white-space:nowrap;color:#6b7fa3;border-bottom:2px solid #2a4070;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);height:80px;vertical-align:bottom;">${escapeHtml(d)}</th>`
+            ).join('');
+
+            const rows = projects.map(p => {
+                const noLink = !p.dashboard_name;
+                const discCells = visibleDiscs.map(d => {
+                    const count = (p.disciplines && p.disciplines[d]) || 0;
+                    const c = p.always_staffed
+                        ? { bg: '#0d3320', text: '#4ade80', label: 'Fully', title: 'Always staffed' }
+                        : cellStatus(count, !noLink);
+                    return `<td title="${c.title}" style="text-align:center;padding:5px 4px;font-size:0.75em;font-weight:700;background:${c.bg};color:${c.text};border:1px solid #0d1b2e;border-bottom:1px solid #1a2740;letter-spacing:0.02em;">${c.label}</td>`;
+                }).join('');
+
+                const totalC = p.total > 0 ? { bg: '#1a2535', text: '#cdd9e5' } : { bg: '#0d1b2e', text: '#2a3f5a' };
+                const rowClickAttr = p.dashboard_name
+                    ? `style="cursor:pointer;" onclick="drillToProject(${JSON.stringify(p).replace(/"/g,'&quot;')})"` : '';
+                const nameColor = p.dashboard_name ? '#7ec8ff' : '#445566';
+                const noGanttBadge = !p.dashboard_name
+                    ? `<span style="font-size:0.72em;color:#445566;margin-left:4px;">(no Gantt)</span>` : '';
+                const drillHint = p.dashboard_name
+                    ? `<span style="font-size:0.72em;color:#445566;margin-left:4px;">🔍</span>` : '';
+
+                const rowBg = '#0b1525';
+                const rowBorder = 'border-bottom:1px solid #1a2740;';
+                return `<tr ${rowClickAttr}>
+                    <td style="position:sticky;left:0;z-index:2;background:${rowBg};padding:5px 8px;text-align:center;font-size:0.8em;color:#6b7fa3;border-right:1px solid #1a2740;${rowBorder}white-space:nowrap;">${p.priority}</td>
+                    <td style="position:sticky;left:32px;z-index:2;background:${rowBg};padding:5px 10px;white-space:nowrap;font-size:0.83em;color:${nameColor};font-weight:500;border-right:1px solid #24355f;${rowBorder}"
+                        title="${p.dashboard_name ? 'Click to see monthly heatmap' : 'No linked Gantt dashboard'}">
+                        ${escapeHtml(p.name)}${noGanttBadge}${drillHint}
+                    </td>
+                    <td style="position:sticky;left:232px;z-index:2;background:${rowBg};padding:5px 8px;font-size:0.78em;color:#8899aa;border-right:2px solid #24355f;${rowBorder}white-space:nowrap;">${escapeHtml(p.leader || '')}</td>
+                    ${discCells}
+                    <td style="position:sticky;right:0;z-index:2;background:${rowBg};text-align:center;padding:5px 8px;font-size:0.85em;font-weight:700;color:${totalC.text};border-left:2px solid #24355f;${rowBorder}">${p.total || ''}</td>
+                </tr>`;
+            }).join('');
+
+            const noDiscMsg = !visibleDiscs.length
+                ? `<div style="margin-bottom:12px;padding:10px 14px;background:#0f1d35;border:1px solid #24355f;border-radius:6px;font-size:0.82em;color:#6b7fa3;">
+                    ⚠️ No discipline mappings found. <a href="/disciplines" target="_blank" style="color:#4a9eff;">Set up discipline map →</a>
+                   </div>` : '';
+
+            return `
+                <div style="margin-bottom:12px;font-size:0.78em;color:#6b7fa3;">
+                    Active tasks window: <span style="color:#cdd9e5;">${window_start}</span> → <span style="color:#cdd9e5;">${window_end}</span>
+                    &nbsp;·&nbsp; Click a project row to see its monthly discipline heatmap
+                </div>
+                ${noDiscMsg}
+                <div style="overflow-x:auto;overflow-y:auto;max-height:460px;border:1px solid #1a2740;border-radius:4px;">
+                    <table style="border-collapse:collapse;width:100%;">
+                        <thead>
+                            <tr>
+                                <th style="position:sticky;left:0;top:0;z-index:5;background:#0d1b2e;text-align:center;padding:4px 8px;font-size:0.72em;color:#6b7fa3;border-bottom:2px solid #2a4070;border-right:1px solid #1a2740;white-space:nowrap;">#</th>
+                                <th style="position:sticky;left:32px;top:0;z-index:5;background:#0d1b2e;text-align:left;padding:4px 10px;font-size:0.72em;color:#6b7fa3;border-bottom:2px solid #2a4070;border-right:1px solid #24355f;min-width:200px;">Project</th>
+                                <th style="position:sticky;left:232px;top:0;z-index:5;background:#0d1b2e;text-align:left;padding:4px 8px;font-size:0.72em;color:#6b7fa3;border-bottom:2px solid #2a4070;border-right:2px solid #24355f;white-space:nowrap;min-width:110px;">Leader</th>
+                                ${headerCells}
+                                <th style="position:sticky;right:0;top:0;z-index:5;background:#0d1b2e;text-align:center;padding:4px 8px;font-size:0.72em;color:#6b7fa3;border-bottom:2px solid #2a4070;border-left:2px solid #24355f;white-space:nowrap;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                <div style="margin-top:12px;font-size:0.72em;color:#445566;">
+                    <span style="color:#4ade80;">■</span> <strong style="color:#4ade80;">Fully</strong> 1–30 tasks &nbsp;
+                    <span style="color:#fbbf24;">■</span> <strong style="color:#fbbf24;">Partially</strong> 31–35 tasks &nbsp;
+                    <span style="color:#f87171;">■</span> <strong style="color:#f87171;">No</strong> 36+ tasks &nbsp;
+                    <span style="color:#445566;">■</span> <strong style="color:#445566;">N/A</strong> not needed this window
+                    &nbsp;·&nbsp; Hover a cell to see task count &nbsp;·&nbsp; Window: today + 2 months
+                </div>`;
+        }
+
         function buildMonthHeatmap(owners) {
             // Collect all months spanned by any task
             const monthSet = new Set();
@@ -3254,6 +3361,9 @@
                     </button>
                     <button class="resource-chip ${chipActive('discipline')}" onclick="setResourceDrilldown('discipline')" style="font-weight:700;">
                         🏢 By Discipline
+                    </button>
+                    <button class="resource-chip ${chipActive('project-matrix')}" onclick="setResourceDrilldown('project-matrix')" style="font-weight:700;">
+                        📦 By Project
                     </button>
                     <a href="/disciplines" target="_blank" class="resource-chip" style="text-decoration:none;padding:5px 10px;">
                         🏷️ Discipline map
@@ -3824,6 +3934,55 @@
                             detailContainer.style.minHeight = '';
                         });
                 }
+                return;
+            }
+
+            if (currentResourceDrilldown === 'project-matrix') {
+                if (actionsContainer) actionsContainer.innerHTML = backButtonHtml;
+                if (projectMatrixCache) {
+                    detailContainer.innerHTML = buildProjectMatrixView(projectMatrixCache);
+                } else {
+                    detailContainer.innerHTML = `<div style="color:#6b7fa3;padding:20px;">⏳ Loading project matrix...</div>`;
+                    fetch('/api/resource-project-matrix')
+                        .then(r => r.json())
+                        .then(data => {
+                            projectMatrixCache = data;
+                            if (currentResourceDrilldown === 'project-matrix') {
+                                detailContainer.innerHTML = buildProjectMatrixView(data);
+                            }
+                        })
+                        .catch(e => {
+                            detailContainer.innerHTML = `<div style="color:#ff6b6b;">Error: ${e.message}</div>`;
+                        });
+                }
+                return;
+            }
+
+            if (currentResourceDrilldown === 'project-detail') {
+                if (!currentProjectDetail) { setResourceDrilldown('project-matrix'); return; }
+                const proj = currentProjectDetail;
+                const backHtml = `
+                    <div class="resource-detail-actions">
+                        <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('project-matrix')">← Back to Project Matrix</button>
+                        <button type="button" class="resource-toggle-btn" onclick="setResourceDrilldown('discipline')" style="margin-left:8px;">Back to default</button>
+                    </div>`;
+                if (actionsContainer) actionsContainer.innerHTML = backHtml;
+                detailContainer.innerHTML = `<div style="color:#6b7fa3;padding:20px;">⏳ Loading ${escapeHtml(proj.name)}...</div>`;
+                fetch(`/api/discipline-resource-load?project_name=${encodeURIComponent(proj.dashboard_name || proj.name)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (currentResourceDrilldown === 'project-detail') {
+                            detailContainer.innerHTML =
+                                `<div style="margin-bottom:14px;font-size:0.88em;color:#7ec8ff;font-weight:600;border-bottom:1px solid #24355f;padding-bottom:8px;">
+                                    📦 ${escapeHtml(proj.name)}
+                                    ${proj.leader ? `<span style="font-size:0.82em;color:#8899aa;margin-left:10px;">Leader: ${escapeHtml(proj.leader)}</span>` : ''}
+                                </div>`
+                                + buildDisciplineView(data);
+                        }
+                    })
+                    .catch(e => {
+                        detailContainer.innerHTML = `<div style="color:#ff6b6b;">Error: ${e.message}</div>`;
+                    });
                 return;
             }
 
@@ -4504,16 +4663,18 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    // Success
-                    progressText.textContent = 'Success! Reloading page...';
-                    showMessage(`Successfully imported project: ${result.project_name || file.name}`, 'success');
-                    
-                    // Reload after a short delay
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1500);
+                    overlay.classList.remove('show');
+                    importBtn.disabled = false;
+                    const unmatched = result.unmatched_owners || [];
+                    if (unmatched.length > 0) {
+                        showOwnerWarning(unmatched, result.project_name || file.name);
+                    } else {
+                        progressText.textContent = 'Success! Reloading page...';
+                        overlay.classList.add('show');
+                        showMessage(`Successfully imported project: ${result.project_name || file.name}`, 'success');
+                        setTimeout(() => location.reload(), 1200);
+                    }
                 } else {
-                    // Error from server
                     throw new Error(result.error || 'Upload failed');
                 }
             } catch (error) {
@@ -4538,6 +4699,77 @@
             }, 5000);
         }
         
+        function showOwnerWarning(unmatched, projectName) {
+            // Remove any existing warning
+            const existing = document.getElementById('ownerWarningModal');
+            if (existing) existing.remove();
+
+            const rows = unmatched.map(u => {
+                const suggestions = u.suggestions.length
+                    ? `<span style="color:#6b7fa3;">Did you mean: </span>${u.suggestions.map(s =>
+                        `<button onclick="applyOwnerSuggestion('${u.name.replace(/'/g,"\\'")}','${s.replace(/'/g,"\\'")}',this)"
+                            style="background:#0f1d35;border:1px solid #24355f;color:#7ec8ff;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:0.82em;margin-left:4px;">${s}</button>`
+                      ).join('')}`
+                    : `<span style="color:#445566;font-size:0.82em;">No close match found — <a href="/disciplines" target="_blank" style="color:#4a9eff;">add to discipline map</a></span>`;
+                return `<tr>
+                    <td style="padding:6px 10px;color:#ffd18d;font-weight:500;">${u.name}</td>
+                    <td style="padding:6px 10px;">${suggestions}</td>
+                </tr>`;
+            }).join('');
+
+            const modal = document.createElement('div');
+            modal.id = 'ownerWarningModal';
+            modal.style.cssText = `position:fixed;top:0;left:0;right:0;bottom:0;background:#00000099;z-index:9999;display:flex;align-items:center;justify-content:center;`;
+            modal.innerHTML = `
+                <div style="background:#0d1b2e;border:1px solid #ffd18d55;border-radius:10px;padding:24px;max-width:700px;width:95%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px #000a;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                        <span style="font-size:1.3em;">⚠️</span>
+                        <span style="font-size:1.05em;font-weight:700;color:#ffd18d;">Unknown owners in "${projectName}"</span>
+                    </div>
+                    <p style="font-size:0.83em;color:#6b7fa3;margin:0 0 16px 0;">
+                        ${unmatched.length} owner name${unmatched.length > 1 ? 's' : ''} not found in the discipline map.
+                        Click a suggestion to rename in all tasks, or add them manually.
+                    </p>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.88em;">
+                        <thead><tr>
+                            <th style="text-align:left;padding:6px 10px;color:#6b7fa3;border-bottom:1px solid #24355f;">Name in Gantt</th>
+                            <th style="text-align:left;padding:6px 10px;color:#6b7fa3;border-bottom:1px solid #24355f;">Suggestion</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                    <div style="margin-top:18px;display:flex;gap:10px;">
+                        <button onclick="document.getElementById('ownerWarningModal').remove();location.reload();"
+                            style="background:#4a9eff;color:#fff;border:none;border-radius:6px;padding:8px 20px;cursor:pointer;font-weight:600;">
+                            Continue →
+                        </button>
+                        <button onclick="window.open('/disciplines','_blank')"
+                            style="background:#1a2740;color:#7ec8ff;border:1px solid #24355f;border-radius:6px;padding:8px 16px;cursor:pointer;">
+                            Open Discipline Map
+                        </button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+        }
+
+        async function applyOwnerSuggestion(oldName, newName, btn) {
+            btn.disabled = true;
+            btn.textContent = '⏳';
+            try {
+                const res = await fetch('/api/rename-owner', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_name: oldName, new_name: newName })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Rename failed');
+                btn.closest('tr').innerHTML = `<td colspan="2" style="padding:6px 10px;color:#9cf79a;">
+                    ✓ Renamed "${oldName}" → "${newName}" (${data.updated} tasks updated)
+                </td>`;
+            } catch (e) {
+                btn.textContent = '❌ ' + e.message;
+            }
+        }
+
         // ── Priority Projects (DB-backed) ────────────────────
         function priorityBadgeClass(type) {
             switch ((type || '').toLowerCase()) {
@@ -4585,15 +4817,16 @@
             }
         }
 
-        function _sel(opts, val, field, extraClass) {
+        function _sel(opts, val, field, extraClass, labels) {
             const cls = extraClass ? ` class="${extraClass}"` : '';
-            const options = opts.map(o =>
-                `<option value="${escapeHtml(o)}"${o === val ? ' selected' : ''}>${escapeHtml(o) || '—'}</option>`
-            ).join('');
+            const options = opts.map(o => {
+                const display = (labels && labels[o]) ? labels[o] : (escapeHtml(o) || '—');
+                return `<option value="${escapeHtml(o)}"${o === val ? ' selected' : ''}>${display}</option>`;
+            }).join('');
             return `<select data-field="${field}" data-original="${escapeHtml(val)}" onchange="savePrioritySelect(this)"${cls}>${options}</select>`;
         }
 
-        function _priorityRowHtml(p) {
+        function _priorityRowHtml(p, rowIdx, rowTotal) {
             const ganttMenu = `<span class="gantt-menu-wrap">
                     <button class="priority-add-gantt-btn" onclick="toggleGanttMenu(event,${p.id})">📥 Add Gantt ▾</button>
                     <div class="gantt-menu" id="gantt-menu-${p.id}">
@@ -4625,10 +4858,13 @@
                 <td contenteditable="true" data-field="launch_date" data-original="${escapeHtml(p.launch_date || '')}">${escapeHtml(p.launch_date || '')}</td>
                 <td>${_sel(['','Growth','Maintain','Discontinue'], p.objective||'', 'objective', 'priority-select')}</td>
                 <td>${_sel(['','Industrial','Suppression','All'], p.segment||'', 'segment', 'priority-select')}</td>
+                <td>${_sel(['active_big','active_small','planned_hold','proposed'], p.category||'active_big', 'category', 'priority-select', {'active_big':'Active Big','active_small':'Active Small','planned_hold':'Planned/Hold','proposed':'Proposed'})}</td>
                 <td class="priority-col-risk">
                     <button class="risk-badge ${riskClass}" onclick="${riskOnClick}" title="${riskLabel} open risk${riskLabel!=='1'?'s':''} — click to manage" style="font-size:0.72em;padding:2px 6px;">${riskIcon} ${riskLabel}</button>
                 </td>
                 <td class="priority-col-actions priority-actions">
+                    <button class="priority-action-btn priority-btn-up" onclick="movePriorityProject(${p.id},'up')" title="Move up" ${rowIdx === 0 ? 'disabled' : ''}>▲</button>
+                    <button class="priority-action-btn priority-btn-down" onclick="movePriorityProject(${p.id},'down')" title="Move down" ${rowIdx === rowTotal - 1 ? 'disabled' : ''}>▼</button>
                     <button class="priority-action-btn priority-btn-complete" onclick="completePriorityProject(${p.id})" title="Mark Complete">✓</button>
                     <button class="priority-action-btn priority-btn-delete" onclick="deletePriorityProject(${p.id})" title="Delete">🗑</button>
                 </td>
@@ -4654,23 +4890,56 @@
             </div>`;
         }
 
-        function renderPrioritySection(projects, archived) {
+        const _PIPE_CATS = {
+            active_big:   { label: '📊 Active Big (>80h)',      title: 'Active Big Projects (>80h)' },
+            active_small: { label: '📋 Active Small (<80h)',     title: 'Active Small Projects (<80h)' },
+            planned_hold: { label: '⏸ Planned & On Hold',       title: 'Planned & On Hold Projects' },
+            proposed:     { label: '💡 Proposed',                title: 'Proposed Projects' },
+        };
+        let _activePipelineCategory = 'active_big';
+        let _allPriorityProjects = [];
+        let _allArchivedProjects = [];
+
+        function setPipelineCategory(cat) {
+            _activePipelineCategory = cat;
+            document.querySelectorAll('.pipe-cat-tab').forEach(b => {
+                b.classList.toggle('pipe-cat-active', b.dataset.cat === cat);
+            });
+            _renderCurrentPipelineTab();
+        }
+
+        function _renderCurrentPipelineTab() {
             const section = document.getElementById('priorityListSection');
-            const tableRows = projects.map(_priorityRowHtml).join('');
+            const cat = _activePipelineCategory;
+            const catInfo = _PIPE_CATS[cat];
+            const filtered = _allPriorityProjects.filter(p => (p.category || 'active_big') === cat)
+                .sort((a, b) => a.priority - b.priority || a.id - b.id);
+            const tableRows = filtered.map((p, i) => _priorityRowHtml(p, i, filtered.length)).join('');
+            const tabsHtml = Object.entries(_PIPE_CATS).map(([k, v]) =>
+                `<button class="pipe-cat-tab${k === cat ? ' pipe-cat-active' : ''}" data-cat="${k}" onclick="setPipelineCategory('${k}')">${v.label}</button>`
+            ).join('');
+
             section.innerHTML = `
-                <h3>📋 Flame &amp; Gas — Active Big Projects (Mar 2026)</h3>
+                <div class="pipe-cat-tabs">${tabsHtml}</div>
+                <h3 style="margin:12px 0 8px;font-size:1em;color:#cdd9e5;">📋 Flame &amp; Gas — ${catInfo.title}</h3>
                 <div class="priority-table-wrap">
                     <table class="priority-table" id="priorityTable">
                         <thead><tr>
                             <th>#</th><th>Project Name</th><th>Leader</th><th>Type</th>
-                            <th>Next Gate</th><th>Target Date</th><th>Objective</th><th>Segment</th><th>Risk</th><th>Actions</th>
+                            <th>Next Gate</th><th>Target Date</th><th>Objective</th><th>Segment</th><th>Category</th><th>Risk</th><th>Actions</th>
                         </tr></thead>
-                        <tbody>${tableRows}</tbody>
+                        <tbody>${tableRows || '<tr><td colspan="11" style="text-align:center;padding:20px;color:#445566;">No projects in this category. Click "+ Add Project" to add one.</td></tr>'}</tbody>
                     </table>
                 </div>
                 <button class="priority-add-btn" onclick="addPriorityProject()">+ Add Project</button>
-                ${_archiveSectionHtml(archived)}`;
+                ${_archiveSectionHtml(_allArchivedProjects)}`;
             _attachPriorityTableListeners();
+        }
+
+        function renderPrioritySection(projects, archived) {
+            _allPriorityProjects = projects;
+            _allArchivedProjects = archived || [];
+            _renderCurrentPipelineTab();
         }
 
         function _attachPriorityTableListeners() {
@@ -4751,6 +5020,8 @@
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error || 'Save failed');
                 showPrioritySaveToast();
+                // If category changed, reload so the project moves to the correct tab
+                if (field === 'category') await loadPrioritySection();
             } catch (err) {
                 console.error('Priority select save failed:', err);
                 el.value = original;
@@ -5014,7 +5285,7 @@
             try {
                 const res = await fetch('/api/priority-projects', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({ category: _activePipelineCategory })
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 await loadPrioritySection();
@@ -5040,6 +5311,22 @@
                 if (tr) tr.remove();
                 showPrioritySaveToast();
             } catch (err) { console.error('Delete failed:', err); }
+        }
+
+        async function movePriorityProject(id, direction) {
+            try {
+                const res = await fetch(`/api/priority-projects/${id}/move`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ direction })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data.projects) {
+                    _allPriorityProjects = data.projects;
+                    _renderCurrentPipelineTab();
+                }
+            } catch (err) { console.error('Move failed:', err); }
         }
 
         async function completePriorityProject(id) {
