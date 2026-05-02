@@ -152,6 +152,10 @@ $cfgLines = @(
     "EXCEL_OUTPUT_FOLDER      = Path(r'$DataDirEsc') / 'exports'",
     '',
     'DB_TIMEOUT = 30',
+    'RESOURCE_LOAD_LOOKBACK_MONTHS = 6',
+    'PM_LOAD_PER_PROJECT = 5',
+    'FULL_TIME_CAPACITY_HRS = 37.5',
+    'OVERLOAD_TASK_THRESHOLD = 5',
     '',
     'EXCEL_PROJECT_NAME_ROW = 3',
     "EXCEL_PROJECT_NAME_COL = 'C'",
@@ -180,47 +184,14 @@ Log "      Config written (port $Port)"
 
 # -- 5. Verify database and seed resource_teams --------------------------------
 Log "[5/7] Checking database..."
-$dbPath     = Join-Path $DataDir "dashboards.db"
-$seedDbPath = Join-Path $InstallDir "installer\seed_dashboards.db"
+$dbPath = Join-Path $DataDir "dashboards.db"
 if (Test-Path $dbPath) {
     Log "      DB found ($([math]::Round((Get-Item $dbPath).Length/1MB,2)) MB)"
 } else {
     Log "      WARNING: DB not found - will be created on first start"
 }
 
-# Seed resource_teams from the bundled DB if the table is empty (fresh install or upgrade)
-if ((Test-Path $dbPath) -and (Test-Path $seedDbPath)) {
-    $seedFile = Join-Path $env:TEMP "dashboard_seed.py"
-    @'
-import sqlite3, sys
-db_path, seed_path = sys.argv[1], sys.argv[2]
-dst = sqlite3.connect(db_path)
-src = sqlite3.connect(seed_path)
-dst.execute("""CREATE TABLE IF NOT EXISTS resource_teams (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    team_name TEXT NOT NULL,
-    owner_name TEXT NOT NULL UNIQUE,
-    capacity_hrs_per_week REAL NOT NULL DEFAULT 37.5)""")
-count = dst.execute("SELECT COUNT(*) FROM resource_teams").fetchone()[0]
-if count == 0:
-    rows = src.execute("SELECT owner_name, team_name, capacity_hrs_per_week FROM resource_teams").fetchall()
-    for row in rows:
-        dst.execute("INSERT OR IGNORE INTO resource_teams (owner_name, team_name, capacity_hrs_per_week) VALUES (?,?,?)", row)
-    dst.commit()
-    print(f"Seeded {len(rows)} resource_teams rows")
-else:
-    print(f"resource_teams already has {count} rows, skipping seed")
-src.close(); dst.close()
-'@ | Set-Content -Encoding UTF8 -Path $seedFile
-    try {
-        $seedOut = & $VenvPython $seedFile $dbPath $seedDbPath 2>&1 | Out-String
-        Log "      DB seed: $seedOut"
-    } catch {
-        Log "      DB seed warning (non-fatal): $_"
-    } finally {
-        Remove-Item $seedFile -ErrorAction SilentlyContinue
-    }
-}
+Log "      DB deployed by installer (source of truth from dev)"
 
 # -- 6. Register Windows service via WinSW ------------------------------------
 Log "[6/7] Registering Windows service '$ServiceName'..."

@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define AppName        "Overall Programs Dashboard"
-#define AppVersion     "1.0.0"
+#define AppVersion     "1.1.0"
 #define AppPublisher   "Emerson"
 #define ServiceName    "OverallDashboard"
 #define DefaultPort    "8092"
@@ -122,7 +122,9 @@ Source: "{#SrcRoot}\config.py";            DestDir: "{app}"; Flags: ignoreversio
 Source: "{#SrcRoot}\database_manager.py";  DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\excel_parser.py";      DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\excel_exporter.py";    DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SrcRoot}\ppt_exporter.py";      DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcRoot}\ppt_exporter.py";       DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcRoot}\risk_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcRoot}\gantt_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_server.py";  DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_app.py";     DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_db.py";      DestDir: "{app}"; Flags: ignoreversion
@@ -149,10 +151,8 @@ Source: "backup_db.ps1";                   DestDir: "{app}\installer";          
 ; Offline pip wheels — allows install on intranet servers with no internet
 Source: "wheels\*";                        DestDir: "{app}\installer\wheels";    Flags: ignoreversion recursesubdirs
 
-; Seed database — only installed if no database exists yet (never overwrites production data)
-Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{commonappdata}\OverallDashboard"; Flags: onlyifdoesntexist uninsneveruninstall
-; Separate seed copy always deployed so post_install.ps1 can seed resource_teams on upgrades too
-Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{app}\installer"; DestName: "seed_dashboards.db"; Flags: ignoreversion
+; Deploy database — always replaced on install/upgrade (dev DB is the source of truth)
+Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{commonappdata}\OverallDashboard"; Flags: ignoreversion uninsneveruninstall
 
 ; ── Start Menu shortcut ───────────────────────────────────────────────────────
 [Icons]

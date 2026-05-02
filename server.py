@@ -425,7 +425,6 @@ def api_export_schematic_to_ppt(project_name):
 
 @app.route('/api/project/<project_name>/export-gantt-ppt', methods=['POST'])
 def api_export_gantt_ppt(project_name):
-    """Export all tasks as a Gantt-style PowerPoint slide, save locally and open."""
     from gantt_ppt_exporter import GanttPptExporter
 
     project = db_manager.get_project_by_name(project_name)
@@ -436,7 +435,6 @@ def api_export_gantt_ppt(project_name):
     data = request.get_json(silent=True) or {}
     save_path = data.get('save_path') or None
 
-    # If the browser sent critical-path IDs (critical path mode was active), mark them red
     critical_ids = set(data.get('critical_ids') or [])
     if critical_ids:
         tasks = [dict(t, critical=(1 if t['id'] in critical_ids else t.get('critical', 0)))
@@ -448,18 +446,19 @@ def api_export_gantt_ppt(project_name):
     if not ppt_path or not os.path.exists(ppt_path):
         return jsonify({'error': 'Export failed'}), 500
 
-    # Auto-open in PowerPoint
-    try:
-        os.startfile(ppt_path)
-    except Exception:
-        pass
+    if save_path:
+        return jsonify({'success': True, 'path': ppt_path})
 
-    return jsonify({'success': True, 'path': ppt_path})
+    return send_file(
+        ppt_path,
+        as_attachment=True,
+        download_name=os.path.basename(ppt_path),
+        mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    )
 
 
 @app.route('/api/project/<project_name>/export-critical-path-ppt', methods=['POST'])
 def api_export_critical_path_ppt(project_name):
-    """Compute CPM and export critical-path tasks as a Gantt PPT."""
     from gantt_ppt_exporter import GanttPptExporter
 
     project = db_manager.get_project_by_name(project_name)
@@ -477,12 +476,15 @@ def api_export_critical_path_ppt(project_name):
     if not ppt_path or not os.path.exists(ppt_path):
         return jsonify({'error': 'Export failed — no critical path tasks found or generation error'}), 500
 
-    try:
-        os.startfile(ppt_path)
-    except Exception:
-        pass
+    if save_path:
+        return jsonify({'success': True, 'path': ppt_path})
 
-    return jsonify({'success': True, 'path': ppt_path})
+    return send_file(
+        ppt_path,
+        as_attachment=True,
+        download_name=os.path.basename(ppt_path),
+        mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    )
 
 
 @app.route('/api/open-file', methods=['POST'])
@@ -571,38 +573,6 @@ def _ensure_priority_tables():
     return conn
 
 
-def _seed_priority_from_excel(conn):
-    """Seed priority_projects from Excel (called once when table is empty)."""
-    try:
-        import openpyxl
-        excel_path = config.PRIORITY_LIST_PATH
-        if not excel_path.exists():
-            return
-        wb = openpyxl.load_workbook(str(excel_path), data_only=True)
-        ws = wb[config.PRIORITY_LIST_SHEET]
-        for row_idx in range(1, ws.max_row + 1):
-            pv = ws.cell(row=row_idx, column=1).value
-            if not isinstance(pv, int) or pv < 1:
-                continue
-            conn.execute("""
-                INSERT INTO priority_projects
-                    (priority, name, leader, process_type, next_gate, launch_date, objective, segment)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                pv,
-                str(ws.cell(row=row_idx, column=2).value or '').strip(),
-                str(ws.cell(row=row_idx, column=3).value or '').strip(),
-                str(ws.cell(row=row_idx, column=4).value or '').strip(),
-                str(ws.cell(row=row_idx, column=5).value or '').strip(),
-                str(ws.cell(row=row_idx, column=6).value or '').strip(),
-                str(ws.cell(row=row_idx, column=7).value or '').strip(),
-                str(ws.cell(row=row_idx, column=8).value or '').strip(),
-            ))
-        conn.commit()
-    except Exception as e:
-        print(f'Warning: could not seed priority list from Excel: {e}')
-
-
 def _build_priority_response(conn):
     """Return sorted priority projects list with dashboard link hints."""
     # Only include projects that are NOT soft-deleted
@@ -629,12 +599,9 @@ def _build_priority_response(conn):
 
 @app.route('/api/priority-projects', methods=['GET'])
 def api_get_priority_projects():
-    """Return all active priority projects (seed from Excel on first call)."""
     conn = None
     try:
         conn = _ensure_priority_tables()
-        if conn.execute("SELECT COUNT(*) FROM priority_projects").fetchone()[0] == 0:
-            _seed_priority_from_excel(conn)
         result = _build_priority_response(conn)
         return jsonify(result)
     except Exception as e:

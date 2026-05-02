@@ -8210,6 +8210,20 @@
             ctx.fillText('Emerson — Program / Project Management Dashboard', CW / 2, CH - FOOT_H / 2);
         }
 
+        async function _downloadPptResponse(resp, fallbackName) {
+            if (!resp.ok) {
+                const data = await resp.json();
+                throw new Error(data.error || resp.statusText);
+            }
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = resp.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1] || fallbackName;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
         async function exportCriticalPathPpt() {
             showNotification('⏳ Computing critical path & generating PPT…', 'info');
             try {
@@ -8218,9 +8232,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
                 });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.error || resp.statusText);
-                showNotification('✅ Critical Path PPT opened in PowerPoint!', 'success');
+                await _downloadPptResponse(resp, 'critical_path.pptx');
+                showNotification('✅ Critical Path PPT downloaded!', 'success');
             } catch (err) {
                 showNotification('❌ Export failed: ' + err.message, 'error');
             }
@@ -8229,7 +8242,6 @@
         async function downloadGanttPpt() {
             showNotification('⏳ Generating PPT…', 'info');
             try {
-                // If critical path is active in the UI, pass those IDs so bars render red
                 const critIds = (_criticalPathIds && _criticalPathIds.size > 0)
                     ? Array.from(_criticalPathIds) : null;
                 const resp = await fetch(API_BASE + '/export-gantt-ppt', {
@@ -8237,13 +8249,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ critical_ids: critIds })
                 });
-                const data = await resp.json();
-                if (!resp.ok) throw new Error(data.error || resp.statusText);
-                const status = document.getElementById('pptSaveStatus');
-                status.style.display = 'block';
-                status.style.color   = '#155724';
-                status.textContent   = '✅ Saved to: ' + data.path + ' — opened in PowerPoint';
-                showNotification('✅ PPT opened in PowerPoint!', 'success');
+                await _downloadPptResponse(resp, 'gantt.pptx');
+                showNotification('✅ PPT downloaded!', 'success');
             } catch (err) {
                 showNotification('❌ Export failed: ' + err.message, 'error');
             }

@@ -48,10 +48,6 @@ EXCEL_COLUMNS = {
     'result': 'I'
 }
 
-# Priority list Excel
-PRIORITY_LIST_PATH = BASE_DIR / 'Flame & Gas Project Priority List.xlsx'
-PRIORITY_LIST_SHEET = 'Mar26'
-
 # Ensure directories exist
 DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 EXCEL_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
