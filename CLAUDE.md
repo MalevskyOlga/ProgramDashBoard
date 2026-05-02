@@ -17,6 +17,16 @@ Output: `installer\Output\OverallDashboardSetup_1.1.0.exe`
 **When to rebuild:** any change to `server.py`, `templates/`, `config.py`, `db_migrate.py`,
 `installer/post_install.ps1`, `installer/setup.iss`, or `migrations/`.
 
+## Running the installer on a target machine
+1. Copy `installer\Output\OverallDashboardSetup_1.1.0.exe` to the target machine
+2. Right-click → **Run as administrator**
+3. Wizard steps:
+   - **Install directory** — default `C:\Program Files\OverallDashboard`
+   - **Port** — default `8092`
+   - **Database** *(upgrade only)*: "Keep production database" (preserves data, runs migrations) or "Replace with bundled database" (backs up first, then overwrites)
+4. After install: service starts automatically, dashboard at `http://<server>:<port>`
+5. Logs at `C:\ProgramData\OverallDashboard\logs\`
+
 ## Adding a Python module
 Every `.py` file imported by `server.py` or `aggregate_app.py` must be listed in
 `installer/setup.iss` [Files] section. Check with:
