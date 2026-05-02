@@ -4,7 +4,8 @@ param(
     [string]$InstallDir  = "C:\Program Files\OverallDashboard",
     [string]$DataDir     = "C:\ProgramData\OverallDashboard",
     [int]   $Port        = 8092,
-    [string]$ServiceName = "OverallDashboard"
+    [string]$ServiceName = "OverallDashboard",
+    [string]$DbAction    = "replace"   # 'replace' or 'keep'
 )
 
 # -- Log to file from the very first line (before ErrorActionPreference) -------
@@ -182,16 +183,45 @@ $cfgLines = @(
 $cfgLines -join "`r`n" | Set-Content -Encoding UTF8 -Path (Join-Path $InstallDir 'config.py')
 Log "      Config written (port $Port)"
 
-# -- 5. Verify database and seed resource_teams --------------------------------
-Log "[5/7] Checking database..."
-$dbPath = Join-Path $DataDir "dashboards.db"
-if (Test-Path $dbPath) {
-    Log "      DB found ($([math]::Round((Get-Item $dbPath).Length/1MB,2)) MB)"
+# -- 5. Deploy / keep database, then run migrations ---------------------------
+Log "[5/7] Database setup (action: $DbAction)..."
+$BundledDb = Join-Path $InstallDir "installer\dashboards_bundled.db"
+$TargetDb  = Join-Path $DataDir    "dashboards.db"
+
+if ($DbAction -eq 'replace') {
+    if (Test-Path $TargetDb) {
+        $BackupName = "dashboards.db.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        $BackupPath = Join-Path $DataDir $BackupName
+        Copy-Item $TargetDb $BackupPath -Force
+        Log "      Backed up existing DB → $BackupPath"
+    }
+    if (Test-Path $BundledDb) {
+        Copy-Item $BundledDb $TargetDb -Force
+        Log "      Deployed bundled DB → $TargetDb"
+    } else {
+        Log "      WARNING: bundled DB not found at $BundledDb"
+    }
 } else {
-    Log "      WARNING: DB not found - will be created on first start"
+    if (Test-Path $TargetDb) {
+        Log "      Keeping production DB ($([math]::Round((Get-Item $TargetDb).Length/1MB,2)) MB)"
+    } else {
+        Log "      WARNING: no existing DB found — deploying bundled DB as fallback"
+        if (Test-Path $BundledDb) {
+            Copy-Item $BundledDb $TargetDb -Force
+            Log "      Deployed bundled DB → $TargetDb"
+        }
+    }
 }
 
-Log "      DB deployed by installer (source of truth from dev)"
+Log "      Running schema migrations..."
+$migrateLog = Join-Path $LogDir "db-migrate.log"
+& $VenvPython (Join-Path $InstallDir "db_migrate.py") $TargetDb 2>&1 |
+    ForEach-Object { Log "migrate: $_" }
+if ($LASTEXITCODE -ne 0) {
+    Log "      WARNING: migration exited $LASTEXITCODE — check $migrateLog"
+} else {
+    Log "      Migrations OK"
+}
 
 # -- 6. Register Windows service via WinSW ------------------------------------
 Log "[6/7] Registering Windows service '$ServiceName'..."

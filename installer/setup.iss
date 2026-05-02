@@ -37,8 +37,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 ; ── Custom wizard page variables ──────────────────────────────────────────────
 [Code]
 var
-  PortPage:    TInputQueryWizardPage;
-  PortNumber:  String;
+  PortPage:   TInputQueryWizardPage;
+  DbPage:     TInputOptionWizardPage;
+  PortNumber: String;
+  DbExists:   Boolean;
 
 procedure InitializeWizard;
 begin
@@ -49,6 +51,24 @@ begin
     '');
   PortPage.Add('Port number (users will access http://server-name:<port>):', False);
   PortPage.Values[0] := '{#DefaultPort}';
+
+  DbExists := FileExists(ExpandConstant('{commonappdata}\OverallDashboard\dashboards.db'));
+  DbPage := CreateInputOptionPage(
+    PortPage.ID,
+    'Database',
+    'An existing database was found on this machine.',
+    'How would you like to handle the database?',
+    True, False);
+  DbPage.Add('Keep production database — preserve live data (schema migrations applied automatically)');
+  DbPage.Add('Replace with bundled database — start fresh (timestamped backup created first)');
+  DbPage.Values[0] := True;
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+begin
+  Result := False;
+  if PageID = DbPage.ID then
+    Result := not DbExists;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -70,6 +90,18 @@ function GetPort(Param: String): String;
 begin
   Result := PortNumber;
   if Result = '' then Result := '{#DefaultPort}';
+end;
+
+function GetDbAction(Param: String): String;
+begin
+  if not DbExists then begin
+    Result := 'replace';
+    Exit;
+  end;
+  if DbPage.Values[1] then
+    Result := 'replace'
+  else
+    Result := 'keep';
 end;
 
 procedure RunPowerShell(Script: String; Args: String);
@@ -98,7 +130,8 @@ begin
     Args := '-InstallDir "' + ExpandConstant('{app}') + '"' +
             ' -DataDir "'    + ExpandConstant('{commonappdata}\OverallDashboard') + '"' +
             ' -Port '        + GetPort('') +
-            ' -ServiceName ' + '{#ServiceName}';
+            ' -ServiceName ' + '{#ServiceName}' +
+            ' -DbAction '    + GetDbAction('');
     RunPowerShell(ExpandConstant('{app}\installer\post_install.ps1'), Args);
   end;
 end;
@@ -125,6 +158,7 @@ Source: "{#SrcRoot}\excel_exporter.py";    DestDir: "{app}"; Flags: ignoreversio
 Source: "{#SrcRoot}\ppt_exporter.py";       DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\risk_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\gantt_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcRoot}\db_migrate.py";        DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_server.py";  DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_app.py";     DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_db.py";      DestDir: "{app}"; Flags: ignoreversion
@@ -136,6 +170,9 @@ Source: "{#SrcRoot}\requirements.txt";     DestDir: "{app}"; Flags: ignoreversio
 Source: "{#SrcRoot}\templates\*";          DestDir: "{app}\templates";           Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SrcRoot}\aggregate_templates\*"; DestDir: "{app}\aggregate_templates"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#SrcRoot}\aggregate_frontend\*"; DestDir: "{app}\aggregate_frontend";  Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Migration scripts
+Source: "{#SrcRoot}\migrations\*";         DestDir: "{app}\migrations";          Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Bundled Python installer (run silently during post-install to create local venv)
 Source: "python-installer.exe";            DestDir: "{app}\installer";           Flags: ignoreversion
@@ -151,8 +188,8 @@ Source: "backup_db.ps1";                   DestDir: "{app}\installer";          
 ; Offline pip wheels — allows install on intranet servers with no internet
 Source: "wheels\*";                        DestDir: "{app}\installer\wheels";    Flags: ignoreversion recursesubdirs
 
-; Deploy database — always replaced on install/upgrade (dev DB is the source of truth)
-Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{commonappdata}\OverallDashboard"; Flags: ignoreversion uninsneveruninstall
+; Bundled database — staged to installer folder; post_install.ps1 decides whether to deploy it
+Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{app}\installer"; DestName: "dashboards_bundled.db"; Flags: ignoreversion
 
 ; ── Start Menu shortcut ───────────────────────────────────────────────────────
 [Icons]

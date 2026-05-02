@@ -24,6 +24,12 @@ from excel_parser import ExcelParser
 import config
 import sqlite3
 
+try:
+    from db_migrate import run_migrations as _run_migrations
+    _run_migrations(config.DATABASE_PATH)
+except Exception as _mig_err:
+    print(f'Warning: migration check failed: {_mig_err}')
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'dashboard-generator-secret-key'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
