@@ -630,20 +630,24 @@ def _build_priority_response(conn):
 @app.route('/api/priority-projects', methods=['GET'])
 def api_get_priority_projects():
     """Return all active priority projects (seed from Excel on first call)."""
+    conn = None
     try:
         conn = _ensure_priority_tables()
         if conn.execute("SELECT COUNT(*) FROM priority_projects").fetchone()[0] == 0:
             _seed_priority_from_excel(conn)
         result = _build_priority_response(conn)
-        conn.close()
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/priority-projects', methods=['POST'])
 def api_create_priority_project():
     """Append a blank project row at max priority + 1."""
+    conn = None
     try:
         data = request.json or {}
         category = data.get('category', 'active_big')
@@ -660,40 +664,39 @@ def api_create_priority_project():
             VALUES (?, '', '', '', '', '', '', '', ?)
         """, (new_p, category)).lastrowid
         conn.commit()
-        conn.close()
         return jsonify({'success': True, 'id': row_id, 'priority': new_p}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/priority-projects/<int:proj_id>', methods=['PUT'])
 def api_update_priority_project(proj_id):
     """Update one field of a priority project; cascade on priority conflicts."""
+    data = request.json or {}
+    field = data.get('field')
+    value = data.get('value', '')
+    if field not in _PRIORITY_ALLOWED_FIELDS:
+        return jsonify({'error': f'Unknown field: {field}'}), 400
+
+    conn = None
     try:
-        data = request.json or {}
-        field = data.get('field')
-        value = data.get('value', '')
-
-        if field not in _PRIORITY_ALLOWED_FIELDS:
-            return jsonify({'error': f'Unknown field: {field}'}), 400
-
         conn = _ensure_priority_tables()
 
         if field == 'priority':
             try:
                 new_p = int(value)
             except (ValueError, TypeError):
-                conn.close()
                 return jsonify({'error': 'Priority must be a number'}), 400
             if new_p < 1:
-                conn.close()
                 return jsonify({'error': 'Priority must be ≥ 1'}), 400
 
             row = conn.execute(
                 "SELECT priority FROM priority_projects WHERE id = ?", (proj_id,)
             ).fetchone()
             if not row:
-                conn.close()
                 return jsonify({'error': 'Project not found'}), 404
             old_p = row[0]
 
@@ -734,28 +737,34 @@ def api_update_priority_project(proj_id):
 
         conn.commit()
         result = _build_priority_response(conn)
-        conn.close()
         return jsonify({'success': True, 'projects': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/priority-projects/<int:proj_id>', methods=['DELETE'])
 def api_delete_priority_project(proj_id):
     """Permanently remove a priority project."""
+    conn = None
     try:
         conn = _ensure_priority_tables()
         conn.execute("DELETE FROM priority_projects WHERE id = ?", (proj_id,))
         conn.commit()
-        conn.close()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/priority-projects/<int:proj_id>/move', methods=['POST'])
 def api_move_priority_project(proj_id):
     """Swap this project's priority with its neighbor within the same category."""
+    conn = None
     try:
         direction = (request.json or {}).get('direction', 'up')
         conn = _ensure_priority_tables()
@@ -763,7 +772,6 @@ def api_move_priority_project(proj_id):
             "SELECT id, priority, category FROM priority_projects WHERE id = ?", (proj_id,)
         ).fetchone()
         if not row:
-            conn.close()
             return jsonify({'error': 'Project not found'}), 404
         curr_priority, category = row['priority'], row['category']
 
@@ -774,17 +782,14 @@ def api_move_priority_project(proj_id):
         ids = [r['id'] for r in siblings]
         idx = ids.index(proj_id) if proj_id in ids else -1
         if idx < 0:
-            conn.close()
             return jsonify({'error': 'Project not in category'}), 400
         neighbor_idx = idx - 1 if direction == 'up' else idx + 1
         if neighbor_idx < 0 or neighbor_idx >= len(siblings):
-            conn.close()
             return jsonify({'success': True, 'projects': _build_priority_response(conn)})
 
         neighbor = siblings[neighbor_idx]
         p_curr = siblings[idx]['priority']
         p_neighbor = neighbor['priority']
-        # Ensure distinct priorities for a clean swap
         if p_curr == p_neighbor:
             p_curr = idx + 1
             p_neighbor = neighbor_idx + 1
@@ -793,15 +798,18 @@ def api_move_priority_project(proj_id):
         conn.execute("UPDATE priority_projects SET priority=?, updated_at=datetime('now') WHERE id=?", (p_curr, neighbor['id']))
         conn.commit()
         result = _build_priority_response(conn)
-        conn.close()
         return jsonify({'success': True, 'projects': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/priority-projects/reorder', methods=['POST'])
 def api_reorder_priority_projects():
     """Assign sequential priorities to projects based on supplied id order."""
+    conn = None
     try:
         ids = (request.json or {}).get('ids', [])
         if not ids:
@@ -814,15 +822,18 @@ def api_reorder_priority_projects():
             )
         conn.commit()
         result = _build_priority_response(conn)
-        conn.close()
         return jsonify({'success': True, 'projects': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/priority-projects/<int:proj_id>/complete', methods=['POST'])
 def api_complete_priority_project(proj_id):
     """Move a project to the archive with today's date."""
+    conn = None
     try:
         from datetime import date as _date_cls
         conn = _ensure_priority_tables()
@@ -830,7 +841,6 @@ def api_complete_priority_project(proj_id):
             "SELECT * FROM priority_projects WHERE id = ?", (proj_id,)
         ).fetchone()
         if not row:
-            conn.close()
             return jsonify({'error': 'Project not found'}), 404
         d = dict(row)
         conn.execute("""
@@ -844,36 +854,41 @@ def api_complete_priority_project(proj_id):
         ))
         conn.execute("DELETE FROM priority_projects WHERE id = ?", (proj_id,))
         conn.commit()
-        conn.close()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/archived-projects', methods=['GET'])
 def api_get_archived_projects():
     """Return all archived (completed) projects."""
+    conn = None
     try:
         conn = _ensure_priority_tables()
         rows = conn.execute(
             "SELECT * FROM archived_projects ORDER BY completed_date DESC, id DESC"
         ).fetchall()
-        conn.close()
         return jsonify([dict(r) for r in rows])
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/archived-projects/<int:arch_id>/restore', methods=['POST'])
 def api_restore_archived_project(arch_id):
     """Restore an archived project to the bottom of the active list."""
+    conn = None
     try:
         conn = _ensure_priority_tables()
         row = conn.execute(
             "SELECT * FROM archived_projects WHERE id = ?", (arch_id,)
         ).fetchone()
         if not row:
-            conn.close()
             return jsonify({'error': 'Archived project not found'}), 404
         d = dict(row)
         max_p = conn.execute(
@@ -890,10 +905,12 @@ def api_restore_archived_project(arch_id):
         conn.execute("DELETE FROM archived_projects WHERE id = ?", (arch_id,))
         conn.commit()
         result = _build_priority_response(conn)
-        conn.close()
         return jsonify({'success': True, 'projects': result})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 # Gate Baseline and Change Log Endpoints
@@ -998,15 +1015,18 @@ def disciplines_page():
 
 @app.route('/api/v1/admin/resource-teams', methods=['GET'])
 def api_resource_teams_get():
+    conn = None
     try:
         conn = db_manager.get_connection()
         rows = conn.execute(
             "SELECT id, team_name, owner_name, capacity_hrs_per_week FROM resource_teams ORDER BY owner_name"
         ).fetchall()
-        conn.close()
         return jsonify([dict(r) for r in rows])
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/v1/admin/resource-teams/bulk', methods=['POST'])
@@ -1014,6 +1034,7 @@ def api_resource_teams_bulk():
     mappings = request.get_json(silent=True) or []
     if not isinstance(mappings, list):
         return jsonify({'error': 'Expected a JSON array of {owner_name, team_name}'}), 400
+    conn = None
     try:
         conn = db_manager.get_connection()
         conn.execute("DELETE FROM resource_teams")
@@ -1031,10 +1052,12 @@ def api_resource_teams_bulk():
                 )
                 count += 1
         conn.commit()
-        conn.close()
         return jsonify({'saved': count})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/resource-project-matrix')
@@ -1385,15 +1408,18 @@ def api_restore_project(project_name):
 @app.route('/api/project/<project_name>/program_manager', methods=['PUT'])
 def api_update_program_manager(project_name):
     """Update the program manager for a project."""
+    conn = None
     try:
         value = (request.json or {}).get('program_manager', '').strip()
         conn = db_manager.get_connection()
         conn.execute('UPDATE projects SET program_manager = ? WHERE name = ?', (value, project_name))
         conn.commit()
-        conn.close()
         return jsonify({'success': True, 'program_manager': value})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @app.route('/api/project/<project_name>/rename', methods=['PUT'])
