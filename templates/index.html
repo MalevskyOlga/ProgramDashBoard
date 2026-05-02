@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Overall Programs Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <style>
         * {
             margin: 0;
@@ -1931,11 +1932,11 @@
         }
         .priority-add-gantt-btn:hover { border-color: #3b82f6; color: #3b82f6; }
         /* Hide the Add Gantt button on linked rows until row is hovered or menu is open */
-        .priority-link-area a ~ .gantt-menu-wrap .priority-add-gantt-btn {
+        tr.has-gantt .gantt-menu-wrap .priority-add-gantt-btn {
             opacity: 0; transition: opacity 0.15s;
         }
-        .priority-table tr:hover .priority-link-area a ~ .gantt-menu-wrap .priority-add-gantt-btn,
-        .priority-link-area a ~ .gantt-menu-wrap:has(.gantt-menu.open) .priority-add-gantt-btn {
+        tr.has-gantt:hover .gantt-menu-wrap .priority-add-gantt-btn,
+        .gantt-menu-wrap:has(.gantt-menu.open) .priority-add-gantt-btn {
             opacity: 1;
         }
         .gantt-menu {
@@ -1984,10 +1985,11 @@
 
         /* Risk & Action columns */
         .priority-col-risk    { width: 70px;  text-align: center; white-space: nowrap; }
-        .priority-col-actions { width: 90px;  text-align: center; white-space: nowrap; }
+        .priority-col-actions { width: 150px; text-align: center; white-space: nowrap; }
         .priority-actions { display: flex; gap: 4px; justify-content: center; align-items: center; flex-wrap: nowrap; }
         .priority-action-btn {
-            border: none; border-radius: 4px; padding: 3px 7px;
+            border: none; border-radius: 4px; padding: 5px 8px;
+            min-height: 28px; min-width: 28px;
             font-size: 12px; font-weight: 700; cursor: pointer;
             transition: opacity 0.15s; line-height: 1.4;
         }
@@ -1996,6 +1998,10 @@
         .priority-btn-delete   { background: #fee2e2; color: #991b1b; }
         .priority-btn-up, .priority-btn-down { background: #e0e7ff; color: #3730a3; padding: 3px 5px; }
         .priority-btn-up:disabled, .priority-btn-down:disabled { opacity: 0.2; cursor: default; }
+        .priority-table tbody tr[draggable="true"] { cursor: grab; }
+        .priority-table tbody tr[draggable="true"]:active { cursor: grabbing; }
+        .priority-table tbody tr.dragging { opacity: 0.35; background: #f0f4ff !important; }
+        .priority-table tbody tr.drag-over { outline: 2px dashed #3b82f6; outline-offset: -2px; background: #eff6ff !important; }
         .priority-add-btn {
             margin-top: 8px; width: 100%;
             border: 2px dashed #93c5fd; background: transparent;
@@ -2053,7 +2059,7 @@
                     <p class="subtitle">Web-based project dashboard management system</p>
                 </div>
                 <div class="header-actions">
-                    <button type="button" class="header-action-btn" onclick="exportOverallDashboardHTML()">📤 Export Overall Dashboard HTML</button>
+                    <button type="button" class="header-action-btn" onclick="exportOverallDashboardHTML()">📤 Export HTML</button>
                     <div class="header-status" id="headerStatus" aria-live="polite"></div>
                 </div>
             </header>
@@ -2061,7 +2067,7 @@
         <div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
             <button class="dashboard-tab active" data-tab="schedule" onclick="setActiveDashboardTab('schedule')">Portfolio Schedule Overview</button>
             <button class="dashboard-tab" data-tab="pipeline" onclick="setActiveDashboardTab('pipeline')">F&amp;G Pipeline</button>
-            <button class="dashboard-tab" data-tab="projects" onclick="setActiveDashboardTab('projects')">Projects</button>
+            <button class="dashboard-tab" data-tab="projects" onclick="setActiveDashboardTab('projects')" style="display:none;">Projects</button>
             <button class="dashboard-tab" data-tab="resources" onclick="setActiveDashboardTab('resources')">Overall Resource Load</button>
             <button class="dashboard-tab" data-tab="critical" onclick="setActiveDashboardTab('critical')">Critical Path</button>
         </div>
@@ -2115,7 +2121,7 @@
             </div>
         </div>
 
-        <div class="tab-pane" data-pane="projects">
+        <div class="tab-pane" data-pane="projects" style="display:none !important;">
             <div class="resource-section">
                 <h2>Projects</h2>
                 <p>All imported Gantt project dashboards</p>
@@ -4828,15 +4834,15 @@
 
         function _priorityRowHtml(p, rowIdx, rowTotal) {
             const ganttMenu = `<span class="gantt-menu-wrap">
-                    <button class="priority-add-gantt-btn" onclick="toggleGanttMenu(event,${p.id})">📥 Add Gantt ▾</button>
+                    <button class="priority-add-gantt-btn" onclick="toggleGanttMenu(event,${p.id})" title="Add / change Gantt">📥▾</button>
                     <div class="gantt-menu" id="gantt-menu-${p.id}">
                         <button onclick="addGanttToPriorityProject(${p.id})">📥 Import from Excel</button>
                         <button onclick="showLinkGanttPicker(${p.id})">🔗 Link existing</button>
                     </div>
                 </span>`;
             const linkArea = p.dashboard_name
-                ? `<span class="priority-link-area"> <a class="priority-link-btn" href="/project/${encodeURIComponent(p.dashboard_name)}" title="Open Gantt (right-click for options)" oncontextmenu="showGanttCtxMenu(event,${p.id},'${escapeJs(p.dashboard_name)}')">↗ Gantt</a> ${ganttMenu}</span>`
-                : `<span class="priority-link-area"> ${ganttMenu}</span>`;
+                ? `<span class="priority-link-area"> <a class="priority-link-btn" href="/project/${encodeURIComponent(p.dashboard_name)}" title="Open Gantt (right-click for options)" oncontextmenu="showGanttCtxMenu(event,${p.id},'${escapeJs(p.dashboard_name)}')">↗ Gantt</a></span>`
+                : ``;
             const bc = priorityBadgeClass(p.process_type);
             // Risk badge: linked Gantt → Gantt risks; unlinked → pipeline risks
             const rc = p.dashboard_name
@@ -4849,7 +4855,7 @@
             const riskOnClick = p.dashboard_name
                 ? `openRiskPanel('${escapeJs(p.dashboard_name)}', null)`
                 : `openPipelineRiskPanel(${p.id}, '${escapeJs(p.name || '')}')`;
-            return `<tr data-id="${p.id}">
+            return `<tr data-id="${p.id}"${p.dashboard_name ? ' class="has-gantt"' : ''} draggable="true">
                 <td class="priority-col-priority" contenteditable="true" data-field="priority" data-original="${p.priority}">${p.priority}</td>
                 <td class="priority-col-name"><span class="priority-editable-name" contenteditable="true" data-field="name" data-original="${escapeHtml(p.name || '')}">${escapeHtml(p.name || '')}</span>${linkArea}</td>
                 <td contenteditable="true" data-field="leader" data-original="${escapeHtml(p.leader || '')}">${escapeHtml(p.leader || '')}</td>
@@ -4863,6 +4869,7 @@
                     <button class="risk-badge ${riskClass}" onclick="${riskOnClick}" title="${riskLabel} open risk${riskLabel!=='1'?'s':''} — click to manage" style="font-size:0.72em;padding:2px 6px;">${riskIcon} ${riskLabel}</button>
                 </td>
                 <td class="priority-col-actions priority-actions">
+                    ${ganttMenu}
                     <button class="priority-action-btn priority-btn-up" onclick="movePriorityProject(${p.id},'up')" title="Move up" ${rowIdx === 0 ? 'disabled' : ''}>▲</button>
                     <button class="priority-action-btn priority-btn-down" onclick="movePriorityProject(${p.id},'down')" title="Move down" ${rowIdx === rowTotal - 1 ? 'disabled' : ''}>▼</button>
                     <button class="priority-action-btn priority-btn-complete" onclick="completePriorityProject(${p.id})" title="Mark Complete">✓</button>
@@ -4942,9 +4949,87 @@
             _renderCurrentPipelineTab();
         }
 
+        let _dragSrcRow = null;
+
+        async function _savePriorityReorder(ids) {
+            try {
+                const res = await fetch('/api/priority-projects/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data.projects) _allPriorityProjects = data.projects;
+                showPrioritySaveToast();
+            } catch (err) { console.error('Reorder failed:', err); }
+        }
+
+        function _initDragDrop(tbody) {
+            tbody.addEventListener('dragstart', e => {
+                // Don't drag from interactive elements
+                if (e.target.closest('[contenteditable="true"], select, button, input, a')) {
+                    e.preventDefault(); return;
+                }
+                const tr = e.target.closest('tr[data-id]');
+                if (!tr) return;
+                _dragSrcRow = tr;
+                tr.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', tr.dataset.id);
+            });
+
+            tbody.addEventListener('dragenter', e => {
+                e.preventDefault();
+                const tr = e.target.closest('tr[data-id]');
+                if (!tr || tr === _dragSrcRow) return;
+                tbody.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+                tr.classList.add('drag-over');
+            });
+
+            tbody.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+
+            tbody.addEventListener('drop', e => {
+                e.preventDefault();
+                const tr = e.target.closest('tr[data-id]');
+                tbody.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+                if (!tr || tr === _dragSrcRow || !_dragSrcRow) return;
+
+                // Insert before or after based on mouse Y position relative to target row midpoint
+                const rect = tr.getBoundingClientRect();
+                if (e.clientY < rect.top + rect.height / 2) {
+                    tbody.insertBefore(_dragSrcRow, tr);
+                } else {
+                    tbody.insertBefore(_dragSrcRow, tr.nextSibling);
+                }
+
+                // Renumber priority cells and collect new id order
+                const rows = Array.from(tbody.querySelectorAll('tr[data-id]'));
+                const ids = rows.map((r, i) => {
+                    const cell = r.querySelector('[data-field="priority"]');
+                    if (cell) { cell.textContent = i + 1; cell.dataset.original = i + 1; }
+                    return parseInt(r.dataset.id);
+                });
+
+                _savePriorityReorder(ids);
+            });
+
+            tbody.addEventListener('dragend', e => {
+                if (_dragSrcRow) _dragSrcRow.classList.remove('dragging');
+                tbody.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+                _dragSrcRow = null;
+            });
+        }
+
         function _attachPriorityTableListeners() {
             const table = document.getElementById('priorityTable');
             if (!table) return;
+
+            const tbody = table.querySelector('tbody');
+            if (tbody) _initDragDrop(tbody);
 
             table.addEventListener('keydown', e => {
                 if (!e.target.isContentEditable) return;

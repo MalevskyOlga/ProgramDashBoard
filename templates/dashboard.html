@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ project_name }} - Task Manager Dashboard</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
     <style>
         * {
             margin: 0;
@@ -148,15 +149,169 @@
             background: #ffb300;
         }
 
-        .view-toggle {
+        .more-dropdown {
+            position: relative;
+            display: inline-flex;
+        }
+
+        .more-dropdown-toggle {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.95em;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .more-dropdown-toggle:hover {
+            background: #545b62;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .more-dropdown-toggle .caret {
+            font-size: 0.75em;
+            opacity: 0.8;
+            margin-left: 2px;
+        }
+
+        .more-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            min-width: 200px;
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .more-dropdown-menu.open {
+            display: block;
+        }
+
+        .more-dropdown-menu button {
+            width: 100%;
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.92em;
+            font-weight: 600;
+            color: #333;
             display: flex;
-            gap: 5px;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+
+        .more-dropdown-menu button:hover {
+            background: #f5f5f5;
+        }
+
+        .more-dropdown-menu .more-divider {
+            height: 1px;
+            background: #eee;
+            margin: 4px 0;
+        }
+
+        .export-dropdown {
+            position: relative;
+            display: inline-flex;
+        }
+
+        .export-dropdown-toggle {
+            background: #2c5f2d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.95em;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .export-dropdown-toggle:hover {
+            background: #1e4620;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .export-dropdown-toggle .caret {
+            font-size: 0.75em;
+            opacity: 0.8;
+            margin-left: 2px;
+        }
+
+        .export-dropdown-menu {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            min-width: 220px;
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .export-dropdown-menu.open {
+            display: block;
+        }
+
+        .export-dropdown-menu button {
+            width: 100%;
+            padding: 11px 16px;
+            background: none;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            font-size: 0.92em;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+
+        .export-dropdown-menu button:hover {
+            background: #f0f4f0;
+        }
+
+        .export-dropdown-menu .export-divider {
+            height: 1px;
+            background: #eee;
+            margin: 4px 0;
+        }
+
+        .view-toggle,
+        .gantt-view-toggle {
+            display: flex;
+            gap: 0;
             border: 1px solid #ddd;
             border-radius: 4px;
             overflow: hidden;
         }
 
-        .view-btn {
+        .view-btn,
+        .gantt-view-btn {
             padding: 8px 16px;
             border: none;
             background: white;
@@ -167,11 +322,13 @@
             font-weight: 500;
         }
 
-        .view-btn:last-child {
+        .view-btn:last-child,
+        .gantt-view-btn:last-child {
             border-right: none;
         }
 
-        .view-btn:hover {
+        .view-btn:hover,
+        .gantt-view-btn:hover {
             background: #f0f0f0;
         }
 
@@ -192,7 +349,8 @@
             transform: scale(1.05);
         }
 
-        .view-btn.active {
+        .view-btn.active,
+        .gantt-view-btn.active {
             background: #2c5f2d;
             color: white;
         }
@@ -1335,20 +1493,34 @@
     <div class="toolbar">
         <a href="/" class="btn btn-secondary" style="text-decoration: none;">🏠 Main Dashboard</a>
         <button class="btn btn-primary" onclick="openAddTaskModal()">➕ Add New Task</button>
-        <button class="btn btn-info" onclick="openGateChangeLog()" title="View Gate deadline change history">📋 Gate Change Log</button>
         <button class="btn btn-danger" onclick="showCriticalPath()">🔴 Show Critical Path</button>
-        <button class="btn btn-warning" onclick="showLongestChain()" id="btnLongestChain">🔗 Longest Chain</button>
-        <button class="btn btn-info" onclick="openDepMap()" title="View full dependency network and find orphan tasks">🗺 Dependency Map</button>
-        <button class="btn btn-primary" onclick="exportToExcel()">📊 Export to Excel</button>
-        <button class="btn btn-primary" onclick="exportUpdatedHTML()">📤 Export Updated HTML (Share This!)</button>
-        <button class="btn btn-primary" id="exportPptBtn" onclick="openGanttPptModal()" title="Preview and export all tasks as a Gantt PowerPoint slide" style="background:#7B4FDB;border-color:#7B4FDB;">📑 Export PPT</button>
-        <button class="btn btn-primary" id="exportCriticalPptBtn" onclick="exportCriticalPathPpt()" title="Export critical-path tasks as a Gantt PowerPoint slide" style="background:#C0392B;border-color:#C0392B;">🔴 Critical Path PPT</button>
-        <button class="btn btn-warning" onclick="refreshDashboard()" title="Clear cache and reload">🔄 Force Refresh</button>
-        <button class="btn btn-whatif" id="whatIfBtn" onclick="toggleWhatIf()" title="Try date changes without saving — discard or commit when done">🧪 What-If</button>
+        <div class="export-dropdown" id="exportDropdownWrapper">
+            <button class="export-dropdown-toggle" onclick="toggleExportDropdown(event)" title="Export options">
+                📤 Export <span class="caret">▾</span>
+            </button>
+            <div class="export-dropdown-menu" id="exportDropdownMenu">
+                <button onclick="exportToExcel(); closeExportDropdown()">📊 Export to Excel</button>
+                <button onclick="exportUpdatedHTML(); closeExportDropdown()">🖥️ Export HTML (Share)</button>
+                <div class="export-divider"></div>
+                <button id="exportPptBtn" onclick="openGanttPptModal(); closeExportDropdown()" title="Preview and export all tasks as a Gantt PowerPoint slide">📑 Export PPT</button>
+                <button id="exportCriticalPptBtn" onclick="exportCriticalPathPpt(); closeExportDropdown()" title="Export critical-path tasks as a Gantt PowerPoint slide">🔴 Critical Path PPT</button>
+            </div>
+        </div>
+        <div class="more-dropdown" id="moreDropdownWrapper">
+            <button class="more-dropdown-toggle" onclick="toggleMoreDropdown(event)">⋯ More <span class="caret">▾</span></button>
+            <div class="more-dropdown-menu" id="moreDropdownMenu">
+                <button onclick="openGateChangeLog(); closeMoreDropdown()">📋 Gate Change Log</button>
+                <button id="btnLongestChain" onclick="showLongestChain(); closeMoreDropdown()">🔗 Longest Chain</button>
+                <button onclick="openDepMap(); closeMoreDropdown()">🗺 Dependency Map</button>
+                <div class="more-divider"></div>
+                <button id="whatIfBtn" onclick="toggleWhatIf(); closeMoreDropdown()" title="Try date changes without saving — discard or commit when done">🧪 What-If</button>
+                <button onclick="refreshDashboard(); closeMoreDropdown()" title="Clear cache and reload">🔄 Force Refresh</button>
+            </div>
+        </div>
         
         <div class="gantt-view-toggle">
-            <button class="gantt-view-btn active" data-view="detailed">📊 Detailed Gantt</button>
-            <button class="gantt-view-btn" data-view="highlevel">⚡ High Level <span class="high-level-badge">Critical Path + Milestones</span></button>
+            <button class="gantt-view-btn active" data-view="detailed">📊 Detailed</button>
+            <button class="gantt-view-btn" data-view="highlevel">⚡ High Level</button>
         </div>
         
         <span class="toolbar-label">Zoom:</span>
@@ -1570,6 +1742,11 @@
                 <div class="form-group">
                     <label>Due Date *</label>
                     <input type="date" id="taskDue" required>
+                </div>
+
+                <div id="overlapAlertSection" style="display:none;margin-bottom:12px;padding:10px 12px;background:#ffebee;border:1.5px solid #ef9a9a;border-radius:6px;">
+                    <div style="font-weight:700;color:#c62828;margin-bottom:6px;">⚠ Overlapping / Blocking Tasks</div>
+                    <div id="overlapAlertList"></div>
                 </div>
 
                 <div class="form-group" id="dependencyPickerSection" style="border:2px solid #4a90d9;border-radius:6px;padding:12px;background:#f0f7ff;">
@@ -3433,7 +3610,7 @@
             const fmt    = d => d ? d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}) : '—';
             const isoStr = d => d ? d.toISOString().slice(0,10) : null;
             const blockerSummary = blockers.map(b =>
-                `<span style="color:#c62828;">#${b.rowNum} ${escapeHtml(b.name)}</span> ends ${b.due}`).join('<br>');
+                `<span style="color:#c62828;cursor:pointer;text-decoration:underline;font-weight:600;" onclick="document.getElementById('suggestDatesPopup')?.remove();scrollToTask(${b.id})" title="Jump to task #${b.rowNum} in Gantt">#${b.rowNum} ${escapeHtml(b.name)}</span> ends ${b.due}`).join('<br>');
 
             let optionsHTML = '';
             if (fitsBeforeGate === true) {
@@ -3986,6 +4163,14 @@
             line.appendChild(label);
 
             timelineContent.appendChild(line);
+
+            // Scroll so today lands ~25% from the left of the visible area
+            requestAnimationFrame(() => {
+                const grid = document.querySelector('.timeline-grid');
+                if (!grid) return;
+                const offset = parseFloat(line.style.left) || 0;
+                grid.scrollLeft = Math.max(0, offset - grid.clientWidth * 0.25);
+            });
         }
 
         function renderFlatTaskList(tasksToRender) {
@@ -5796,6 +5981,27 @@
             populateDepPicker(id, task.entered);
             if (document.getElementById('depSearchInput')) document.getElementById('depSearchInput').value = '';
 
+            // Populate overlapping/blocking tasks section
+            const blockers = _atRiskMap ? (_atRiskMap.get(id) || []) : [];
+            const overlapSection = document.getElementById('overlapAlertSection');
+            const overlapList = document.getElementById('overlapAlertList');
+            if (blockers.length > 0) {
+                overlapList.innerHTML = blockers.map(b => {
+                    const reason = b._blockReason === 'overdue' ? 'OVERDUE' : 'OVERLAP';
+                    const label = `#${b.rowNum || '?'} ${escapeHtml(b.name)} (due ${b.due || '?'})`;
+                    return `<div style="margin-bottom:4px;">
+                        <span style="font-size:0.78em;font-weight:700;color:#c62828;background:#ffcdd2;padding:1px 5px;border-radius:3px;margin-right:6px;">${reason}</span>
+                        <button type="button" onclick="closeTaskModal();scrollToTask(${b.id})"
+                            style="background:none;border:none;color:#c62828;cursor:pointer;text-decoration:underline;font-size:0.9em;padding:0;font-weight:600;">
+                            ${label} ↗
+                        </button>
+                    </div>`;
+                }).join('');
+                overlapSection.style.display = 'block';
+            } else {
+                overlapSection.style.display = 'none';
+            }
+
             // Scroll modal to show dependency picker
             setTimeout(() => {
                 const depSection = document.getElementById('dependencyPickerSection');
@@ -7420,6 +7626,33 @@
             
             showNotification('✅ Updated HTML exported! Share this file with your team - they will see all your changes!', 'success');
         }
+
+        function toggleExportDropdown(e) {
+            e.stopPropagation();
+            closeMoreDropdown();
+            document.getElementById('exportDropdownMenu').classList.toggle('open');
+        }
+
+        function closeExportDropdown() {
+            document.getElementById('exportDropdownMenu').classList.remove('open');
+        }
+
+        function toggleMoreDropdown(e) {
+            e.stopPropagation();
+            closeExportDropdown();
+            document.getElementById('moreDropdownMenu').classList.toggle('open');
+        }
+
+        function closeMoreDropdown() {
+            document.getElementById('moreDropdownMenu').classList.remove('open');
+        }
+
+        document.addEventListener('click', function(e) {
+            const expWrapper = document.getElementById('exportDropdownWrapper');
+            if (expWrapper && !expWrapper.contains(e.target)) closeExportDropdown();
+            const moreWrapper = document.getElementById('moreDropdownWrapper');
+            if (moreWrapper && !moreWrapper.contains(e.target)) closeMoreDropdown();
+        });
 
         async function exportToExcel() {
             try {

@@ -799,6 +799,27 @@ def api_move_priority_project(proj_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/priority-projects/reorder', methods=['POST'])
+def api_reorder_priority_projects():
+    """Assign sequential priorities to projects based on supplied id order."""
+    try:
+        ids = (request.json or {}).get('ids', [])
+        if not ids:
+            return jsonify({'error': 'ids required'}), 400
+        conn = _ensure_priority_tables()
+        for priority, proj_id in enumerate(ids, start=1):
+            conn.execute(
+                "UPDATE priority_projects SET priority=?, updated_at=datetime('now') WHERE id=?",
+                (priority, proj_id)
+            )
+        conn.commit()
+        result = _build_priority_response(conn)
+        conn.close()
+        return jsonify({'success': True, 'projects': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/priority-projects/<int:proj_id>/complete', methods=['POST'])
 def api_complete_priority_project(proj_id):
     """Move a project to the archive with today's date."""
