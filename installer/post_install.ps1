@@ -105,14 +105,29 @@ if (-not $pythonOK) {
 
 # -- 3. Create venv and install dependencies (offline wheels) ------------------
 Log "[3/7] Creating virtual environment at $VenvDir ..."
-# Stop the service first — running Python locks DLL files inside the venv
+# Stop the service and wait for all file locks to be released
 $existingSvc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existingSvc -and $existingSvc.Status -ne 'Stopped') {
-    Log "      Stopping service '$ServiceName' to release file locks..."
+    Log "      Stopping service '$ServiceName'..."
     Stop-Service -Name $ServiceName -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 4
+    # Poll until fully stopped (up to 30s)
+    $waited = 0
+    while ($waited -lt 30) {
+        Start-Sleep -Seconds 1; $waited++
+        $s = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+        if (-not $s -or $s.Status -eq 'Stopped') { break }
+    }
+    Log "      Service stopped after ${waited}s"
 }
-# Always remove a stale venv (e.g. from a previous failed install) before recreating
+# Kill any Python processes still holding locks inside the venv
+Get-Process -Name python* -ErrorAction SilentlyContinue | Where-Object {
+    try { $_.Path -like "$InstallDir*" } catch { $false }
+} | ForEach-Object {
+    Log "      Killing lingering process: $($_.Name) PID=$($_.Id)"
+    $_ | Stop-Process -Force -ErrorAction SilentlyContinue
+}
+Start-Sleep -Seconds 2
+# Always remove a stale venv before recreating
 if (Test-Path $VenvDir) {
     Log "      Removing existing venv for clean reinstall..."
     Remove-Item -Recurse -Force $VenvDir
@@ -193,11 +208,11 @@ if ($DbAction -eq 'replace') {
         $BackupName = "dashboards.db.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         $BackupPath = Join-Path $DataDir $BackupName
         Copy-Item $TargetDb $BackupPath -Force
-        Log "      Backed up existing DB → $BackupPath"
+        Log "      Backed up existing DB -> $BackupPath"
     }
     if (Test-Path $BundledDb) {
         Copy-Item $BundledDb $TargetDb -Force
-        Log "      Deployed bundled DB → $TargetDb"
+        Log "      Deployed bundled DB -> $TargetDb"
     } else {
         Log "      WARNING: bundled DB not found at $BundledDb"
     }
@@ -205,10 +220,10 @@ if ($DbAction -eq 'replace') {
     if (Test-Path $TargetDb) {
         Log "      Keeping production DB ($([math]::Round((Get-Item $TargetDb).Length/1MB,2)) MB)"
     } else {
-        Log "      WARNING: no existing DB found — deploying bundled DB as fallback"
+        Log "      WARNING: no existing DB found - deploying bundled DB as fallback"
         if (Test-Path $BundledDb) {
             Copy-Item $BundledDb $TargetDb -Force
-            Log "      Deployed bundled DB → $TargetDb"
+            Log "      Deployed bundled DB -> $TargetDb"
         }
     }
 }
@@ -218,7 +233,7 @@ $migrateLog = Join-Path $LogDir "db-migrate.log"
 & $VenvPython (Join-Path $InstallDir "db_migrate.py") $TargetDb 2>&1 |
     ForEach-Object { Log "migrate: $_" }
 if ($LASTEXITCODE -ne 0) {
-    Log "      WARNING: migration exited $LASTEXITCODE — check $migrateLog"
+    Log "      WARNING: migration exited $LASTEXITCODE - check $migrateLog"
 } else {
     Log "      Migrations OK"
 }
@@ -243,23 +258,23 @@ if ($existing) {
 $xmlPath      = Join-Path $InstallDir "nssm\$ServiceName.xml"
 $winswService = Join-Path $InstallDir "nssm\$ServiceName.exe"
 
-# Build XML via array join - avoids here-string PS5.1 parsing issues
+# Build WinSW XML - all double-quoted to avoid PS5.1 quirk with '<' in single-quoted strings
 $xmlLines = @(
-    '<service>',
+    "<service>",
     "  <id>$ServiceName</id>",
-    '  <name>Overall Programs Dashboard</name>',
+    "  <name>Overall Programs Dashboard</name>",
     "  <description>Web-based project dashboard (Flask, port $Port)</description>",
     "  <executable>$VenvPython</executable>",
-    '  <arguments>server.py</arguments>',
+    "  <arguments>server.py</arguments>",
     "  <workingdirectory>$InstallDir</workingdirectory>",
     "  <logpath>$LogDir</logpath>",
-    '  <logmode>rotate</logmode>',
-    '  <sizeThreshold>5120</sizeThreshold>',
-    '  <startmode>Automatic</startmode>',
-    '  <onfailure action="restart" delay="5 sec"/>',
-    '  <onfailure action="restart" delay="10 sec"/>',
-    '  <onfailure action="restart" delay="20 sec"/>',
-    '</service>'
+    "  <logmode>rotate</logmode>",
+    "  <sizeThreshold>5120</sizeThreshold>",
+    "  <startmode>Automatic</startmode>",
+    "  <onfailure action=`"restart`" delay=`"5 sec`"/>",
+    "  <onfailure action=`"restart`" delay=`"10 sec`"/>",
+    "  <onfailure action=`"restart`" delay=`"20 sec`"/>",
+    "</service>"
 )
 $xmlLines -join "`r`n" | Set-Content -Encoding UTF8 -Path $xmlPath
 Copy-Item $WinSwExe $winswService -Force
