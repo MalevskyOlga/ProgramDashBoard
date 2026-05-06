@@ -74,7 +74,7 @@ def index():
     return render_template('index.html', projects=projects)
 
 
-@app.route('/project/<project_name>')
+@app.route('/project/<path:project_name>')
 def view_project(project_name):
     """View a specific project dashboard"""
     project = db_manager.get_project_by_name(project_name)
@@ -89,7 +89,7 @@ def view_project(project_name):
                          PROGRAM_MANAGER=project.get('program_manager') or '')
 
 
-@app.route('/project/<project_name>/schematic')
+@app.route('/project/<path:project_name>/schematic')
 def view_project_schematic(project_name):
     """View a standalone schematic schedule for a project"""
     project = db_manager.get_project_by_name(project_name)
@@ -134,7 +134,7 @@ def api_get_overall_critical_path_overview():
     return jsonify(critical_overview)
 
 
-@app.route('/api/project/<project_name>')
+@app.route('/api/project/<path:project_name>')
 def api_get_project(project_name):
     """API endpoint to get project details"""
     project = db_manager.get_project_by_name(project_name)
@@ -144,7 +144,7 @@ def api_get_project(project_name):
     return jsonify(project)
 
 
-@app.route('/api/project/<project_name>/tasks')
+@app.route('/api/project/<path:project_name>/tasks')
 def api_get_tasks(project_name):
     """API endpoint to get all tasks for a project"""
     tasks = db_manager.get_tasks_by_project(project_name)
@@ -179,7 +179,7 @@ def api_update_task(task_id):
         return jsonify({'error': 'Failed to update task'}), 500
 
 
-@app.route('/api/project/<project_name>/task', methods=['POST'])
+@app.route('/api/project/<path:project_name>/task', methods=['POST'])
 def api_create_task(project_name):
     """API endpoint to create a new task"""
     data = request.json
@@ -378,7 +378,7 @@ def api_upload_excel():
                 print(f"Warning: Failed to delete temporary file {temp_file_path}: {e}")
 
 
-@app.route('/api/project/<project_name>/export')
+@app.route('/api/project/<path:project_name>/export')
 def api_export_to_excel(project_name):
     """API endpoint to export project to Excel"""
     from excel_exporter import ExcelExporter
@@ -403,7 +403,7 @@ def api_export_to_excel(project_name):
         return jsonify({'error': 'Failed to export to Excel'}), 500
 
 
-@app.route('/api/project/<project_name>/export-ppt')
+@app.route('/api/project/<path:project_name>/export-ppt')
 def api_export_schematic_to_ppt(project_name):
     """API endpoint to export project schematic to PowerPoint"""
     from ppt_exporter import PptExporter
@@ -429,7 +429,7 @@ def api_export_schematic_to_ppt(project_name):
     return jsonify({'error': 'Failed to export schematic to PowerPoint'}), 500
 
 
-@app.route('/api/project/<project_name>/export-gantt-ppt', methods=['POST'])
+@app.route('/api/project/<path:project_name>/export-gantt-ppt', methods=['POST'])
 def api_export_gantt_ppt(project_name):
     from gantt_ppt_exporter import GanttPptExporter
 
@@ -463,7 +463,7 @@ def api_export_gantt_ppt(project_name):
     )
 
 
-@app.route('/api/project/<project_name>/export-critical-path-ppt', methods=['POST'])
+@app.route('/api/project/<path:project_name>/export-critical-path-ppt', methods=['POST'])
 def api_export_critical_path_ppt(project_name):
     from gantt_ppt_exporter import GanttPptExporter
 
@@ -888,7 +888,7 @@ def api_restore_archived_project(arch_id):
 
 # Gate Baseline and Change Log Endpoints
 
-@app.route('/api/project/<project_name>/gate-baselines', methods=['GET'])
+@app.route('/api/project/<path:project_name>/gate-baselines', methods=['GET'])
 def api_get_gate_baselines(project_name):
     """Get all Gate baselines for a project"""
     try:
@@ -898,7 +898,7 @@ def api_get_gate_baselines(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/gate-baselines', methods=['POST'])
+@app.route('/api/project/<path:project_name>/gate-baselines', methods=['POST'])
 def api_create_gate_baselines(project_name):
     """Create/update Gate baselines for a project"""
     try:
@@ -918,7 +918,7 @@ def api_create_gate_baselines(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/gate-change-log', methods=['GET'])
+@app.route('/api/project/<path:project_name>/gate-change-log', methods=['GET'])
 def api_get_gate_change_log(project_name):
     """Get all Gate change log entries for a project"""
     try:
@@ -928,7 +928,7 @@ def api_get_gate_change_log(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/gate-change-log', methods=['POST'])
+@app.route('/api/project/<path:project_name>/gate-change-log', methods=['POST'])
 def api_add_gate_change_log(project_name):
     """Add a Gate change log entry"""
     try:
@@ -942,7 +942,7 @@ def api_add_gate_change_log(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/gate-change-log/<gate_name>', methods=['DELETE'])
+@app.route('/api/project/<path:project_name>/gate-change-log/<gate_name>', methods=['DELETE'])
 def api_delete_gate_change_log(project_name, gate_name):
     """Delete all change log entries for a specific Gate"""
     try:
@@ -953,7 +953,7 @@ def api_delete_gate_change_log(project_name, gate_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/dependencies', methods=['GET'])
+@app.route('/api/project/<path:project_name>/dependencies', methods=['GET'])
 def api_get_dependencies(project_name):
     """Get all task dependencies for a project"""
     try:
@@ -963,7 +963,7 @@ def api_get_dependencies(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/dependencies', methods=['POST'])
+@app.route('/api/project/<path:project_name>/dependencies', methods=['POST'])
 def api_create_dependency(project_name):
     """Create a task dependency"""
     try:
@@ -1311,7 +1311,7 @@ def api_delete_dependency(dep_id):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/dependencies/by-tasks', methods=['DELETE'])
+@app.route('/api/project/<path:project_name>/dependencies/by-tasks', methods=['DELETE'])
 def api_delete_dependency_by_tasks(project_name):
     """Delete a dependency between two specific tasks"""
     try:
@@ -1322,14 +1322,14 @@ def api_delete_dependency_by_tasks(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/gate-sign-offs', methods=['GET'])
+@app.route('/api/project/<path:project_name>/gate-sign-offs', methods=['GET'])
 def api_get_gate_sign_offs(project_name):
     """Get all gate sign-offs for a project"""
     sign_offs = db_manager.get_gate_sign_offs(project_name)
     return jsonify(sign_offs)
 
 
-@app.route('/api/project/<project_name>/gate-sign-offs', methods=['POST'])
+@app.route('/api/project/<path:project_name>/gate-sign-offs', methods=['POST'])
 def api_upsert_gate_sign_off(project_name):
     """Create or update a gate sign-off"""
     data = request.json
@@ -1351,14 +1351,14 @@ def api_upsert_gate_sign_off(project_name):
     return jsonify({'success': success})
 
 
-@app.route('/api/project/<project_name>/gate-sign-off/<gate_name>', methods=['DELETE'])
+@app.route('/api/project/<path:project_name>/gate-sign-off/<gate_name>', methods=['DELETE'])
 def api_delete_gate_sign_off(project_name, gate_name):
     """Remove a gate sign-off"""
     success = db_manager.delete_gate_sign_off(project_name, gate_name)
     return jsonify({'success': success})
 
 
-@app.route('/api/project/<project_name>/soft-delete', methods=['POST'])
+@app.route('/api/project/<path:project_name>/soft-delete', methods=['POST'])
 def api_soft_delete_project(project_name):
     """Mark project as deleted (reversible within undo window)."""
     try:
@@ -1368,7 +1368,7 @@ def api_soft_delete_project(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/restore', methods=['POST'])
+@app.route('/api/project/<path:project_name>/restore', methods=['POST'])
 def api_restore_project(project_name):
     """Restore a soft-deleted project."""
     try:
@@ -1378,7 +1378,7 @@ def api_restore_project(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>/program_manager', methods=['PUT'])
+@app.route('/api/project/<path:project_name>/program_manager', methods=['PUT'])
 def api_update_program_manager(project_name):
     """Update the program manager for a project."""
     conn = None
@@ -1395,7 +1395,7 @@ def api_update_program_manager(project_name):
             conn.close()
 
 
-@app.route('/api/project/<project_name>/rename', methods=['PUT'])
+@app.route('/api/project/<path:project_name>/rename', methods=['PUT'])
 def api_rename_project(project_name):
     """Rename a project across all tables."""
     try:
@@ -1427,7 +1427,7 @@ def api_rename_project(project_name):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/project/<project_name>', methods=['DELETE'])
+@app.route('/api/project/<path:project_name>', methods=['DELETE'])
 def api_delete_project(project_name):
     """Delete a project and all its data"""
     try:
@@ -1442,13 +1442,13 @@ def api_delete_project(project_name):
 
 # ── Risk Management Routes ───────────────────────────────────────────────────
 
-@app.route('/api/project/<project_name>/risks', methods=['GET'])
+@app.route('/api/project/<path:project_name>/risks', methods=['GET'])
 def api_get_risks(project_name):
     risks = db_manager.get_risks(project_name)
     return jsonify(risks)
 
 
-@app.route('/api/project/<project_name>/risks', methods=['POST'])
+@app.route('/api/project/<path:project_name>/risks', methods=['POST'])
 def api_create_risk(project_name):
     data = request.get_json(silent=True) or {}
     risk_id = db_manager.create_risk(
@@ -1637,7 +1637,7 @@ def _parse_risks_from_excel(file_bytes):
     return risks
 
 
-@app.route('/api/project/<project_name>/risks/import', methods=['POST'])
+@app.route('/api/project/<path:project_name>/risks/import', methods=['POST'])
 def api_import_risks(project_name):
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
@@ -1661,7 +1661,7 @@ def api_import_pipeline_risks(pipeline_project_id):
     return jsonify({'imported': count})
 
 
-@app.route('/api/project/<project_name>/risks/export-ppt')
+@app.route('/api/project/<path:project_name>/risks/export-ppt')
 def api_export_risks_ppt(project_name):
     risks = db_manager.get_risks(project_name=project_name)
     buf = export_risks_to_pptx(project_name, risks)

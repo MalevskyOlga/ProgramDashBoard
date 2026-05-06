@@ -905,8 +905,13 @@ class DatabaseManager:
                 pstart = proj.get('start_date')
                 pend   = proj.get('end_date')
                 if pstart and pend:
-                    owner_entry['pm_date_points'].append((pstart, PM_LOAD_PER_PROJECT))
-                    owner_entry['pm_date_points'].append((pend,  -PM_LOAD_PER_PROJECT))
+                    try:
+                        pstart_d = datetime.strptime(pstart[:10], '%Y-%m-%d').date()
+                        pend_d   = datetime.strptime(pend[:10],   '%Y-%m-%d').date()
+                    except (ValueError, TypeError):
+                        continue
+                    owner_entry['pm_date_points'].append((pstart_d, PM_LOAD_PER_PROJECT))
+                    owner_entry['pm_date_points'].append((pend_d,  -PM_LOAD_PER_PROJECT))
                     is_active = pstart <= today_str <= pend
                     owner_entry['active_today_count'] += 1 if is_active else 0
                     owner_entry['project_names'].add(proj['name'])
