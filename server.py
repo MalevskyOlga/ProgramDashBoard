@@ -101,12 +101,20 @@ def require_login():
     # division key doesn't exist here (fresh install, deleted/deactivated division, or a
     # stale cookie from another environment). Redirect instead of letting the DB proxy 500.
     if tenancy.get_division_db(tenancy.current_division_key()) is None:
+        if session.get('role') == 'superadmin':
+            # Auto-select the first available division so the superadmin is never stuck
+            # on /admin after a division exists (e.g. logged in before any were created).
+            divs = tenancy.list_divisions()
+            if divs:
+                session['active_division'] = divs[0]['key']
+                return None
+            session['active_division'] = None
+            if request.path.startswith('/api/'):
+                return jsonify({'error': 'no division selected'}), 409
+            flash('Create a division to get started.', 'info')
+            return redirect(url_for('admin_home'))
         if request.path.startswith('/api/'):
             return jsonify({'error': 'no division selected'}), 409
-        if session.get('role') == 'superadmin':
-            session['active_division'] = None
-            flash('Select or create a division to get started.', 'info')
-            return redirect(url_for('admin_home'))
         flash('Your account is not assigned to an active division. Contact your administrator.',
               'error')
         session.clear()

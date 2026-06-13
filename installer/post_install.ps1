@@ -1,11 +1,12 @@
 # post_install.ps1 - run by Inno Setup after files are copied
 # Args: -InstallDir <path> -DataDir <path> -Port <number> -ServiceName <name>
 param(
-    [string]$InstallDir  = "C:\Program Files\OverallDashboard",
-    [string]$DataDir     = "C:\ProgramData\OverallDashboard",
-    [int]   $Port        = 8092,
-    [string]$ServiceName = "OverallDashboard",
-    [string]$DbAction    = "replace"   # 'replace' or 'keep'
+    [string]$InstallDir   = "C:\Program Files\OverallDashboard",
+    [string]$DataDir      = "C:\ProgramData\OverallDashboard",
+    [int]   $Port         = 8092,
+    [string]$ServiceName  = "OverallDashboard",
+    [string]$DbAction     = "replace",  # 'replace' (start fresh) or 'keep' (migrate existing data)
+    [string]$FirstDivision = ""         # name for the first division (blank = vanilla/empty)
 )
 
 # -- Log to file from the very first line (before ErrorActionPreference) -------
@@ -236,44 +237,27 @@ $cfgLines = @(
 $cfgLines -join "`r`n" | Set-Content -Encoding UTF8 -Path (Join-Path $InstallDir 'config.py')
 Log "      Config written (port $Port)"
 
-# -- 5. Deploy / keep database, then run migrations ---------------------------
+# -- 5. Database: in multi-tenant mode dashboards.db is only a MIGRATION SOURCE --
+# 'keep'    -> preserve an existing single-tenant dashboards.db so step 5c can migrate
+#              its data into the first division.
+# 'replace' -> back up and clear it, so the install starts empty (vanilla).
 Log "[5/7] Database setup (action: $DbAction)..."
-$BundledDb = Join-Path $InstallDir "installer\dashboards_bundled.db"
-$TargetDb  = Join-Path $DataDir    "dashboards.db"
-
+$TargetDb = Join-Path $DataDir "dashboards.db"
 if ($DbAction -eq 'replace') {
     if (Test-Path $TargetDb) {
         $BackupName = "dashboards.db.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        $BackupPath = Join-Path $DataDir $BackupName
-        Copy-Item $TargetDb $BackupPath -Force
-        Log "      Backed up existing DB -> $BackupPath"
-    }
-    if (Test-Path $BundledDb) {
-        Copy-Item $BundledDb $TargetDb -Force
-        Log "      Deployed bundled DB -> $TargetDb"
+        Copy-Item $TargetDb (Join-Path $DataDir $BackupName) -Force
+        Remove-Item $TargetDb -Force
+        Log "      Backed up and cleared existing single-tenant DB (starting fresh)."
     } else {
-        Log "      WARNING: bundled DB not found at $BundledDb"
+        Log "      No existing DB - starting fresh."
     }
 } else {
     if (Test-Path $TargetDb) {
-        Log "      Keeping production DB ($([math]::Round((Get-Item $TargetDb).Length/1MB,2)) MB)"
+        Log "      Keeping existing single-tenant DB to migrate into the first division."
     } else {
-        Log "      WARNING: no existing DB found - deploying bundled DB as fallback"
-        if (Test-Path $BundledDb) {
-            Copy-Item $BundledDb $TargetDb -Force
-            Log "      Deployed bundled DB -> $TargetDb"
-        }
+        Log "      No existing DB found (nothing to migrate)."
     }
-}
-
-Log "      Running schema migrations..."
-$migrateLog = Join-Path $LogDir "db-migrate.log"
-& $VenvPython (Join-Path $InstallDir "db_migrate.py") $TargetDb 2>&1 |
-    ForEach-Object { Log "migrate: $_" }
-if ($LASTEXITCODE -ne 0) {
-    Log "      WARNING: migration exited $LASTEXITCODE - check $migrateLog"
-} else {
-    Log "      Migrations OK"
 }
 
 # -- 5b. Bootstrap control DB (users/divisions) + initial super-admin ----------
@@ -296,6 +280,15 @@ if ($adminLine) {
     ) -join "`r`n" | Set-Content -Encoding UTF8 -Path $credFile
     Log "      Initial admin credentials written -> $credFile"
 }
+
+# -- 5c. First-division setup: migrate existing data or create a named division
+# The division name is read from a file written by the installer (handles '&'/spaces safely).
+$divFile = Join-Path $DataDir 'first_division.txt'
+if (Test-Path $divFile) { $FirstDivision = (Get-Content $divFile -Raw).Trim() }
+Log "      First-division setup (name: '$FirstDivision')..."
+& $VenvPython (Join-Path $InstallDir "scripts\migrate_to_division.py") --name "$FirstDivision" 2>&1 |
+    ForEach-Object { Log "division: $_" }
+Remove-Item $divFile -Force -ErrorAction SilentlyContinue
 
 # -- 6. Register Windows service via WinSW ------------------------------------
 Log "[6/7] Registering Windows service '$ServiceName'..."

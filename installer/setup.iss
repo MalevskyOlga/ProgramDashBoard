@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define AppName        "Overall Programs Dashboard"
-#define AppVersion     "1.2.1"
+#define AppVersion     "1.2.2"
 #define AppPublisher   "Emerson"
 #define ServiceName    "OverallDashboard"
 #define DefaultPort    "8092"
@@ -39,6 +39,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 var
   PortPage:   TInputQueryWizardPage;
   DbPage:     TInputOptionWizardPage;
+  DivPage:    TInputQueryWizardPage;
   PortNumber: String;
   DbExists:   Boolean;
 
@@ -59,9 +60,19 @@ begin
     'An existing database was found on this machine.',
     'How would you like to handle the database?',
     True, False);
-  DbPage.Add('Keep production database — preserve live data (schema migrations applied automatically)');
-  DbPage.Add('Replace with bundled database — start fresh (timestamped backup created first)');
+  DbPage.Add('Keep existing data — migrate it into your first division');
+  DbPage.Add('Start fresh — back up and clear existing data');
   DbPage.Values[0] := True;
+
+  DivPage := CreateInputQueryPage(
+    DbPage.ID,
+    'First Division',
+    'Name your first division.',
+    'The dashboard organizes projects by division. Enter a name for the first division.' + #13#10 +
+    'If this machine has existing dashboard data (and you chose "Keep existing data"), it will be ' +
+    'migrated into this division. Leave blank to start empty — e.g. a clean deployment for another division.');
+  DivPage.Add('First division name (blank = start empty):', False);
+  DivPage.Values[0] := 'Flame & Gas';
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
@@ -104,6 +115,11 @@ begin
     Result := 'keep';
 end;
 
+function GetFirstDivision(Param: String): String;
+begin
+  Result := Trim(DivPage.Values[0]);
+end;
+
 procedure RunPowerShell(Script: String; Args: String);
 var
   Cmd, Params, LogFile: String;
@@ -127,6 +143,11 @@ var
   Args: String;
 begin
   if CurStep = ssPostInstall then begin
+    // Pass the first-division name via a file (not the command line) so names containing
+    // '&' or spaces (e.g. "Flame & Gas") aren't mangled by cmd.exe. post_install reads it.
+    ForceDirectories(ExpandConstant('{commonappdata}\OverallDashboard'));
+    SaveStringToFile(ExpandConstant('{commonappdata}\OverallDashboard\first_division.txt'),
+                     GetFirstDivision(''), False);
     Args := '-InstallDir "' + ExpandConstant('{app}') + '"' +
             ' -DataDir "'    + ExpandConstant('{commonappdata}\OverallDashboard') + '"' +
             ' -Port '        + GetPort('') +
@@ -195,8 +216,9 @@ Source: "backup_db.ps1";                   DestDir: "{app}\installer";          
 ; Offline pip wheels — allows install on intranet servers with no internet
 Source: "wheels\*";                        DestDir: "{app}\installer\wheels";    Flags: ignoreversion recursesubdirs
 
-; Bundled database — staged to installer folder; post_install.ps1 decides whether to deploy it
-Source: "{#SrcRoot}\database\dashboards.db"; DestDir: "{app}\installer"; DestName: "dashboards_bundled.db"; Flags: ignoreversion
+; NOTE: no bundled data database is shipped. dashboards.db is only a migration source for
+; upgrades-in-place; fresh/vanilla installs start empty so deployments to other divisions
+; never carry another division's data.
 
 ; ── Start Menu shortcut ───────────────────────────────────────────────────────
 [Icons]
