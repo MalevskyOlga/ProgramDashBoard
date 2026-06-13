@@ -181,6 +181,39 @@ class DatabaseManager:
             )
         ''')
 
+        # Per-task threaded comment log (see migrations/002_task_comments.sql)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS task_comments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                author TEXT NOT NULL,
+                body TEXT NOT NULL,
+                state TEXT NOT NULL DEFAULT 'open',
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                closed_at TEXT,
+                closed_by TEXT,
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            )
+        ''')
+
+        # Per-task attachments: links or uploaded files (see migrations/003_task_attachments.sql)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS task_attachments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                kind TEXT NOT NULL,
+                label TEXT,
+                url TEXT,
+                stored_name TEXT,
+                original_name TEXT,
+                size_bytes INTEGER,
+                mime TEXT,
+                uploaded_by TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            )
+        ''')
+
         # Create indexes for better performance
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)')
@@ -190,7 +223,10 @@ class DatabaseManager:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_task_deps_project ON task_dependencies(project_name)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_resource_teams_owner ON resource_teams(owner_name)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_resource_teams_team ON resource_teams(team_name)')
-        
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_task_comments_task_id ON task_comments(task_id)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_task_comments_task_open ON task_comments(task_id, state)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_task_attachments_task_id ON task_attachments(task_id)')
+
         conn.commit()
 
         # Migration: add is_deleted for soft-delete support
@@ -402,7 +438,12 @@ class DatabaseManager:
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT t.* FROM tasks t
+            SELECT t.*,
+                   (SELECT COUNT(*) FROM task_comments c
+                     WHERE c.task_id = t.id AND c.state = 'open') AS open_comment_count,
+                   (SELECT COUNT(*) FROM task_attachments a
+                     WHERE a.task_id = t.id) AS attachment_count
+            FROM tasks t
             JOIN projects p ON t.project_id = p.id
             WHERE p.name = ?
             ORDER BY t.row_order, t.id
@@ -505,27 +546,210 @@ class DatabaseManager:
         """Delete a task"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
+        # FK cascade is not enabled at the connection level, so remove children explicitly
+        cursor.execute('DELETE FROM task_comments WHERE task_id = ?', (task_id,))
+        cursor.execute('DELETE FROM task_attachments WHERE task_id = ?', (task_id,))
         cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
-        
+
         success = cursor.rowcount > 0
         conn.commit()
         conn.close()
-        
+
         return success
-    
+
     def delete_tasks_by_project(self, project_id):
         """Delete all tasks for a project"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
+        # Remove children for this project's tasks first (FK cascade is not enabled)
+        cursor.execute('''
+            DELETE FROM task_comments
+            WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)
+        ''', (project_id,))
+        cursor.execute('''
+            DELETE FROM task_attachments
+            WHERE task_id IN (SELECT id FROM tasks WHERE project_id = ?)
+        ''', (project_id,))
         cursor.execute('DELETE FROM tasks WHERE project_id = ?', (project_id,))
-        
+
         deleted_count = cursor.rowcount
         conn.commit()
         conn.close()
-        
+
         return deleted_count
+
+    # ---- Per-task comment log -------------------------------------------------
+
+    def get_comments_for_task(self, task_id, include_closed=False):
+        """Return a task's comment log, oldest first. Open-only unless include_closed."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        query = 'SELECT * FROM task_comments WHERE task_id = ?'
+        params = [task_id]
+        if not include_closed:
+            query += " AND state = 'open'"
+        query += ' ORDER BY created_at, id'
+
+        cursor.execute(query, params)
+        comments = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+
+        return comments
+
+    def add_comment(self, task_id, author, body):
+        """Add an open comment to a task's log. Returns the new comment id."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        now = datetime.now().isoformat()
+        cursor.execute('''
+            INSERT INTO task_comments (task_id, author, body, state, created_at)
+            VALUES (?, ?, ?, 'open', ?)
+        ''', (task_id, author, body, now))
+
+        comment_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        return comment_id
+
+    def set_comment_state(self, comment_id, state, actor):
+        """Close or reopen a comment. state is 'open' or 'closed'. Returns True if updated."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        if state == 'closed':
+            now = datetime.now().isoformat()
+            cursor.execute('''
+                UPDATE task_comments
+                SET state = 'closed', closed_at = ?, closed_by = ?
+                WHERE id = ?
+            ''', (now, actor, comment_id))
+        else:
+            cursor.execute('''
+                UPDATE task_comments
+                SET state = 'open', closed_at = NULL, closed_by = NULL
+                WHERE id = ?
+            ''', (comment_id,))
+
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+
+        return success
+
+    def get_open_comment_count(self, task_id):
+        """Return the number of open comments on a task."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT COUNT(*) FROM task_comments WHERE task_id = ? AND state = 'open'",
+            (task_id,)
+        )
+        count = cursor.fetchone()[0]
+        conn.close()
+
+        return count
+
+    # ---- Per-task attachments -------------------------------------------------
+
+    def get_attachments_for_task(self, task_id):
+        """Return a task's attachments, oldest first."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'SELECT * FROM task_attachments WHERE task_id = ? ORDER BY created_at, id',
+            (task_id,)
+        )
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    def add_link_attachment(self, task_id, label, url, uploaded_by):
+        """Add a link attachment to a task. Returns the new attachment id."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        now = datetime.now().isoformat()
+        cursor.execute('''
+            INSERT INTO task_attachments (task_id, kind, label, url, uploaded_by, created_at)
+            VALUES (?, 'link', ?, ?, ?, ?)
+        ''', (task_id, label, url, uploaded_by, now))
+        attachment_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return attachment_id
+
+    def add_file_attachment(self, task_id, label, stored_name, original_name,
+                            size_bytes, mime, uploaded_by):
+        """Add a file attachment record to a task. Returns the new attachment id."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        now = datetime.now().isoformat()
+        cursor.execute('''
+            INSERT INTO task_attachments
+                (task_id, kind, label, stored_name, original_name, size_bytes, mime, uploaded_by, created_at)
+            VALUES (?, 'file', ?, ?, ?, ?, ?, ?, ?)
+        ''', (task_id, label, stored_name, original_name, size_bytes, mime, uploaded_by, now))
+        attachment_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return attachment_id
+
+    def get_attachment_by_id(self, attachment_id):
+        """Get a single attachment row by id, or None."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM task_attachments WHERE id = ?', (attachment_id,))
+        row = cursor.fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def delete_attachment(self, attachment_id):
+        """Delete an attachment row. Returns True if a row was removed."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM task_attachments WHERE id = ?', (attachment_id,))
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        return success
+
+    def get_attachment_count(self, task_id):
+        """Return the number of attachments on a task."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT COUNT(*) FROM task_attachments WHERE task_id = ?', (task_id,))
+        count = cursor.fetchone()[0]
+        conn.close()
+        return count
+
+    def get_file_attachments_for_task(self, task_id):
+        """Return stored_name rows of file attachments for a task (for disk cleanup)."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, task_id, stored_name FROM task_attachments WHERE task_id = ? AND kind = 'file'",
+            (task_id,)
+        )
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    def get_file_attachments_for_project(self, project_id):
+        """Return file-attachment rows (with task_id, stored_name) for a project (for disk cleanup)."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, task_id, stored_name FROM task_attachments
+            WHERE kind = 'file' AND task_id IN (SELECT id FROM tasks WHERE project_id = ?)
+        ''', (project_id,))
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
 
     def soft_delete_project(self, project_name):
         """Mark a project as deleted without removing data (supports undo)."""
@@ -658,8 +882,7 @@ class DatabaseManager:
                 LEFT JOIN gate_sign_offs gso
                     ON gso.project_name = p.name
                    AND gso.gate_name = t.name
-                WHERE t.milestone = 1
-                  AND t.name LIKE 'Gate %'
+                WHERE LOWER(t.name) LIKE '%gate%'
                   AND p.is_deleted = 0
             )
             SELECT
@@ -704,6 +927,9 @@ class DatabaseManager:
 
         rows = [dict(row) for row in cursor.fetchall()]
         conn.close()
+        # The SQL LIKE '%gate%' also matches substrings like "gateway"; keep only
+        # whole-word "gate" names (Gate 3, Military Gate 2, Discontinued Gate A, …).
+        rows = [r for r in rows if re.search(r'\bgate\b', r.get('gate_name') or '', re.IGNORECASE)]
         return rows
 
     def get_overall_resource_load(self):

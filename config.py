@@ -40,6 +40,9 @@ APP_BASE_URL = 'http://localhost:5003'
 # Excel file locations (not used for auto-import, but for manual export)
 EXCEL_OUTPUT_FOLDER = BASE_DIR / 'exports'
 
+# Per-task attachment file storage (uploaded documents, per division/task subdirs)
+ATTACHMENTS_DIR = BASE_DIR / 'database' / 'attachments'
+
 # Database settings
 DB_TIMEOUT = 30  # seconds
 
@@ -75,3 +78,4 @@ DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 EXCEL_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
 CONTROL_DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
 DIVISIONS_DIR.mkdir(parents=True, exist_ok=True)
+ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)

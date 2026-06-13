@@ -414,7 +414,7 @@
             display: grid;
             grid-template-columns: 40px 200px 120px 105px 65px 105px 85px 120px 140px;
             gap: 8px;
-            padding: 15px 12px;
+            padding: 13px 12px;
             background: #2c5f2d;
             color: white;
             font-weight: 600;
@@ -1019,6 +1019,44 @@
             cursor: pointer; font-size: 0.85em; padding: 2px 5px; color: #555;
         }
         .dep-btn:hover { background: #e3f2fd; border-color: #1565c0; color: #1565c0; }
+        .attach-badge {
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+            border-radius: 8px;
+            font-size: 0.72em;
+            font-weight: 600;
+            padding: 1px 6px;
+            margin-left: 5px;
+            vertical-align: middle;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .attach-badge:hover { background: #c8e6c9; }
+        /* Right-click task context menu (Comments / Attachments) */
+        .task-context-menu {
+            position: absolute;
+            z-index: 10001;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            overflow: hidden;
+            min-width: 150px;
+        }
+        .task-context-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            padding: 9px 14px;
+            font-size: 0.85em;
+            cursor: pointer;
+            color: #333;
+        }
+        .task-context-menu button:hover { background: #f0f0f0; }
 
         /* Tailed Out tasks */
         .gantt-bar.tailed-out {
@@ -1110,6 +1148,269 @@
             margin-left: 5px;
             vertical-align: middle;
             white-space: nowrap;
+        }
+        .comment-badge {
+            display: inline-block;
+            background: #fff3cd;
+            color: #7a5d00;
+            border: 1px solid #ffe08a;
+            border-radius: 8px;
+            font-size: 0.72em;
+            font-weight: 600;
+            padding: 1px 6px;
+            margin-left: 5px;
+            vertical-align: middle;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .comment-badge:hover { background: #ffe8a3; }
+
+        /* Per-task comment log popup */
+        .comment-log-popup {
+            position: absolute;
+            z-index: 10000;
+            background: #fff;
+            border: 2px solid #f0ad00;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+            width: 380px;
+            max-width: 90vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .comment-log-header {
+            background: #f0ad00;
+            color: #3d2f00;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.9em;
+            gap: 8px;
+        }
+        .comment-log-header .clp-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .comment-log-header button {
+            background: transparent;
+            border: none;
+            color: #3d2f00;
+            font-size: 1.1em;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .comment-history-toggle {
+            padding: 7px 12px;
+            font-size: 0.78em;
+            color: #8a6d00;
+            background: #fffaf0;
+            border-top: 1px dashed #e8d48a;
+            border-bottom: 1px dashed #e8d48a;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            user-select: none;
+        }
+        .comment-history-toggle:hover { background: #fff3d6; }
+        #comment-log-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+        .comment-empty {
+            padding: 14px 12px;
+            color: #888;
+            font-size: 0.85em;
+            text-align: center;
+        }
+        .comment-row {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f3f3f3;
+        }
+        .comment-row:last-child { border-bottom: none; }
+        .comment-row.closed { opacity: 0.6; }
+        .comment-row.closed .comment-body { text-decoration: line-through; }
+        .comment-meta {
+            font-size: 0.72em;
+            color: #888;
+            margin-bottom: 3px;
+        }
+        .comment-body {
+            font-size: 0.86em;
+            color: #222;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .comment-actions { margin-top: 5px; }
+        .comment-actions button {
+            background: #f7f7f7;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 1px 8px;
+            font-size: 0.74em;
+            cursor: pointer;
+            color: #444;
+        }
+        .comment-actions button:hover { background: #ececec; }
+        .comment-add-box {
+            display: flex;
+            gap: 6px;
+            padding: 8px 12px;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+        }
+        .comment-add-box textarea {
+            flex: 1;
+            resize: vertical;
+            min-height: 38px;
+            max-height: 120px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 6px 8px;
+            font-size: 0.85em;
+            font-family: inherit;
+        }
+        .comment-add-box button {
+            align-self: flex-end;
+            background: #f0ad00;
+            border: none;
+            color: #3d2f00;
+            font-weight: 600;
+            border-radius: 5px;
+            padding: 6px 14px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .comment-add-box button:hover { background: #e0a000; }
+
+        /* Per-task attachments popup (green accent to distinguish from comments) */
+        .attachments-popup {
+            position: absolute;
+            z-index: 10000;
+            background: #fff;
+            border: 2px solid #2e7d32;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+            width: 400px;
+            max-width: 90vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .attachments-header {
+            background: #2e7d32;
+            color: #fff;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.9em;
+            gap: 8px;
+        }
+        .attachments-header .clp-title {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .attachments-header button {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 1.1em;
+            cursor: pointer;
+            line-height: 1;
+        }
+        #attachments-list {
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 4px 0;
+        }
+        .attach-empty {
+            padding: 14px 12px;
+            color: #888;
+            font-size: 0.85em;
+            text-align: center;
+        }
+        .attach-row {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f3f3f3;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .attach-row:last-child { border-bottom: none; }
+        .attach-icon { font-size: 1.1em; line-height: 1.2; }
+        .attach-main { flex: 1; min-width: 0; }
+        .attach-label {
+            font-size: 0.86em;
+            color: #1565c0;
+            font-weight: 600;
+            cursor: pointer;
+            word-break: break-word;
+        }
+        .attach-label:hover { text-decoration: underline; }
+        .attach-meta {
+            font-size: 0.72em;
+            color: #888;
+            margin-top: 2px;
+        }
+        .attach-del {
+            background: #f7f7f7;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 1px 8px;
+            font-size: 0.74em;
+            cursor: pointer;
+            color: #b71c1c;
+            flex-shrink: 0;
+        }
+        .attach-del:hover { background: #ffebee; border-color: #b71c1c; }
+        .attach-add-box {
+            padding: 8px 12px;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .attach-add-row { display: flex; gap: 6px; align-items: center; }
+        .attach-add-row input[type="text"], .attach-add-row input[type="url"] {
+            flex: 1;
+            min-width: 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 5px 8px;
+            font-size: 0.82em;
+            font-family: inherit;
+        }
+        .attach-add-row button {
+            background: #2e7d32;
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            border-radius: 5px;
+            padding: 5px 12px;
+            cursor: pointer;
+            font-size: 0.82em;
+            white-space: nowrap;
+        }
+        .attach-add-row button:hover { background: #1b5e20; }
+        .attach-add-divider {
+            text-align: center;
+            font-size: 0.72em;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .attach-error {
+            color: #b71c1c;
+            font-size: 0.76em;
+            padding: 0 12px 6px;
         }
         .rework-popup {
             position: absolute;
@@ -1711,13 +2012,9 @@
 
                 <div class="form-group">
                     <label>Gate *</label>
-                    <select id="taskPhase" required>
-                        <option value="Gate 1">Gate 1</option>
-                        <option value="Gate 2">Gate 2</option>
-                        <option value="Gate 3">Gate 3</option>
-                        <option value="Gate 4">Gate 4</option>
-                        <option value="Gate 5">Gate 5</option>
-                    </select>
+                    <input type="text" id="taskPhase" list="taskPhaseOptions" required
+                           placeholder="Select or type a phase…" autocomplete="off">
+                    <datalist id="taskPhaseOptions"></datalist>
                 </div>
 
                 <div class="form-group">
@@ -2622,11 +2919,16 @@
                         due: task.end_date,
                         phase: task.phase,
                         critical: task.critical === 1 || task.critical === true,
-                        milestone: task.milestone === 1 || task.milestone === true || (task.name && task.name.toLowerCase().includes('gate')),
+                        // Auto-mark as milestone/gate for any task whose name contains the WORD "gate"
+                        // (e.g. "Gate 3", "Military Gate 2", "Discontinued Gate A"). \bgate\b is a whole-word
+                        // match, so substrings like "gateway" are excluded. The Milestone checkbox still works.
+                        milestone: task.milestone === 1 || task.milestone === true || (task.name && /\bgate\b/i.test(task.name)),
                         tailed_out: task.tailed_out === 1 || task.tailed_out === true,
                         is_rework_cause: task.is_rework_cause === 1 || task.is_rework_cause === true,
                         rework_original_due: task.rework_original_due || null,
                         cloned_from_phase: task.cloned_from_phase || null,
+                        open_comment_count: task.open_comment_count || 0,
+                        attachment_count: task.attachment_count || 0,
                         manualUncritical: getManualUncritical().has(task.id)
                     };
                 });
@@ -3938,8 +4240,40 @@
             }
         }
 
+        // Canonical phase/gate presets (single source of truth for the Gate combobox
+        // suggestions AND the Gantt phase-group ordering).
+        const GANTT_PHASE_PRESETS = [
+            'General task',
+            'Gate 1', 'Gate 2', 'Gate 3', 'Gate 4', 'Gate 5',
+            'Military Gate 2', 'Military Gate 2.5', 'Military Gate 3', 'Military Gate 4', 'Military Gate 5',
+            'Discontinued Gate A', 'Discontinued Gate B', 'Discontinued Gate C'
+        ];
+
+        // Sort key for ordering phase groups: presets first (in defined order), then
+        // any custom phases alphabetically.
+        function phaseSortKey(phase) {
+            const i = GANTT_PHASE_PRESETS.indexOf(phase);
+            return i !== -1 ? [0, i, ''] : [1, 0, (phase || '').toLowerCase()];
+        }
+
+        function comparePhases(a, b) {
+            const ka = phaseSortKey(a), kb = phaseSortKey(b);
+            return (ka[0] - kb[0]) || (ka[1] - kb[1]) || ka[2].localeCompare(kb[2]);
+        }
+
+        // Fill the Gate combobox datalist: presets first, then any custom phases
+        // already used on tasks (so previously-entered wording persists as a suggestion).
+        function populateTaskPhaseOptions() {
+            const dl = document.getElementById('taskPhaseOptions');
+            if (!dl) return;
+            const used = [...new Set(tasks.map(t => t.phase).filter(Boolean))];
+            const extras = used.filter(p => !GANTT_PHASE_PRESETS.includes(p)).sort();
+            dl.innerHTML = [...GANTT_PHASE_PRESETS, ...extras]
+                .map(p => `<option value="${escapeHtml(p)}"></option>`).join('');
+        }
+
         function populatePhaseFilter() {
-            const phases = [...new Set(tasks.map(t => t.phase))].sort();
+            const phases = [...new Set(tasks.map(t => t.phase))].filter(Boolean).sort(comparePhases);
             const select = document.getElementById('phaseFilter');
             select.innerHTML = '<option value="all">All Gates</option>';
             phases.forEach(phase => {
@@ -3948,6 +4282,7 @@
                 option.textContent = phase;
                 select.appendChild(option);
             });
+            populateTaskPhaseOptions();
         }
 
         async function applyFilters() {
@@ -4304,6 +4639,12 @@
                 const clonedFromBadge = task.cloned_from_phase
                     ? `<span class="cloned-from-badge" title="Carried forward from ${task.cloned_from_phase}">↩ ${task.cloned_from_phase}</span>`
                     : '';
+                const commentBadge = (task.open_comment_count > 0)
+                    ? `<span class="comment-badge" title="${task.open_comment_count} open comment${task.open_comment_count !== 1 ? 's' : ''} — click to open log" onclick="event.stopPropagation();openCommentLog(${task.id})">💬 ${task.open_comment_count}</span>`
+                    : '';
+                const attachBadge = (task.attachment_count > 0)
+                    ? `<span class="attach-badge" data-att-task-id="${task.id}" title="${task.attachment_count} attachment${task.attachment_count !== 1 ? 's' : ''} — click to open" onclick="event.stopPropagation();openAttachmentsPopup(${task.id})">📎 ${task.attachment_count}</span>`
+                    : '';
 
                 let actionsHTML;
                 if (isGate) {
@@ -4325,7 +4666,7 @@
                 taskHTML += `
                     <div class="${rowClass}" data-task-id="${task.id}">
                         <div>${rowNum}</div>
-                        <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
+                        <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge}${commentBadge}${attachBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
                         <div>${task.owner}</div>
                         <div class="date-cell start-date editable" data-task-id="${task.id}" data-date-type="start" data-date-value="${task.entered}">${formatDateShort(task.entered)}</div>
                         <div class="duration-cell">${(task.entered && task.due) ? Math.max(1, Math.round((new Date(task.due) - new Date(task.entered)) / 86400000) + 1) : '—'}</div>
@@ -4659,6 +5000,454 @@
             }, 10);
         }
 
+        // ---- Per-task comment log -------------------------------------------
+        let _commentLogTaskId = null;
+        let _commentShowClosed = false;
+
+        function _formatCommentTime(ts) {
+            if (!ts) return '';
+            const d = new Date(ts);
+            if (isNaN(d)) return formatDateShort(ts);
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mm = String(d.getMinutes()).padStart(2, '0');
+            return `${formatDateShort(ts)} ${hh}:${mm}`;
+        }
+
+        function _dismissCommentPopup(e) {
+            const popup = document.getElementById('comment-log-popup');
+            if (popup && !popup.contains(e.target) && !e.target.closest('.comment-badge')) {
+                popup.remove();
+                document.removeEventListener('click', _dismissCommentPopup);
+            }
+        }
+
+        function openCommentLog(taskId, evt) {
+            if (evt) { try { evt.preventDefault(); } catch (e) {} }
+            const existing = document.getElementById('comment-log-popup');
+            if (existing) {
+                const isSame = existing.dataset.taskId === String(taskId);
+                existing.remove();
+                document.removeEventListener('click', _dismissCommentPopup);
+                if (isSame) return; // toggle off when re-triggered on same task
+            }
+            _commentLogTaskId = taskId;
+            _commentShowClosed = false;
+            const task = tasks.find(t => t.id === taskId);
+            const popup = document.createElement('div');
+            popup.id = 'comment-log-popup';
+            popup.dataset.taskId = String(taskId);
+            popup.className = 'comment-log-popup';
+            popup.innerHTML = `
+                <div class="comment-log-header">
+                    <span class="clp-title" title="${escapeHtml(task ? task.name : 'Task')}">💬 ${escapeHtml(task ? task.name : 'Task')}</span>
+                    <button onclick="closeCommentLog()" title="Close">✕</button>
+                </div>
+                <div id="comment-log-list"><div class="comment-empty">Loading…</div></div>
+                <div class="comment-add-box">
+                    <textarea id="comment-new-body" placeholder="Add a comment…"
+                        onkeydown="if(event.ctrlKey&&event.key==='Enter'){event.preventDefault();addCommentFromPopup();}"></textarea>
+                    <button onclick="addCommentFromPopup()">Add</button>
+                </div>`;
+            document.body.appendChild(popup);
+
+            // Position near the cursor (right-click) or near the clicked element/center
+            let top, left;
+            if (evt && typeof evt.pageX === 'number' && evt.pageX) {
+                top = evt.pageY + 6;
+                left = evt.pageX - 40;
+            } else {
+                top = window.scrollY + Math.max(60, window.innerHeight / 2 - 180);
+                left = window.scrollX + Math.max(10, window.innerWidth / 2 - 190);
+            }
+            const maxLeft = window.scrollX + window.innerWidth - 390;
+            popup.style.top = top + 'px';
+            popup.style.left = Math.max(10, Math.min(left, maxLeft)) + 'px';
+
+            loadCommentLog();
+            setTimeout(() => document.addEventListener('click', _dismissCommentPopup), 10);
+        }
+
+        function closeCommentLog() {
+            const popup = document.getElementById('comment-log-popup');
+            if (popup) popup.remove();
+            document.removeEventListener('click', _dismissCommentPopup);
+        }
+
+        async function loadCommentLog() {
+            const list = document.getElementById('comment-log-list');
+            if (!list) return;
+            try {
+                const res = await fetch(`/api/task/${_commentLogTaskId}/comments?include_closed=1`);
+                const all = await res.json();
+                const open = all.filter(c => c.state !== 'closed');
+                const closed = all.filter(c => c.state === 'closed');
+
+                if (!all.length) {
+                    list.innerHTML = '<div class="comment-empty">No comments yet.</div>';
+                    return;
+                }
+
+                let html = open.length
+                    ? open.map(renderCommentRow).join('')
+                    : '<div class="comment-empty">No open comments.</div>';
+
+                // History marker — only shown when resolved comments exist; hidden by default
+                if (closed.length) {
+                    const label = _commentShowClosed
+                        ? `🕓 Hide ${closed.length} resolved ▾`
+                        : `🕓 ${closed.length} resolved comment${closed.length !== 1 ? 's' : ''} — show history ▸`;
+                    html += `<div class="comment-history-toggle" onclick="toggleShowClosed()">${label}</div>`;
+                    if (_commentShowClosed) {
+                        html += closed.map(renderCommentRow).join('');
+                    }
+                }
+
+                list.innerHTML = html;
+            } catch (e) {
+                console.error('Error loading comments:', e);
+                list.innerHTML = '<div class="comment-empty">Failed to load comments.</div>';
+            }
+        }
+
+        function renderCommentRow(c) {
+            const closed = c.state === 'closed';
+            const btn = closed
+                ? `<button onclick="setCommentState(${c.id}, 'open')">Reopen</button>`
+                : `<button onclick="setCommentState(${c.id}, 'closed')">Close</button>`;
+            return `<div class="comment-row ${closed ? 'closed' : ''}">
+                <div class="comment-meta">${escapeHtml(c.author)} · ${_formatCommentTime(c.created_at)}${closed ? ' · resolved' : ''}</div>
+                <div class="comment-body">${escapeHtml(c.body)}</div>
+                <div class="comment-actions">${btn}</div>
+            </div>`;
+        }
+
+        function toggleShowClosed() {
+            _commentShowClosed = !_commentShowClosed;
+            loadCommentLog();
+        }
+
+        async function addCommentFromPopup() {
+            const textarea = document.getElementById('comment-new-body');
+            if (!textarea) return;
+            const body = textarea.value.trim();
+            if (!body) return;
+            try {
+                await fetch(`/api/task/${_commentLogTaskId}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ body })
+                });
+                textarea.value = '';
+                await loadCommentLog();
+                await refreshCommentBadge(_commentLogTaskId);
+            } catch (e) {
+                console.error('Error adding comment:', e);
+            }
+        }
+
+        async function setCommentState(commentId, state) {
+            try {
+                await fetch(`/api/comment/${commentId}/state`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ state })
+                });
+                await loadCommentLog();
+                await refreshCommentBadge(_commentLogTaskId);
+            } catch (e) {
+                console.error('Error updating comment:', e);
+            }
+        }
+
+        async function refreshCommentBadge(taskId) {
+            try {
+                const res = await fetch(`/api/task/${taskId}/comments`); // open-only
+                const open = await res.json();
+                const task = tasks.find(t => t.id === taskId);
+                if (task) task.open_comment_count = open.length;
+                // Update the badge in place — avoids a full re-render that would
+                // reset scroll and ignore the active task filters.
+                updateTaskCommentBadge(taskId, open.length);
+            } catch (e) {
+                console.error('Error refreshing comment badge:', e);
+            }
+        }
+
+        function updateTaskCommentBadge(taskId, count) {
+            document.querySelectorAll(`.task-row[data-task-id="${taskId}"] .task-name`).forEach(nameCell => {
+                let badge = nameCell.querySelector('.comment-badge');
+                if (count > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'comment-badge';
+                        badge.addEventListener('click', (e) => { e.stopPropagation(); openCommentLog(taskId); });
+                        const cloned = nameCell.querySelector('.cloned-from-badge');
+                        if (cloned) cloned.after(badge);
+                        else nameCell.insertBefore(badge, nameCell.firstChild);
+                    }
+                    badge.title = `${count} open comment${count !== 1 ? 's' : ''} — click to open log`;
+                    badge.textContent = `💬 ${count}`;
+                } else if (badge) {
+                    badge.remove();
+                }
+            });
+        }
+
+        // Right-click a task row or Gantt bar → small menu: Comments / Attachments
+        document.addEventListener('contextmenu', (e) => {
+            const el = e.target.closest('.task-row[data-task-id], .gantt-bar[data-task-id]');
+            if (!el) return;            // normal browser menu elsewhere
+            e.preventDefault();         // suppress default menu only over tasks
+            showTaskContextMenu(parseInt(el.dataset.taskId, 10), e);
+        });
+
+        let _ctxPos = null;
+        function _dismissTaskContextMenu(e) {
+            const m = document.getElementById('task-context-menu');
+            if (m && !m.contains(e.target)) {
+                m.remove();
+                document.removeEventListener('click', _dismissTaskContextMenu);
+            }
+        }
+        function showTaskContextMenu(taskId, evt) {
+            document.getElementById('task-context-menu')?.remove();
+            _ctxPos = { pageX: evt.pageX, pageY: evt.pageY };
+            const menu = document.createElement('div');
+            menu.id = 'task-context-menu';
+            menu.className = 'task-context-menu';
+            menu.innerHTML = `
+                <button onclick="_ctxOpen('comments', ${taskId})">💬 Comments</button>
+                <button onclick="_ctxOpen('attachments', ${taskId})">📎 Attachments</button>`;
+            document.body.appendChild(menu);
+            const maxLeft = window.scrollX + window.innerWidth - 170;
+            menu.style.top = evt.pageY + 'px';
+            menu.style.left = Math.max(10, Math.min(evt.pageX, maxLeft)) + 'px';
+            setTimeout(() => document.addEventListener('click', _dismissTaskContextMenu), 10);
+        }
+        function _ctxOpen(which, taskId) {
+            document.getElementById('task-context-menu')?.remove();
+            document.removeEventListener('click', _dismissTaskContextMenu);
+            const pos = _ctxPos;   // open the popup near where the menu appeared
+            if (which === 'comments') openCommentLog(taskId, pos);
+            else openAttachmentsPopup(taskId, pos);
+        }
+
+        // ---- Per-task attachments -------------------------------------------
+        let _attachTaskId = null;
+
+        function _dismissAttachmentsPopup(e) {
+            const popup = document.getElementById('attachments-popup');
+            if (popup && !popup.contains(e.target) && !e.target.closest('.attach-btn')) {
+                popup.remove();
+                document.removeEventListener('click', _dismissAttachmentsPopup);
+            }
+        }
+
+        function closeAttachmentsPopup() {
+            const popup = document.getElementById('attachments-popup');
+            if (popup) popup.remove();
+            document.removeEventListener('click', _dismissAttachmentsPopup);
+        }
+
+        function openAttachmentsPopup(taskId, evt) {
+            if (evt) { try { evt.stopPropagation(); } catch (e) {} }
+            const existing = document.getElementById('attachments-popup');
+            if (existing) {
+                const isSame = existing.dataset.taskId === String(taskId);
+                existing.remove();
+                document.removeEventListener('click', _dismissAttachmentsPopup);
+                if (isSame) return; // toggle off
+            }
+            _attachTaskId = taskId;
+            const task = tasks.find(t => t.id === taskId);
+            const popup = document.createElement('div');
+            popup.id = 'attachments-popup';
+            popup.dataset.taskId = String(taskId);
+            popup.className = 'attachments-popup';
+            popup.innerHTML = `
+                <div class="attachments-header">
+                    <span class="clp-title" title="${escapeHtml(task ? task.name : 'Task')}">📎 ${escapeHtml(task ? task.name : 'Task')}</span>
+                    <button onclick="closeAttachmentsPopup()" title="Close">✕</button>
+                </div>
+                <div id="attachments-list"><div class="attach-empty">Loading…</div></div>
+                <div class="attach-error" id="attach-error" style="display:none;"></div>
+                <div class="attach-add-box">
+                    <div class="attach-add-row">
+                        <input type="url" id="attach-url" placeholder="Paste a link (https://…)">
+                    </div>
+                    <div class="attach-add-row">
+                        <input type="text" id="attach-label" placeholder="Optional label">
+                        <button onclick="addLink()">Add link</button>
+                    </div>
+                    <div class="attach-add-divider">— or —</div>
+                    <div class="attach-add-row">
+                        <input type="file" id="attach-file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.txt,.csv">
+                        <button onclick="uploadFile()">Upload</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(popup);
+
+            // Position near the click, kept within the viewport
+            let top, left;
+            if (evt && typeof evt.pageX === 'number' && evt.pageX) {
+                top = evt.pageY + 6;
+                left = evt.pageX - 200;
+            } else {
+                top = window.scrollY + Math.max(60, window.innerHeight / 2 - 180);
+                left = window.scrollX + Math.max(10, window.innerWidth / 2 - 200);
+            }
+            const maxLeft = window.scrollX + window.innerWidth - 410;
+            popup.style.top = top + 'px';
+            popup.style.left = Math.max(10, Math.min(left, maxLeft)) + 'px';
+
+            loadAttachments();
+            setTimeout(() => document.addEventListener('click', _dismissAttachmentsPopup), 10);
+        }
+
+        function _attachError(msg) {
+            const el = document.getElementById('attach-error');
+            if (!el) return;
+            if (msg) { el.textContent = msg; el.style.display = 'block'; }
+            else { el.textContent = ''; el.style.display = 'none'; }
+        }
+
+        async function loadAttachments() {
+            const list = document.getElementById('attachments-list');
+            if (!list) return;
+            try {
+                const res = await fetch(`/api/task/${_attachTaskId}/attachments`);
+                const items = await res.json();
+                list.innerHTML = items.length
+                    ? items.map(renderAttachmentRow).join('')
+                    : '<div class="attach-empty">No attachments yet.</div>';
+            } catch (e) {
+                console.error('Error loading attachments:', e);
+                list.innerHTML = '<div class="attach-empty">Failed to load attachments.</div>';
+            }
+        }
+
+        function renderAttachmentRow(a) {
+            const icon = a.kind === 'link' ? '🔗' : '📄';
+            const label = escapeHtml(a.label || a.original_name || a.url || 'Attachment');
+            const sizeKb = a.size_bytes ? ` · ${Math.max(1, Math.round(a.size_bytes / 1024))} KB` : '';
+            const openUrl = `/api/task/${_attachTaskId}/attachment/${a.id}/download`;
+            return `<div class="attach-row">
+                <span class="attach-icon">${icon}</span>
+                <div class="attach-main">
+                    <div class="attach-label" onclick="openAttachment(${a.id}, '${a.kind}')" title="Open">${label}</div>
+                    <div class="attach-meta">${escapeHtml(a.uploaded_by)} · ${_formatCommentTime(a.created_at)}${sizeKb}</div>
+                </div>
+                <button class="attach-del" onclick="deleteAttachment(${a.id})">Delete</button>
+            </div>`;
+        }
+
+        function openAttachment(attachmentId, kind) {
+            // Both links and files go through the download route (links 302-redirect).
+            window.open(`/api/task/${_attachTaskId}/attachment/${attachmentId}/download`, '_blank');
+        }
+
+        async function addLink() {
+            _attachError('');
+            const urlEl = document.getElementById('attach-url');
+            const labelEl = document.getElementById('attach-label');
+            const url = (urlEl.value || '').trim();
+            const label = (labelEl.value || '').trim();
+            if (!url) { _attachError('Please paste a link.'); return; }
+            try {
+                const res = await fetch(`/api/task/${_attachTaskId}/attachments/link`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, label })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    _attachError(err.error || 'Could not add link.');
+                    return;
+                }
+                urlEl.value = ''; labelEl.value = '';
+                await loadAttachments();
+                await refreshAttachmentButton(_attachTaskId);
+            } catch (e) {
+                console.error('Error adding link:', e);
+                _attachError('Could not add link.');
+            }
+        }
+
+        async function uploadFile() {
+            _attachError('');
+            const fileEl = document.getElementById('attach-file');
+            const labelEl = document.getElementById('attach-label');
+            if (!fileEl.files || !fileEl.files.length) { _attachError('Please choose a file.'); return; }
+            const fd = new FormData();
+            fd.append('file', fileEl.files[0]);
+            if (labelEl.value.trim()) fd.append('label', labelEl.value.trim());
+            try {
+                const res = await fetch(`/api/task/${_attachTaskId}/attachments/file`, {
+                    method: 'POST',
+                    body: fd  // browser sets multipart boundary
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    _attachError(err.error || (res.status === 413 ? 'File too large (max 16MB).' : 'Upload failed.'));
+                    return;
+                }
+                fileEl.value = ''; labelEl.value = '';
+                await loadAttachments();
+                await refreshAttachmentButton(_attachTaskId);
+            } catch (e) {
+                console.error('Error uploading file:', e);
+                _attachError('Upload failed.');
+            }
+        }
+
+        async function deleteAttachment(attachmentId) {
+            try {
+                await fetch(`/api/attachment/${attachmentId}`, { method: 'DELETE' });
+                await loadAttachments();
+                await refreshAttachmentButton(_attachTaskId);
+            } catch (e) {
+                console.error('Error deleting attachment:', e);
+            }
+        }
+
+        async function refreshAttachmentButton(taskId) {
+            try {
+                const res = await fetch(`/api/task/${taskId}/attachments`);
+                const items = await res.json();
+                const count = items.length;
+                const task = tasks.find(t => t.id === taskId);
+                if (task) task.attachment_count = count;
+                updateTaskAttachmentBadge(taskId, count);
+            } catch (e) {
+                console.error('Error refreshing attachment badge:', e);
+            }
+        }
+
+        function updateTaskAttachmentBadge(taskId, count) {
+            document.querySelectorAll(`.task-row[data-task-id="${taskId}"] .task-name`).forEach(nameCell => {
+                let badge = nameCell.querySelector('.attach-badge');
+                if (count > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'attach-badge';
+                        badge.dataset.attTaskId = String(taskId);
+                        badge.addEventListener('click', (e) => { e.stopPropagation(); openAttachmentsPopup(taskId); });
+                        // Place after the comment badge if present, else after cloned badge, else at front
+                        const commentB = nameCell.querySelector('.comment-badge');
+                        const cloned = nameCell.querySelector('.cloned-from-badge');
+                        if (commentB) commentB.after(badge);
+                        else if (cloned) cloned.after(badge);
+                        else nameCell.insertBefore(badge, nameCell.firstChild);
+                    }
+                    badge.title = `${count} attachment${count !== 1 ? 's' : ''} — click to open`;
+                    badge.textContent = `📎 ${count}`;
+                } else if (badge) {
+                    badge.remove();
+                }
+            });
+        }
+
         async function saveReworkOriginalDate(taskId, newDate, inputEl) {
             try {
                 const response = await fetch(`/api/task/${taskId}`, {
@@ -4810,33 +5599,25 @@
                 });
             });
 
-            // Sort phases chronologically by earliest task start date in each phase
+            // Order phase groups by the canonical preset order (General task → Gate 1–5 →
+            // Military Gate 2/2.5/3/4/5 → Discontinued Gate A/B/C), then any custom phases
+            // alphabetically. Empty groups sink to the end.
             let sortedPhases = Object.entries(phases).sort((a, b) => {
                 const [phaseNameA, tasksA] = a;
                 const [phaseNameB, tasksB] = b;
-                
+
                 if (tasksA.length === 0) return 1;
                 if (tasksB.length === 0) return -1;
-                
-                // First, try to sort by gate number (Gate 3, Gate 4, Gate 5, etc.)
-                const gateNumA = parseInt(phaseNameA.match(/\d+/)?.[0]);
-                const gateNumB = parseInt(phaseNameB.match(/\d+/)?.[0]);
-                
-                if (!isNaN(gateNumA) && !isNaN(gateNumB) && gateNumA !== gateNumB) {
-                    return gateNumA - gateNumB;
-                }
-                
-                // Fallback: Get earliest start date in each phase - with null handling
+
+                const cmp = comparePhases(phaseNameA, phaseNameB);
+                if (cmp !== 0) return cmp;
+
+                // Fallback (identical names shouldn't occur): earliest task start date
                 const validDatesA = tasksA.map(t => parseDate(t.entered)).filter(d => d);
                 const validDatesB = tasksB.map(t => parseDate(t.entered)).filter(d => d);
-                
                 if (validDatesA.length === 0) return 1;
                 if (validDatesB.length === 0) return -1;
-                
-                const earliestA = Math.min(...validDatesA);
-                const earliestB = Math.min(...validDatesB);
-                
-                return earliestA - earliestB;
+                return Math.min(...validDatesA) - Math.min(...validDatesB);
             });
 
             // Calculate timeline based on actual task dates
@@ -4995,6 +5776,12 @@
                     const clonedFromBadge = task.cloned_from_phase
                         ? `<span class="cloned-from-badge" title="Carried forward from ${task.cloned_from_phase}">↩ ${task.cloned_from_phase}</span>`
                         : '';
+                    const commentBadge = (task.open_comment_count > 0)
+                        ? `<span class="comment-badge" title="${task.open_comment_count} open comment${task.open_comment_count !== 1 ? 's' : ''} — click to open log" onclick="event.stopPropagation();openCommentLog(${task.id})">💬 ${task.open_comment_count}</span>`
+                        : '';
+                    const attachBadge = (task.attachment_count > 0)
+                        ? `<span class="attach-badge" data-att-task-id="${task.id}" title="${task.attachment_count} attachment${task.attachment_count !== 1 ? 's' : ''} — click to open" onclick="event.stopPropagation();openAttachmentsPopup(${task.id})">📎 ${task.attachment_count}</span>`
+                        : '';
 
                     let actionsHTML;
                     if (isGate) {
@@ -5016,7 +5803,7 @@
                     taskHTML += `
                         <div class="${rowClass}" data-task-id="${task.id}">
                             <div>${rowNum}</div>
-                            <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
+                            <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge}${commentBadge}${attachBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
                             <div>${task.owner}</div>
                             <div class="date-cell start-date editable" data-task-id="${task.id}" data-date-type="start" data-date-value="${task.entered}">${formatDateShort(task.entered)}</div>
                             <div class="duration-cell">${(task.entered && task.due) ? Math.max(1, Math.round((new Date(task.due) - new Date(task.entered)) / 86400000) + 1) : '—'}</div>
@@ -5930,6 +6717,7 @@
             currentEditId = null;
             document.getElementById('modalTitle').textContent = 'Add New Task';
             document.getElementById('taskForm').reset();
+            populateTaskPhaseOptions();
             document.getElementById('deleteTaskBtn').style.display = 'none';
             document.getElementById('taskDuration').value = '';
 
@@ -5954,6 +6742,7 @@
             document.getElementById('taskName').value = task.name;
             document.getElementById('taskOwner').value = task.owner;
             document.getElementById('taskTeam').value = task.team || '';
+            populateTaskPhaseOptions();
             document.getElementById('taskPhase').value = task.phase;
             document.getElementById('taskStatus').value = task.status;
             document.getElementById('taskEntered').value = formatDate(task.entered);
@@ -7996,12 +8785,8 @@
                 if (!phaseMap[ph]) { phaseOrder.push(ph); phaseMap[ph] = []; }
                 phaseMap[ph].push(t);
             });
-            // Sort phases by gate number extracted from name, else alphabetically
-            phaseOrder.sort((a, b) => {
-                const na = (a.match(/\d+/) || [999])[0] | 0;
-                const nb = (b.match(/\d+/) || [999])[0] | 0;
-                return na - nb || a.localeCompare(b);
-            });
+            // Order phases the same way as the on-screen Gantt (preset order, then custom A–Z)
+            phaseOrder.sort(comparePhases);
             // Sort tasks within each phase by start date
             phaseOrder.forEach(ph => {
                 phaseMap[ph].sort((a, b) => {

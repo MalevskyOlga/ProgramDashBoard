@@ -196,6 +196,7 @@ $cfgLines = @(
     "CONTROL_DATABASE_PATH    = Path(r'$DataDirEsc') / 'control.db'",
     "DIVISIONS_DIR            = Path(r'$DataDirEsc') / 'divisions'",
     "EXCEL_OUTPUT_FOLDER      = Path(r'$DataDirEsc') / 'exports'",
+    "ATTACHMENTS_DIR          = Path(r'$DataDirEsc') / 'attachments'",
     '',
     "SECRET_KEY = '$SecretKey'",
     'RESET_TOKEN_TTL_MINUTES = 60',
@@ -238,7 +239,8 @@ $cfgLines = @(
     'DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)',
     'EXCEL_OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)',
     'CONTROL_DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)',
-    'DIVISIONS_DIR.mkdir(parents=True, exist_ok=True)'
+    'DIVISIONS_DIR.mkdir(parents=True, exist_ok=True)',
+    'ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)'
 )
 $cfgLines -join "`r`n" | Set-Content -Encoding UTF8 -Path (Join-Path $InstallDir 'config.py')
 Log "      Config written (port $Port)"

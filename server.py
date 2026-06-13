@@ -5,6 +5,7 @@ Flask-based web server for managing project dashboards
 
 import os
 import sys
+import uuid
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -147,6 +148,31 @@ def inject_user_context():
 def allowed_file(filename):
     """Check if uploaded file has .xlsx extension"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'xlsx'
+
+
+# Allowlist for per-task attachment uploads (executables/scripts are rejected)
+ATTACHMENT_ALLOWED_EXTS = {
+    'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+    'png', 'jpg', 'jpeg', 'txt', 'csv'
+}
+
+
+def allowed_attachment_file(filename):
+    """Check an attachment upload's extension against the allowlist."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ATTACHMENT_ALLOWED_EXTS
+
+
+def _attachment_dir(division_key, task_id):
+    """Directory holding a task's attachment files, scoped per division and task."""
+    safe_div = secure_filename(str(division_key)) or 'default'
+    return Path(config.ATTACHMENTS_DIR) / safe_div / str(int(task_id))
+
+
+def _attachment_path(division_key, task_id, stored_name):
+    """Full path to one stored attachment file (path-traversal safe)."""
+    base = _attachment_dir(division_key, task_id)
+    # stored_name is server-generated (uuid + secure_filename), but guard anyway
+    return base / os.path.basename(stored_name)
 
 
 # ---------------------------------------------------------------------------
@@ -512,12 +538,194 @@ def api_create_task(project_name):
 @app.route('/api/task/<int:task_id>', methods=['DELETE'])
 def api_delete_task(task_id):
     """API endpoint to delete a task"""
+    # Remove any attachment files from disk before deleting DB rows (FK cascade is off)
+    division_key = tenancy.current_division_key()
+    file_atts = db_manager.get_file_attachments_for_task(task_id)
     success = db_manager.delete_task(task_id)
-    
+    if success:
+        for att in file_atts:
+            _safe_remove_attachment_file(division_key, att['task_id'], att.get('stored_name'))
+
     if success:
         return jsonify({'message': 'Task deleted successfully'})
     else:
         return jsonify({'error': 'Failed to delete task'}), 500
+
+
+@app.route('/api/task/<int:task_id>/comments', methods=['GET'])
+def api_get_task_comments(task_id):
+    """API endpoint to get a task's comment log. ?include_closed=1 shows resolved entries."""
+    include_closed = request.args.get('include_closed') in ('1', 'true', 'yes')
+    return jsonify(db_manager.get_comments_for_task(task_id, include_closed))
+
+
+@app.route('/api/task/<int:task_id>/comments', methods=['POST'])
+def api_add_task_comment(task_id):
+    """API endpoint to add a comment to a task. Author is the logged-in user."""
+    data = request.json or {}
+    body = (data.get('body') or '').strip()
+    if not body:
+        return jsonify({'error': 'Comment body is required'}), 400
+
+    author = session.get('username') or 'unknown'
+    comment_id = db_manager.add_comment(task_id, author, body)
+    return jsonify({
+        'id': comment_id,
+        'open_comment_count': db_manager.get_open_comment_count(task_id)
+    }), 201
+
+
+@app.route('/api/comment/<int:comment_id>/state', methods=['PUT'])
+def api_set_comment_state(comment_id):
+    """API endpoint to close or reopen a comment."""
+    data = request.json or {}
+    state = data.get('state')
+    if state not in ('open', 'closed'):
+        return jsonify({'error': "state must be 'open' or 'closed'"}), 400
+
+    actor = session.get('username') or 'unknown'
+    success = db_manager.set_comment_state(comment_id, state, actor)
+    if success:
+        return jsonify({'message': 'Comment updated successfully'})
+    else:
+        return jsonify({'error': 'Comment not found'}), 404
+
+
+# ---------------------------------------------------------------------------
+# Per-task attachments (links + uploaded files)
+# ---------------------------------------------------------------------------
+
+def _safe_remove_attachment_file(division_key, task_id, stored_name):
+    """Best-effort delete of one stored attachment file. Never raises."""
+    if not stored_name:
+        return
+    try:
+        path = _attachment_path(division_key, task_id, stored_name)
+        if path.exists():
+            path.unlink()
+    except Exception as e:
+        print(f"Warning: could not remove attachment file {stored_name}: {e}")
+
+
+@app.route('/api/task/<int:task_id>/attachments', methods=['GET'])
+def api_get_task_attachments(task_id):
+    """API endpoint to list a task's attachments."""
+    return jsonify(db_manager.get_attachments_for_task(task_id))
+
+
+@app.route('/api/task/<int:task_id>/attachments/link', methods=['POST'])
+def api_add_task_link(task_id):
+    """API endpoint to add a link attachment to a task."""
+    data = request.json or {}
+    url = (data.get('url') or '').strip()
+    label = (data.get('label') or '').strip()
+    if not url:
+        return jsonify({'error': 'A URL is required'}), 400
+    # Only allow web links — block javascript:/data:/file: etc.
+    if not (url.lower().startswith('http://') or url.lower().startswith('https://')):
+        return jsonify({'error': 'Link must start with http:// or https://'}), 400
+    if not label:
+        label = url
+
+    author = session.get('username') or 'unknown'
+    attachment_id = db_manager.add_link_attachment(task_id, label, url, author)
+    return jsonify({
+        'id': attachment_id,
+        'attachment_count': db_manager.get_attachment_count(task_id)
+    }), 201
+
+
+@app.route('/api/task/<int:task_id>/attachments/file', methods=['POST'])
+def api_add_task_file(task_id):
+    """API endpoint to upload a file attachment to a task."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    if not allowed_attachment_file(file.filename):
+        return jsonify({'error': 'File type not allowed'}), 400
+
+    original_name = file.filename
+    stored_name = uuid.uuid4().hex + '_' + secure_filename(original_name)
+    division_key = tenancy.current_division_key()
+    dest_dir = _attachment_dir(division_key, task_id)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / stored_name
+
+    try:
+        file.save(str(dest_path))
+        size_bytes = os.path.getsize(str(dest_path))
+        mime = file.mimetype or ''
+        label = (request.form.get('label') or '').strip() or original_name
+        author = session.get('username') or 'unknown'
+        attachment_id = db_manager.add_file_attachment(
+            task_id, label, stored_name, original_name, size_bytes, mime, author
+        )
+    except Exception as e:
+        # Clean up a partially-saved file on failure
+        try:
+            if dest_path.exists():
+                dest_path.unlink()
+        except Exception:
+            pass
+        print(f"Error saving attachment: {e}")
+        return jsonify({'error': 'Failed to save file'}), 500
+
+    return jsonify({
+        'id': attachment_id,
+        'attachment_count': db_manager.get_attachment_count(task_id)
+    }), 201
+
+
+@app.route('/api/task/<int:task_id>/attachment/<int:attachment_id>/download', methods=['GET'])
+def api_download_attachment(task_id, attachment_id):
+    """Download a file attachment, or redirect to a link attachment."""
+    att = db_manager.get_attachment_by_id(attachment_id)
+    if not att or att['task_id'] != task_id:
+        return jsonify({'error': 'Attachment not found'}), 404
+
+    if att['kind'] == 'link':
+        return redirect(att['url'])
+
+    division_key = tenancy.current_division_key()
+    path = _attachment_path(division_key, task_id, att['stored_name'])
+    # Path-traversal guard: resolved path must live under the task's attachment dir
+    base = _attachment_dir(division_key, task_id).resolve()
+    try:
+        resolved = path.resolve()
+        resolved.relative_to(base)
+    except (ValueError, OSError):
+        return jsonify({'error': 'Attachment not found'}), 404
+    if not resolved.exists():
+        return jsonify({'error': 'File missing on server'}), 404
+
+    return send_file(str(resolved), as_attachment=True,
+                     download_name=att['original_name'] or att['stored_name'])
+
+
+@app.route('/api/attachment/<int:attachment_id>', methods=['DELETE'])
+def api_delete_attachment(attachment_id):
+    """Delete an attachment (and its stored file, if any)."""
+    att = db_manager.get_attachment_by_id(attachment_id)
+    if not att:
+        return jsonify({'error': 'Attachment not found'}), 404
+
+    if att['kind'] == 'file':
+        _safe_remove_attachment_file(
+            tenancy.current_division_key(), att['task_id'], att.get('stored_name')
+        )
+    db_manager.delete_attachment(attachment_id)
+    return jsonify({
+        'message': 'Attachment deleted successfully',
+        'attachment_count': db_manager.get_attachment_count(att['task_id'])
+    })
+
+
+@app.errorhandler(413)
+def handle_file_too_large(e):
+    """Friendly JSON for uploads exceeding MAX_CONTENT_LENGTH (16MB)."""
+    return jsonify({'error': 'File too large (max 16MB)'}), 413
 
 
 @app.route('/api/upload-excel', methods=['POST'])
@@ -568,8 +776,12 @@ def api_upload_excel():
             excel_filename=filename
         )
         
-        # Delete existing tasks for this project
+        # Delete existing tasks for this project (clean up attachment files first)
+        _div_key = tenancy.current_division_key()
+        _file_atts = db_manager.get_file_attachments_for_project(project_id)
         deleted_count = db_manager.delete_tasks_by_project(project_id)
+        for _att in _file_atts:
+            _safe_remove_attachment_file(_div_key, _att['task_id'], _att.get('stored_name'))
         if deleted_count > 0:
             print(f"  ✓ Removed {deleted_count} old tasks")
         
