@@ -19,6 +19,14 @@ import sqlite3
 import sys
 from pathlib import Path
 
+# Be robust on non-UTF-8 consoles (e.g. cp1255): downstream code prints Unicode.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        if _stream and (_stream.encoding or '').lower() not in ('utf-8', 'utf8'):
+            _stream.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import config

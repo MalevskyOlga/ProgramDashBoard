@@ -28,6 +28,12 @@ trap {
     exit 1
 }
 
+# Force UTF-8 for all Python invocations below. The service console can be a non-UTF-8
+# code page (e.g. cp1255), where printing Unicode like the "OK" check mark crashes
+# initialize_database() with UnicodeEncodeError and fails the install.
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
+
 $PythonInstaller = Join-Path $InstallDir "installer\python-installer.exe"
 $PythonDir       = Join-Path $InstallDir "python"
 $PythonExe       = Join-Path $PythonDir  "python.exe"
