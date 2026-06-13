@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define AppName        "Overall Programs Dashboard"
-#define AppVersion     "1.1.0"
+#define AppVersion     "1.2.0"
 #define AppPublisher   "Emerson"
 #define ServiceName    "OverallDashboard"
 #define DefaultPort    "8092"
@@ -159,6 +159,8 @@ Source: "{#SrcRoot}\ppt_exporter.py";       DestDir: "{app}"; Flags: ignoreversi
 Source: "{#SrcRoot}\risk_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\gantt_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\db_migrate.py";        DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcRoot}\tenancy.py";           DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcRoot}\mailer.py";            DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_server.py";  DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_app.py";     DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\aggregate_db.py";      DestDir: "{app}"; Flags: ignoreversion
@@ -173,6 +175,9 @@ Source: "{#SrcRoot}\aggregate_frontend\*"; DestDir: "{app}\aggregate_frontend"; 
 
 ; Migration scripts
 Source: "{#SrcRoot}\migrations\*";         DestDir: "{app}\migrations";          Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Helper scripts (control-DB bootstrap, first-division seed)
+Source: "{#SrcRoot}\scripts\*";            DestDir: "{app}\scripts";             Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Bundled Python installer (run silently during post-install to create local venv)
 Source: "python-installer.exe";            DestDir: "{app}\installer";           Flags: ignoreversion

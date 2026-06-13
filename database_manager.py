@@ -170,6 +170,17 @@ class DatabaseManager:
             )
         ''')
 
+        # Disciplines master list - per-division vocabulary used by the discipline map.
+        # Seeded per division (see migrations/001_disciplines.sql and tenancy.create_division).
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS disciplines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                sort_order INTEGER DEFAULT 100,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        ''')
+
         # Create indexes for better performance
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)')

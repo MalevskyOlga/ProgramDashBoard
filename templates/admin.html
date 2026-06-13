@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - Overall Programs Dashboard</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+               margin: 0; background: #f1f5f9; color: #1a202c; }
+        .topbar { background: #1e3a5f; color: #fff; padding: 14px 24px;
+                  display: flex; align-items: center; justify-content: space-between; }
+        .topbar a { color: #cbd5e0; text-decoration: none; font-size: 14px; }
+        .topbar a:hover { color: #fff; }
+        .wrap { max-width: 1100px; margin: 24px auto; padding: 0 20px; }
+        .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1);
+                padding: 22px; margin-bottom: 24px; }
+        h2 { margin: 0 0 16px; font-size: 17px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #e2e8f0; }
+        th { color: #718096; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+        .row-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 16px;
+                    padding-top: 16px; border-top: 1px dashed #cbd5e0; }
+        .row-form label { font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px; }
+        .row-form input, .row-form select { padding: 8px 10px; border: 1px solid #cbd5e0;
+                    border-radius: 6px; font-size: 13px; }
+        button { cursor: pointer; border: none; border-radius: 6px; font-size: 13px;
+                 padding: 8px 14px; font-weight: 600; }
+        button.primary { background: #2c5282; color: #fff; }
+        button.primary:hover { background: #1e3a5f; }
+        button.ghost { background: #edf2f7; color: #2d3748; }
+        button.ghost:hover { background: #e2e8f0; }
+        .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+        .pill.on { background: #c6f6d5; color: #22543d; }
+        .pill.off { background: #fed7d7; color: #822727; }
+        .pill.role { background: #e9d8fd; color: #44337a; }
+        .flash { padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+        .flash.error { background: #fed7d7; color: #822727; }
+        .flash.success { background: #c6f6d5; color: #22543d; }
+        .flash.info { background: #bee3f8; color: #2a4365; }
+        .inline { display: inline; }
+        .muted { color: #a0aec0; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <strong>⚙️ Administration</strong>
+        <div>
+            <a href="{{ url_for('index') }}">← Back to portal</a>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <a href="{{ url_for('logout') }}">Sign out ({{ current_user.username }})</a>
+        </div>
+    </div>
+    <div class="wrap">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endwith %}
+
+        <div class="card">
+            <h2>Divisions</h2>
+            <table>
+                <thead><tr><th>Name</th><th>Key</th><th>Database file</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                {% for d in divisions %}
+                    <tr>
+                        <td>{{ d.name }}</td>
+                        <td class="muted">{{ d.key }}</td>
+                        <td class="muted">{{ d.db_filename }}</td>
+                        <td>{% if d.is_active %}<span class="pill on">active</span>
+                            {% else %}<span class="pill off">inactive</span>{% endif %}</td>
+                        <td>
+                            <form class="inline" method="post"
+                                  action="{{ url_for('admin_toggle_division', division_id=d.id) }}">
+                                <button class="ghost" type="submit">
+                                    {{ 'Deactivate' if d.is_active else 'Activate' }}</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5" class="muted">No divisions yet — add one below.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <form class="row-form" method="post" action="{{ url_for('admin_create_division') }}">
+                <div>
+                    <label>New division name</label>
+                    <input type="text" name="name" placeholder="e.g. Flame &amp; Gas" required>
+                </div>
+                <button class="primary" type="submit">Add division</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Users</h2>
+            <table>
+                <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Division</th>
+                    <th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for u in users %}
+                    <tr>
+                        <td>{{ u.username }}</td>
+                        <td class="muted">{{ u.email or '—' }}</td>
+                        <td><span class="pill role">{{ u.role }}</span></td>
+                        <td>{{ u.division_name or ('— (all)' if u.role == 'superadmin' else '—') }}</td>
+                        <td>{% if u.is_active %}<span class="pill on">active</span>
+                            {% else %}<span class="pill off">inactive</span>{% endif %}</td>
+                        <td>
+                            <form class="inline" method="post"
+                                  action="{{ url_for('admin_reset_user', user_id=u.id) }}">
+                                <button class="ghost" type="submit">Issue reset code</button>
+                            </form>
+                            {% if u.id != current_user.id %}
+                            <form class="inline" method="post"
+                                  action="{{ url_for('admin_toggle_user', user_id=u.id) }}">
+                                <button class="ghost" type="submit">
+                                    {{ 'Disable' if u.is_active else 'Enable' }}</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <form class="row-form" method="post" action="{{ url_for('admin_create_user') }}">
+                <div><label>Username</label><input type="text" name="username" required></div>
+                <div><label>Email</label><input type="email" name="email"></div>
+                <div><label>Temp password</label><input type="text" name="password" required></div>
+                <div>
+                    <label>Role</label>
+                    <select name="role">
+                        <option value="user">user</option>
+                        <option value="superadmin">superadmin</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Division</label>
+                    <select name="division_id">
+                        <option value="">— (superadmin)</option>
+                        {% for d in divisions if d.is_active %}
+                        <option value="{{ d.id }}">{{ d.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button class="primary" type="submit">Add user</button>
+            </form>
+            <p class="muted" style="margin-top:14px;font-size:12px;">
+                New users must change their password on first sign-in. Use "Issue reset code"
+                to give a user a code they can enter on the reset page when email isn't set up.</p>
+        </div>
+    </div>
+</body>
+</html>

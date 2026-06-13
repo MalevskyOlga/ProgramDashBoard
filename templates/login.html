@@ -1,0 +1,17 @@
+{% extends "_auth_base.html" %}
+{% block title %}Sign in - Overall Programs Dashboard{% endblock %}
+{% block content %}
+    <h1>Overall Programs Dashboard</h1>
+    <p class="subtitle">Sign in to your division</p>
+    <form method="post" action="{{ url_for('login') }}">
+        <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autofocus autocomplete="username" required>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+        <button type="submit" class="primary">Sign in</button>
+    </form>
+    <div class="links">
+        <a href="{{ url_for('forgot_password') }}">Forgot your password?</a>
+    </div>
+{% endblock %}

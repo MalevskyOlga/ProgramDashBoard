@@ -2059,6 +2059,25 @@
                     <p class="subtitle">Web-based project dashboard management system</p>
                 </div>
                 <div class="header-actions">
+                    {% if current_user %}
+                    <div class="user-bar" style="display:flex;align-items:center;gap:10px;margin-right:8px;font-size:13px;color:#e2e8f0;">
+                        {% if is_superadmin and all_divisions %}
+                        <form method="post" action="{{ url_for('admin_switch_division') }}" style="margin:0;">
+                            <select name="division_key" onchange="this.form.submit()"
+                                    style="padding:5px 8px;border-radius:6px;border:1px solid #cbd5e0;font-size:13px;">
+                                {% for d in all_divisions %}
+                                <option value="{{ d.key }}" {{ 'selected' if d.key == active_division else '' }}>{{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        {% endif %}
+                        <span title="Signed in">👤 {{ current_user.username }}</span>
+                        {% if is_superadmin %}
+                        <a href="{{ url_for('admin_home') }}" class="header-action-btn" style="text-decoration:none;">⚙️ Admin</a>
+                        {% endif %}
+                        <a href="{{ url_for('logout') }}" class="header-action-btn" style="text-decoration:none;">Sign out</a>
+                    </div>
+                    {% endif %}
                     <button type="button" class="header-action-btn" onclick="exportOverallDashboardHTML()">📤 Export HTML</button>
                     <div class="header-status" id="headerStatus" aria-live="polite"></div>
                 </div>
@@ -2066,7 +2085,7 @@
 
         <div class="dashboard-tabs" role="tablist" aria-label="Dashboard sections">
             <button class="dashboard-tab active" data-tab="schedule" onclick="setActiveDashboardTab('schedule')">Portfolio Schedule Overview</button>
-            <button class="dashboard-tab" data-tab="pipeline" onclick="setActiveDashboardTab('pipeline')">F&amp;G Pipeline</button>
+            <button class="dashboard-tab" data-tab="pipeline" onclick="setActiveDashboardTab('pipeline')">Pipeline</button>
             <button class="dashboard-tab" data-tab="projects" onclick="setActiveDashboardTab('projects')" style="display:none;">Projects</button>
             <button class="dashboard-tab" data-tab="resources" onclick="setActiveDashboardTab('resources')">Overall Resource Load</button>
             <button class="dashboard-tab" data-tab="critical" onclick="setActiveDashboardTab('critical')">Critical Path</button>
@@ -2091,8 +2110,13 @@
 
         <div class="tab-pane" data-pane="resources">
             <div class="resource-section">
-                <h2>Overall Resource Load</h2>
-                <p>Owners, active work & cross-project load</p>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <h2>Overall Resource Load</h2>
+                        <p>Owners, active work & cross-project load</p>
+                    </div>
+                    <a href="/disciplines" target="_blank" class="import-btn" style="text-decoration:none;white-space:nowrap;align-self:center;">🏷️ Manage Discipline Map</a>
+                </div>
                 <div class="sticky-summary-header">
                     <div class="resource-command-center" id="resourceSummary">
                         <div class="resource-summary-card">
@@ -2112,8 +2136,8 @@
 
         <div class="tab-pane" data-pane="pipeline">
             <div class="resource-section">
-                <h2>F&amp;G Pipeline</h2>
-                <p>Flame &amp; Gas — Active Big Projects priority list &amp; Gantt management</p>
+                <h2>Pipeline</h2>
+                <p>Active Big Projects priority list &amp; Gantt management</p>
                 <div id="priorityListSection" class="priority-list-section">
                     <div class="loading">Loading priority list…</div>
                 </div>
@@ -2245,7 +2269,7 @@
                 ]);
                 currentProjectsPayload = projects;
 
-                // Build name-keyed map so F&G Pipeline badges can look up by dashboard_name
+                // Build name-keyed map so Pipeline badges can look up by dashboard_name
                 _projectRiskCountsByName = {};
                 projects.forEach(p => { if (riskCounts[p.id]) _projectRiskCountsByName[p.name] = riskCounts[p.id]; });
 
@@ -3021,7 +3045,7 @@
         function buildProjectMatrixView(data) {
             const { disciplines, projects, window_start, window_end } = data;
             if (!projects || !projects.length) {
-                return `<div class="resource-detail-empty">No priority projects found. Add projects to the F&G pipeline first.</div>`;
+                return `<div class="resource-detail-empty">No priority projects found. Add projects to the pipeline first.</div>`;
             }
 
             function cellStatus(count, hasProject) {
@@ -4928,7 +4952,7 @@
 
             section.innerHTML = `
                 <div class="pipe-cat-tabs">${tabsHtml}</div>
-                <h3 style="margin:12px 0 8px;font-size:1em;color:#cdd9e5;">📋 Flame &amp; Gas — ${catInfo.title}</h3>
+                <h3 style="margin:12px 0 8px;font-size:1em;color:#cdd9e5;">📋 ${catInfo.title}</h3>
                 <div class="priority-table-wrap">
                     <table class="priority-table" id="priorityTable">
                         <thead><tr>

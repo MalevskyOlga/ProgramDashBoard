@@ -42,6 +42,16 @@
   .summary-bar { display:flex; gap:20px; margin-bottom:16px; font-size:0.82em; flex-wrap:wrap; }
   .summary-bar span { color:#6b7fa3; }
   .summary-bar strong { color:#cdd9e5; }
+  .disc-panel { background:#0f1d35; border:1px solid #24355f; border-radius:8px; padding:14px 16px; margin-bottom:18px; }
+  .disc-panel-head { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .disc-panel-head strong { color:#7ec8ff; font-size:0.95em; }
+  .disc-hint { color:#6b7fa3; font-size:0.78em; }
+  .disc-chips { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .disc-chip { display:inline-flex; align-items:center; gap:6px; background:#13233f; border:1px solid #24355f; color:#cdd9e5; border-radius:999px; padding:4px 10px; font-size:0.82em; }
+  .disc-chip button { background:none; border:none; color:#445566; cursor:pointer; font-size:1em; line-height:1; padding:0; }
+  .disc-chip button:hover { color:#ff6b6b; }
+  .disc-add { display:flex; gap:8px; align-items:center; }
+  .disc-empty { color:#445566; font-size:0.82em; }
 </style>
 </head>
 <body>
@@ -63,6 +73,19 @@
   <span>Unmapped: <strong id="unmappedCount" style="color:#ffa94d;">—</strong></span>
 </div>
 
+<div class="disc-panel">
+  <div class="disc-panel-head">
+    <strong>Disciplines (this division)</strong>
+    <span class="disc-hint">This division's own list — it powers the discipline suggestions below. Add or remove to curate it.</span>
+  </div>
+  <div id="disciplineChips" class="disc-chips"><span class="disc-empty">Loading…</span></div>
+  <div class="disc-add">
+    <input id="newDisciplineInput" class="search" type="text" placeholder="New discipline…"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();addDiscipline();}">
+    <button class="btn btn-add" onclick="addDiscipline()">＋ Add discipline</button>
+  </div>
+</div>
+
 <table id="mappingTable">
   <thead>
     <tr>
@@ -80,12 +103,9 @@
 <datalist id="discipline-suggestions"></datalist>
 
 <script>
-const CANONICAL_DISCIPLINES = [
-  'ATE','Electrical Eng.','FCT','Manufacturing','Mechanical','NPI',
-  'Optics','Proj. Mgmt','Product Manager','Purchasing','R&D QA (inc. SW test)',
-  'RSK Cert.','RSK GMS','RSK Ops','Sderot Cert.','SW','Supply Chain',
-  'Supply Chain RSK'
-];
+// This division's discipline master list, loaded from the database (no hardcoded list).
+// [{id, name}] — populates the autocomplete and the "Disciplines" management panel.
+let disciplineList = [];
 
 // Master list: [{owner, discipline, projects, task_count, active, isNew, hidden}]
 let rows = [];
@@ -94,12 +114,16 @@ let newRowCounter = 0;
 
 async function loadData() {
   try {
-    const [ownersRes, teamsRes] = await Promise.all([
+    const [ownersRes, teamsRes, discRes] = await Promise.all([
       fetch('/api/overall-resource-load'),
-      fetch('/api/v1/admin/resource-teams')
+      fetch('/api/v1/admin/resource-teams'),
+      fetch('/api/v1/admin/disciplines')
     ]);
     const ownersData = await ownersRes.json();
     const teamsData  = await teamsRes.json();
+    const discData   = await discRes.json();
+    disciplineList = (Array.isArray(discData) ? discData : []).map(d => ({ id: d.id, name: d.name }));
+    renderDisciplinePanel();
 
     // Build task stats map (owner_lower → stats)
     statsMap = {};
@@ -211,10 +235,61 @@ function applyFilter() {
 }
 
 function rebuildDatalist() {
-  const extra = rows.map(r => r.discipline).filter(Boolean);
-  const all = [...new Set([...CANONICAL_DISCIPLINES, ...extra])].sort();
+  const fromTable = disciplineList.map(d => d.name);
+  const typed = rows.map(r => r.discipline).filter(Boolean);
+  const all = [...new Set([...fromTable, ...typed])].sort();
   document.getElementById('discipline-suggestions').innerHTML =
     all.map(d => `<option value="${escHtml(d)}">`).join('');
+}
+
+function renderDisciplinePanel() {
+  const el = document.getElementById('disciplineChips');
+  if (!disciplineList.length) {
+    el.innerHTML = '<span class="disc-empty">No disciplines yet. Add the first one below.</span>';
+    return;
+  }
+  el.innerHTML = disciplineList.map(d =>
+    `<span class="disc-chip">${escHtml(d.name)}<button title="Remove discipline" onclick="deleteDiscipline(${d.id})">✕</button></span>`
+  ).join('');
+}
+
+async function reloadDisciplines() {
+  const res = await fetch('/api/v1/admin/disciplines');
+  const data = await res.json();
+  disciplineList = (Array.isArray(data) ? data : []).map(d => ({ id: d.id, name: d.name }));
+  renderDisciplinePanel();
+  rebuildDatalist();
+}
+
+async function addDiscipline() {
+  const input = document.getElementById('newDisciplineInput');
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch('/api/v1/admin/disciplines', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Add failed');
+    input.value = '';
+    await reloadDisciplines();
+  } catch (e) { showDiscError(e.message); }
+}
+
+async function deleteDiscipline(id) {
+  try {
+    const res = await fetch('/api/v1/admin/disciplines/' + id, { method: 'DELETE' });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Delete failed'); }
+    await reloadDisciplines();
+  } catch (e) { showDiscError(e.message); }
+}
+
+function showDiscError(msg) {
+  const err = document.getElementById('errorMsg');
+  err.textContent = '❌ ' + msg;
+  err.style.display = 'inline';
+  setTimeout(() => { err.style.display = 'none'; }, 4000);
 }
 
 function updateSummary() {

@@ -17,32 +17,325 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 if sys.stderr.encoding and sys.stderr.encoding.lower() not in ('utf-8', 'utf8'):
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-from flask import Flask, render_template, jsonify, request, send_file
+from functools import wraps
+from flask import (Flask, render_template, jsonify, request, send_file,
+                   session, redirect, url_for, flash, abort)
 from werkzeug.utils import secure_filename
+from werkzeug.local import LocalProxy
 from database_manager import DatabaseManager
 from excel_parser import ExcelParser
 import config
 import sqlite3
-
-try:
-    from db_migrate import run_migrations as _run_migrations
-    _run_migrations(config.DATABASE_PATH)
-except Exception as _mig_err:
-    print(f'Warning: migration check failed: {_mig_err}')
+import tenancy
+import mailer
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dashboard-generator-secret-key'
+app.config['SECRET_KEY'] = config.SECRET_KEY
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 
-# Initialize database manager
-db_manager = DatabaseManager(config.DATABASE_PATH)
-db_manager.initialize_database()
+# Multi-division: the control DB holds users/divisions; division data lives in
+# per-division SQLite files resolved from the logged-in user's session.
+tenancy.init_control_db()
+
+
+def _resolve_division_db():
+    """Resolve the DatabaseManager for the current request's division."""
+    dbm = tenancy.get_division_db(tenancy.current_division_key())
+    if dbm is None:
+        # No division selected (e.g. superadmin before picking one). Fail loudly so
+        # the before_request guard / route can redirect appropriately.
+        raise RuntimeError('No division selected for this session')
+    return dbm
+
+
+# Drop-in replacement for the former global DatabaseManager: every db_manager.<call>
+# now transparently targets the current user's division database.
+db_manager = LocalProxy(_resolve_division_db)
+
+
+# Paths that do not require an authenticated session.
+_PUBLIC_ENDPOINTS = {'login', 'logout', 'forgot_password', 'reset_password', 'static'}
+
+
+def login_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get('user_id'):
+            return redirect(url_for('login', next=request.path))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def superadmin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get('user_id'):
+            return redirect(url_for('login', next=request.path))
+        if session.get('role') != 'superadmin':
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped
+
+
+@app.before_request
+def require_login():
+    """Global auth gate: redirect anonymous users to the login page."""
+    if request.endpoint in _PUBLIC_ENDPOINTS:
+        return None
+    if (request.endpoint or '').startswith('static'):
+        return None
+    if not session.get('user_id'):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'authentication required'}), 401
+        return redirect(url_for('login', next=request.path))
+
+    # Endpoints that operate without an active division (auth/admin/account pages).
+    _no_division_needed = {'logout', 'change_password', 'admin_home',
+                           'admin_create_division', 'admin_toggle_division',
+                           'admin_create_user', 'admin_update_user', 'admin_toggle_user',
+                           'admin_reset_user', 'admin_switch_division'}
+    if request.endpoint in _no_division_needed:
+        return None
+    if tenancy.current_division_key() is None:
+        # Logged in but no division resolvable (superadmin with none created yet, or a
+        # user whose division was deactivated). Route them somewhere useful.
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'no division selected'}), 409
+        if session.get('role') == 'superadmin':
+            flash('Create a division to get started.', 'info')
+            return redirect(url_for('admin_home'))
+        flash('Your account is not assigned to an active division. Contact your administrator.',
+              'error')
+        session.clear()
+        return redirect(url_for('login'))
+    return None
+
+
+@app.context_processor
+def inject_user_context():
+    """Make the current user + division list available to all templates."""
+    divisions = []
+    if session.get('role') == 'superadmin':
+        try:
+            divisions = tenancy.list_divisions()
+        except Exception:
+            divisions = []
+    return {
+        'current_user': {
+            'id': session.get('user_id'),
+            'username': session.get('username'),
+            'role': session.get('role'),
+            'division': session.get('division'),
+        } if session.get('user_id') else None,
+        'is_superadmin': session.get('role') == 'superadmin',
+        'active_division': tenancy.current_division_key(),
+        'all_divisions': divisions,
+    }
 
 
 def allowed_file(filename):
     """Check if uploaded file has .xlsx extension"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() == 'xlsx'
+
+
+# ---------------------------------------------------------------------------
+# Authentication
+# ---------------------------------------------------------------------------
+
+def _start_session(user):
+    """Populate the session for a freshly authenticated user."""
+    session.clear()
+    session['user_id'] = user['id']
+    session['username'] = user['username']
+    session['role'] = user['role']
+    division_key = None
+    if user.get('division_id'):
+        div = tenancy.get_division_by_id(user['division_id'])
+        division_key = div['key'] if div else None
+    session['division'] = division_key
+    if user['role'] == 'superadmin':
+        # Default the superadmin into the first available division (if any).
+        divs = tenancy.list_divisions()
+        session['active_division'] = divs[0]['key'] if divs else None
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = (request.form.get('username') or '').strip()
+        password = request.form.get('password') or ''
+        user = tenancy.authenticate(username, password)
+        if not user:
+            flash('Invalid username or password.', 'error')
+            return render_template('login.html'), 401
+        _start_session(user)
+        if user['must_change_password']:
+            return redirect(url_for('change_password'))
+        nxt = request.args.get('next') or request.form.get('next')
+        return redirect(nxt or url_for('index'))
+    return render_template('login.html')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        new1 = request.form.get('password') or ''
+        new2 = request.form.get('password_confirm') or ''
+        if len(new1) < 6:
+            flash('Password must be at least 6 characters.', 'error')
+        elif new1 != new2:
+            flash('Passwords do not match.', 'error')
+        else:
+            tenancy.set_password(session['user_id'], new1)
+            flash('Password updated.', 'success')
+            return redirect(url_for('index'))
+    return render_template('change_password.html')
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    sent = False
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip()
+        user = tenancy.get_user_by_email(email)
+        if user:
+            raw_token, _code = tenancy.create_reset(user['id'])
+            reset_url = config.APP_BASE_URL.rstrip('/') + url_for('reset_password', token=raw_token)
+            mailer.send_password_reset(user['email'], reset_url)
+        # Always show the same neutral message (no account enumeration).
+        sent = True
+    return render_template('forgot_password.html', sent=sent,
+                           email_enabled=mailer.email_enabled())
+
+
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    token = request.values.get('token') or ''
+    code = request.values.get('code') or ''
+    if request.method == 'POST':
+        new1 = request.form.get('password') or ''
+        new2 = request.form.get('password_confirm') or ''
+        reset = tenancy.verify_reset(token=token or None, code=code or None)
+        if not reset:
+            flash('This reset link or code is invalid or has expired.', 'error')
+        elif len(new1) < 6:
+            flash('Password must be at least 6 characters.', 'error')
+        elif new1 != new2:
+            flash('Passwords do not match.', 'error')
+        else:
+            tenancy.set_password(reset['user_id'], new1)
+            tenancy.consume_reset(reset['id'])
+            flash('Password reset. You can now sign in.', 'success')
+            return redirect(url_for('login'))
+    return render_template('reset_password.html', token=token, code=code)
+
+
+# ---------------------------------------------------------------------------
+# Super-admin: divisions & users
+# ---------------------------------------------------------------------------
+
+@app.route('/admin')
+@superadmin_required
+def admin_home():
+    return render_template('admin.html',
+                           divisions=tenancy.list_divisions(include_inactive=True),
+                           users=tenancy.list_users())
+
+
+@app.route('/admin/divisions', methods=['POST'])
+@superadmin_required
+def admin_create_division():
+    name = (request.form.get('name') or '').strip()
+    if not name:
+        flash('Division name is required.', 'error')
+    elif tenancy.get_division_by_key(tenancy.slugify(name)):
+        flash('A division with that name already exists.', 'error')
+    else:
+        tenancy.create_division(name)
+        flash(f'Division "{name}" created.', 'success')
+    return redirect(url_for('admin_home'))
+
+
+@app.route('/admin/divisions/<int:division_id>/toggle', methods=['POST'])
+@superadmin_required
+def admin_toggle_division(division_id):
+    div = tenancy.get_division_by_id(division_id)
+    if div:
+        tenancy.set_division_active(division_id, not div['is_active'])
+    return redirect(url_for('admin_home'))
+
+
+@app.route('/admin/users', methods=['POST'])
+@superadmin_required
+def admin_create_user():
+    username = (request.form.get('username') or '').strip()
+    email = (request.form.get('email') or '').strip() or None
+    password = request.form.get('password') or ''
+    role = request.form.get('role') or 'user'
+    division_id = request.form.get('division_id') or None
+    if division_id:
+        division_id = int(division_id)
+    if not username or not password:
+        flash('Username and temporary password are required.', 'error')
+    elif tenancy.get_user_by_username(username):
+        flash('That username already exists.', 'error')
+    elif role != 'superadmin' and not division_id:
+        flash('A regular user must be assigned to a division.', 'error')
+    else:
+        tenancy.create_user(username, password, email=email, role=role,
+                            division_id=(None if role == 'superadmin' else division_id),
+                            must_change_password=True)
+        flash(f'User "{username}" created.', 'success')
+    return redirect(url_for('admin_home'))
+
+
+@app.route('/admin/users/<int:user_id>/update', methods=['POST'])
+@superadmin_required
+def admin_update_user(user_id):
+    role = request.form.get('role')
+    division_id = request.form.get('division_id') or None
+    if division_id:
+        division_id = int(division_id)
+    email = request.form.get('email')
+    tenancy.update_user(user_id, email=email, role=role,
+                        division_id=(None if role == 'superadmin' else division_id))
+    flash('User updated.', 'success')
+    return redirect(url_for('admin_home'))
+
+
+@app.route('/admin/users/<int:user_id>/toggle', methods=['POST'])
+@superadmin_required
+def admin_toggle_user(user_id):
+    user = tenancy.get_user_by_id(user_id)
+    if user and user['id'] != session.get('user_id'):
+        tenancy.update_user(user_id, is_active=not user['is_active'])
+    return redirect(url_for('admin_home'))
+
+
+@app.route('/admin/users/<int:user_id>/reset', methods=['POST'])
+@superadmin_required
+def admin_reset_user(user_id):
+    """Issue a reset code a superadmin can hand to a user (email-less fallback)."""
+    _token, code = tenancy.create_reset(user_id)
+    flash(f'Reset code for user #{user_id}: {code} '
+          f'(valid {config.RESET_TOKEN_TTL_MINUTES} min). They enter it at the reset page.',
+          'success')
+    return redirect(url_for('admin_home'))
+
+
+@app.route('/admin/switch-division', methods=['POST'])
+@superadmin_required
+def admin_switch_division():
+    session['active_division'] = request.form.get('division_key') or None
+    return redirect(request.referrer or url_for('index'))
 
 
 @app.after_request
@@ -1026,6 +1319,60 @@ def api_resource_teams_bulk():
                 count += 1
         conn.commit()
         return jsonify({'saved': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/api/v1/admin/disciplines', methods=['GET'])
+def api_disciplines_get():
+    """List this division's discipline master list."""
+    conn = None
+    try:
+        conn = db_manager.get_connection()
+        rows = conn.execute(
+            "SELECT id, name FROM disciplines ORDER BY sort_order, name COLLATE NOCASE"
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/api/v1/admin/disciplines', methods=['POST'])
+def api_disciplines_add():
+    """Add a discipline to this division's master list."""
+    name = ((request.get_json(silent=True) or {}).get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'name is required'}), 400
+    conn = None
+    try:
+        conn = db_manager.get_connection()
+        conn.execute("INSERT OR IGNORE INTO disciplines (name) VALUES (?)", (name,))
+        conn.commit()
+        row = conn.execute("SELECT id, name FROM disciplines WHERE name = ?", (name,)).fetchone()
+        return jsonify(dict(row) if row else {'name': name})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/api/v1/admin/disciplines/<int:discipline_id>', methods=['DELETE'])
+def api_disciplines_delete(discipline_id):
+    """Remove a discipline from this division's master list.
+    Existing owner→discipline mappings (resource_teams) keep their text value."""
+    conn = None
+    try:
+        conn = db_manager.get_connection()
+        conn.execute("DELETE FROM disciplines WHERE id = ?", (discipline_id,))
+        conn.commit()
+        return jsonify({'deleted': discipline_id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:

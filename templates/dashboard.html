@@ -7745,16 +7745,13 @@
         // ── Owner autocomplete + add-to-map prompt ───────────────
         let knownOwners = [];  // [{owner_name, team_name}]
 
-        const CANONICAL_DISCIPLINES = [
-            'ATE','Electrical Eng.','FCT','Manufacturing','Mechanical','NPI',
-            'Optics','Proj. Mgmt','Product Manager','Purchasing','R&D QA (inc. SW test)',
-            'RSK Cert.','RSK GMS','RSK Ops','Sderot Cert.','SW','Supply Chain',
-            'Supply Chain RSK'
-        ];
-
         async function loadKnownOwners() {
             try {
-                const data = await fetch('/api/known-owners').then(r => r.json());
+                // This division's discipline list comes from the database (no hardcoded list).
+                const [data, discData] = await Promise.all([
+                    fetch('/api/known-owners').then(r => r.json()),
+                    fetch('/api/v1/admin/disciplines').then(r => r.json())
+                ]);
                 knownOwners = data;
                 const dl = document.getElementById('knownOwnersList');
                 if (dl) {
@@ -7762,11 +7759,12 @@
                         `<option value="${o.owner_name.replace(/"/g,'&quot;')}" data-disc="${(o.team_name||'').replace(/"/g,'&quot;')}">`
                     ).join('');
                 }
-                // Populate discipline select in add-prompt
+                // Populate discipline select in add-prompt from this division's discipline list
                 const sel = document.getElementById('ownerAddDisc');
                 if (sel) {
-                    const existingDiscs = [...new Set(data.map(o => o.team_name).filter(Boolean))];
-                    const allDiscs = [...new Set([...CANONICAL_DISCIPLINES, ...existingDiscs])].sort();
+                    const fromTable = (Array.isArray(discData) ? discData : []).map(d => d.name);
+                    const existingDiscs = data.map(o => o.team_name).filter(Boolean);
+                    const allDiscs = [...new Set([...fromTable, ...existingDiscs])].sort();
                     sel.innerHTML = allDiscs.map(d => `<option value="${d.replace(/"/g,'&quot;')}">${d}</option>`).join('');
                 }
             } catch(e) { /* non-critical */ }

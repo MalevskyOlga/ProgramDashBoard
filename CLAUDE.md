@@ -2,23 +2,38 @@
 
 ## Architecture
 - Flask app (`server.py`) on port 5003 (dev) / 8092 (production)
-- SQLite database at `database/dashboards.db` (dev) / `C:\ProgramData\OverallDashboard\dashboards.db` (production)
 - Windows Service via WinSW; installed by Inno Setup 6
 - Active dev branch: `portal`
+
+### Multi-division (multi-tenant)
+- The portal is multi-tenant: each division has its **own** SQLite data DB under
+  `database/divisions/<key>.db` (dev) / `<DataDir>\divisions\<key>.db` (prod).
+- A **control DB** (`database/control.db` dev / `<DataDir>\control.db` prod) holds
+  `users`, `divisions`, `password_resets`. Managed in `tenancy.py`.
+- Login (`/login`) puts the user's division in the session; the module-global
+  `db_manager` in `server.py` is a `LocalProxy` that resolves to the logged-in
+  user's division `DatabaseManager` per request — existing routes are unchanged.
+- Roles: `superadmin` (manages all divisions/users via `/admin`, division switcher in
+  header) and `user` (one division). Auth gate is `@app.before_request require_login`.
+- Self-service password reset: `/forgot-password` emails a link (`mailer.py`, SMTP_*
+  in config); if `SMTP_HOST` is blank, super-admin issues a code from `/admin`.
+- Fresh install = vanilla: empty control DB + one `admin` super-admin (temp password
+  written to `<DataDir>\INITIAL_ADMIN_CREDENTIALS.txt`), zero divisions, zero data.
+- Dev seed of division #1 from legacy data: `python scripts/seed_first_division.py`.
 
 ## Rebuilding the installer
 Run from the project root (PowerShell):
 ```powershell
-Remove-Item "installer\Output\OverallDashboardSetup_1.1.0.exe" -Force -ErrorAction SilentlyContinue
+Remove-Item "installer\Output\OverallDashboardSetup_1.2.0.exe" -Force -ErrorAction SilentlyContinue
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\setup.iss"
 ```
-Output: `installer\Output\OverallDashboardSetup_1.1.0.exe`
+Output: `installer\Output\OverallDashboardSetup_1.2.0.exe`
 
 **When to rebuild:** any change to `server.py`, `templates/`, `config.py`, `db_migrate.py`,
 `installer/post_install.ps1`, `installer/setup.iss`, or `migrations/`.
 
 ## Running the installer on a target machine
-1. Copy `installer\Output\OverallDashboardSetup_1.1.0.exe` to the target machine
+1. Copy `installer\Output\OverallDashboardSetup_1.2.0.exe` to the target machine
 2. Right-click → **Run as administrator**
 3. Wizard steps:
    - **Install directory** — default `C:\Program Files\OverallDashboard`
