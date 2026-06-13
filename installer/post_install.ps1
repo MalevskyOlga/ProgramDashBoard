@@ -160,6 +160,9 @@ if (Test-Path $ExistingCfg) {
     $m = Select-String -Path $ExistingCfg -Pattern "^SECRET_KEY\s*=\s*'([^']+)'" -ErrorAction SilentlyContinue
     if ($m) { $SecretKey = $m.Matches[0].Groups[1].Value }
 }
+# Never reuse the dev placeholder key (it would let dev session cookies validate in prod
+# and is shared/insecure). Force a fresh random key in that case.
+if ($SecretKey -eq 'dev-only-insecure-secret-change-me') { $SecretKey = $null }
 if (-not $SecretKey) {
     $SecretKey = ([System.Guid]::NewGuid().ToString('N') + [System.Guid]::NewGuid().ToString('N'))
 }

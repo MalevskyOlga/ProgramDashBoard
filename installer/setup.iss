@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define AppName        "Overall Programs Dashboard"
-#define AppVersion     "1.2.0"
+#define AppVersion     "1.2.1"
 #define AppPublisher   "Emerson"
 #define ServiceName    "OverallDashboard"
 #define DefaultPort    "8092"
@@ -151,7 +151,9 @@ end;
 [Files]
 ; Application source
 Source: "{#SrcRoot}\server.py";            DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SrcRoot}\config.py";            DestDir: "{app}"; Flags: ignoreversion
+; NOTE: config.py is intentionally NOT shipped. post_install.ps1 generates the production
+; config (with a unique SECRET_KEY). Shipping the dev config.py would leak its insecure
+; SECRET_KEY into every install and break per-install session security.
 Source: "{#SrcRoot}\database_manager.py";  DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\excel_parser.py";      DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\excel_exporter.py";    DestDir: "{app}"; Flags: ignoreversion

@@ -97,13 +97,15 @@ def require_login():
                            'admin_reset_user', 'admin_switch_division'}
     if request.endpoint in _no_division_needed:
         return None
-    if tenancy.current_division_key() is None:
-        # Logged in but no division resolvable (superadmin with none created yet, or a
-        # user whose division was deactivated). Route them somewhere useful.
+    # Resolve the actual division DB. None means: no division selected, OR the session's
+    # division key doesn't exist here (fresh install, deleted/deactivated division, or a
+    # stale cookie from another environment). Redirect instead of letting the DB proxy 500.
+    if tenancy.get_division_db(tenancy.current_division_key()) is None:
         if request.path.startswith('/api/'):
             return jsonify({'error': 'no division selected'}), 409
         if session.get('role') == 'superadmin':
-            flash('Create a division to get started.', 'info')
+            session['active_division'] = None
+            flash('Select or create a division to get started.', 'info')
             return redirect(url_for('admin_home'))
         flash('Your account is not assigned to an active division. Contact your administrator.',
               'error')
