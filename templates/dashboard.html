@@ -4465,24 +4465,12 @@
             if (todayColIndex < 0) return; // today is outside the visible timeline range
 
             const today = new Date();
-            let fraction;
-            if (currentZoom === 'month') {
-                const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-                fraction = (today.getDate() - 1) / daysInMonth;
-            } else if (currentZoom === 'quarter') {
-                const qStartMonth = Math.floor(today.getMonth() / 3) * 3;
-                const qStart = new Date(today.getFullYear(), qStartMonth, 1);
-                const qEnd = new Date(today.getFullYear(), qStartMonth + 3, 0);
-                const qDays = (qEnd - qStart) / 86400000 + 1;
-                fraction = (today - qStart) / 86400000 / qDays;
-            } else {
-                // year or fit — yearly fraction
-                const yearStart = new Date(today.getFullYear(), 0, 1);
-                const yearDays = ((today.getFullYear() % 4 === 0 && (today.getFullYear() % 100 !== 0 || today.getFullYear() % 400 === 0)) ? 366 : 365);
-                fraction = (today - yearStart) / 86400000 / yearDays;
-            }
+            today.setHours(0, 0, 0, 0);
 
-            const todayOffset = (todayColIndex + fraction) * columnWidth;
+            // Position the line with the SAME calendar-aware math the task bars use
+            // (ganttPixelOffset). Computing the offset independently here is what made the
+            // today line drift away from the bars.
+            const todayOffset = ganttPixelOffset(today, projectStart, columnWidth);
 
             const timelineContent = document.querySelector('.timeline-content');
             if (!timelineContent) return;
@@ -4519,14 +4507,22 @@
                 projectStart = new Date(Math.min(...allDates));
                 projectEnd = new Date(Math.max(...allDates));
                 
-                // For year/fit view: round to start of earliest year and end of latest year
+                // Align the timeline origin to a calendar boundary for the current zoom so
+                // columns, task bars (ganttPixelOffset) and the today line all share one
+                // reference point. (An arbitrary day-of-month origin used to make the today
+                // line drift away from the bars.)
                 if (currentZoom === 'year' || currentZoom === 'fit') {
                     projectStart = new Date(projectStart.getFullYear(), 0, 1);
                     projectEnd = new Date(projectEnd.getFullYear(), 11, 31);
+                } else if (currentZoom === 'quarter') {
+                    const sQ = Math.floor(projectStart.getMonth() / 3) * 3;
+                    const eQ = Math.floor(projectEnd.getMonth() / 3) * 3;
+                    projectStart = new Date(projectStart.getFullYear(), sQ, 1);
+                    projectEnd = new Date(projectEnd.getFullYear(), eQ + 3, 0);
                 } else {
-                    // For month/quarter: minimal padding
-                    projectStart.setDate(projectStart.getDate() - 15);
-                    projectEnd.setDate(projectEnd.getDate() + 15);
+                    // month — snap to the 1st of the earliest/latest task month
+                    projectStart = new Date(projectStart.getFullYear(), projectStart.getMonth(), 1);
+                    projectEnd = new Date(projectEnd.getFullYear(), projectEnd.getMonth() + 1, 0);
                 }
             }
 
@@ -4547,23 +4543,18 @@
                 }
             } else if (currentZoom === 'quarter') {
                 const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
-                const quarterMonths = [0, 3, 6, 9];
-
-                for (let year = projectStart.getFullYear(); year <= projectEnd.getFullYear(); year++) {
-                    for (let q = 0; q < 4; q++) {
-                        const qDate = new Date(year, quarterMonths[q], 1);
-                        if (qDate >= projectStart && qDate <= projectEnd) {
-                            const today = new Date();
-                            const currentQ = Math.floor(today.getMonth() / 3);
-                            const isCurrentPeriod = currentQ === q && year === today.getFullYear();
-
-                            periods.push({
-                                date: qDate,
-                                label: `${quarters[q]} ${year}`,
-                                isToday: isCurrentPeriod
-                            });
-                        }
-                    }
+                const today = new Date();
+                // Step from the quarter-aligned origin so columns match ganttPixelOffset exactly
+                while (current <= projectEnd) {
+                    const q = Math.floor(current.getMonth() / 3);
+                    const isCurrentPeriod = Math.floor(today.getMonth() / 3) === q &&
+                                            current.getFullYear() === today.getFullYear();
+                    periods.push({
+                        date: new Date(current),
+                        label: `${quarters[q]} ${current.getFullYear()}`,
+                        isToday: isCurrentPeriod
+                    });
+                    current.setMonth(current.getMonth() + 3);
                 }
             } else {
                 // year or fit — yearly columns
@@ -5630,14 +5621,22 @@
                 projectStart = new Date(Math.min(...allDates));
                 projectEnd = new Date(Math.max(...allDates));
                 
-                // For year/fit view: round to start of earliest year and end of latest year
+                // Align the timeline origin to a calendar boundary for the current zoom so
+                // columns, task bars (ganttPixelOffset) and the today line all share one
+                // reference point. (An arbitrary day-of-month origin used to make the today
+                // line drift away from the bars.)
                 if (currentZoom === 'year' || currentZoom === 'fit') {
                     projectStart = new Date(projectStart.getFullYear(), 0, 1);
                     projectEnd = new Date(projectEnd.getFullYear(), 11, 31);
+                } else if (currentZoom === 'quarter') {
+                    const sQ = Math.floor(projectStart.getMonth() / 3) * 3;
+                    const eQ = Math.floor(projectEnd.getMonth() / 3) * 3;
+                    projectStart = new Date(projectStart.getFullYear(), sQ, 1);
+                    projectEnd = new Date(projectEnd.getFullYear(), eQ + 3, 0);
                 } else {
-                    // For month/quarter: minimal padding
-                    projectStart.setDate(projectStart.getDate() - 15);
-                    projectEnd.setDate(projectEnd.getDate() + 15);
+                    // month — snap to the 1st of the earliest/latest task month
+                    projectStart = new Date(projectStart.getFullYear(), projectStart.getMonth(), 1);
+                    projectEnd = new Date(projectEnd.getFullYear(), projectEnd.getMonth() + 1, 0);
                 }
 
                 console.log('Timeline range:', projectStart.toISOString().split('T')[0], 'to', projectEnd.toISOString().split('T')[0]);
@@ -5660,23 +5659,18 @@
                 }
             } else if (currentZoom === 'quarter') {
                 const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
-                const quarterMonths = [0, 3, 6, 9];
-
-                for (let year = projectStart.getFullYear(); year <= projectEnd.getFullYear(); year++) {
-                    for (let q = 0; q < 4; q++) {
-                        const qDate = new Date(year, quarterMonths[q], 1);
-                        if (qDate >= projectStart && qDate <= projectEnd) {
-                            const today = new Date();
-                            const currentQ = Math.floor(today.getMonth() / 3);
-                            const isCurrentPeriod = currentQ === q && year === today.getFullYear();
-
-                            periods.push({
-                                date: qDate,
-                                label: `${quarters[q]} ${year}`,
-                                isToday: isCurrentPeriod
-                            });
-                        }
-                    }
+                const today = new Date();
+                // Step from the quarter-aligned origin so columns match ganttPixelOffset exactly
+                while (current <= projectEnd) {
+                    const q = Math.floor(current.getMonth() / 3);
+                    const isCurrentPeriod = Math.floor(today.getMonth() / 3) === q &&
+                                            current.getFullYear() === today.getFullYear();
+                    periods.push({
+                        date: new Date(current),
+                        label: `${quarters[q]} ${current.getFullYear()}`,
+                        isToday: isCurrentPeriod
+                    });
+                    current.setMonth(current.getMonth() + 3);
                 }
             } else {
                 // year or fit — yearly columns
