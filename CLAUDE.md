@@ -24,16 +24,16 @@
 ## Rebuilding the installer
 Run from the project root (PowerShell):
 ```powershell
-Remove-Item "installer\Output\OverallDashboardSetup_1.2.3.exe" -Force -ErrorAction SilentlyContinue
+Remove-Item "installer\Output\OverallDashboardSetup_1.3.3.exe" -Force -ErrorAction SilentlyContinue
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "installer\setup.iss"
 ```
-Output: `installer\Output\OverallDashboardSetup_1.2.3.exe`
+Output: `installer\Output\OverallDashboardSetup_1.3.3.exe`
 
 **When to rebuild:** any change to `server.py`, `templates/`, `config.py`, `db_migrate.py`,
 `installer/post_install.ps1`, `installer/setup.iss`, or `migrations/`.
 
 ## Running the installer on a target machine
-1. Copy `installer\Output\OverallDashboardSetup_1.2.3.exe` to the target machine
+1. Copy `installer\Output\OverallDashboardSetup_1.3.3.exe` to the target machine
 2. Right-click → **Run as administrator**
 3. Wizard steps:
    - **Install directory** — default `C:\Program Files\OverallDashboard`

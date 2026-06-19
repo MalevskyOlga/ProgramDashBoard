@@ -2192,7 +2192,7 @@
         </div>
     </div>
     
-    <div class="priority-save-toast" id="prioritySaveToast">✓ Saved to Excel</div>
+    <div class="priority-save-toast" id="prioritySaveToast">✓ Saved</div>
 
     <div class="progress-overlay" id="progressOverlay">
         <div class="progress-content">
@@ -5001,6 +5001,17 @@
         }
 
         function _initDragDrop(tbody) {
+            // Chromium blocks caret placement / typing inside a contenteditable when an
+            // ancestor is draggable="true". Toggle the row's draggable flag on mousedown:
+            // disable it when pressing an editable control (so you can click in and type),
+            // re-enable it when pressing a plain part of the row (so drag-to-reorder works).
+            tbody.addEventListener('mousedown', e => {
+                const tr = e.target.closest('tr[data-id]');
+                if (!tr) return;
+                const onEditable = e.target.closest('[contenteditable="true"], select, input, textarea, button, a');
+                tr.draggable = !onEditable;
+            });
+
             tbody.addEventListener('dragstart', e => {
                 // Don't drag from interactive elements
                 if (e.target.closest('[contenteditable="true"], select, button, input, a')) {
@@ -5415,6 +5426,9 @@
                     const lastRow = table.querySelector('tbody tr:last-child');
                     if (lastRow) {
                         lastRow.classList.add('priority-row-new');
+                        // Disable row dragging so the caret lands in the name cell and you
+                        // can type right away (Chromium blocks caret in draggable ancestors).
+                        lastRow.draggable = false;
                         const nameCell = lastRow.querySelector('[data-field="name"]');
                         if (nameCell) nameCell.focus();
                     }
@@ -5476,7 +5490,12 @@
             loadOverallResourceLoad();
             loadOverallCriticalPathOverview();
             loadProjects();
-            loadPrioritySection();
+            // Don't re-render the pipeline table out from under an active edit:
+            // a background refresh rebuilds its HTML and would wipe the unsaved
+            // text + caret the user is currently typing into a cell.
+            const ae = document.activeElement;
+            const editingPipeline = ae && ae.closest && ae.closest('#priorityTable');
+            if (!editingPipeline) loadPrioritySection();
         }
 
         function applyEmbeddedOverallDashboardPayload() {

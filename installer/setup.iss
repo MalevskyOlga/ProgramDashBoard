@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define AppName        "Overall Programs Dashboard"
-#define AppVersion     "1.3.0"
+#define AppVersion     "1.3.3"
 #define AppPublisher   "Emerson"
 #define ServiceName    "OverallDashboard"
 #define DefaultPort    "8092"
@@ -40,8 +40,10 @@ var
   PortPage:   TInputQueryWizardPage;
   DbPage:     TInputOptionWizardPage;
   DivPage:    TInputQueryWizardPage;
+  AdminPage:  TInputQueryWizardPage;
   PortNumber: String;
   DbExists:   Boolean;
+  ControlDbExists: Boolean;
 
 procedure InitializeWizard;
 begin
@@ -54,6 +56,9 @@ begin
   PortPage.Values[0] := '{#DefaultPort}';
 
   DbExists := FileExists(ExpandConstant('{commonappdata}\OverallDashboard\dashboards.db'));
+  // A control.db means the multi-tenant setup (and its super-admin) already exists,
+  // so we skip the Administrator Email page below — no need to ask again.
+  ControlDbExists := FileExists(ExpandConstant('{commonappdata}\OverallDashboard\control.db'));
   DbPage := CreateInputOptionPage(
     PortPage.ID,
     'Database',
@@ -73,6 +78,16 @@ begin
     'migrated into this division. Leave blank to start empty — e.g. a clean deployment for another division.');
   DivPage.Add('First division name (blank = start empty):', False);
   DivPage.Values[0] := 'Flame & Gas';
+
+  AdminPage := CreateInputQueryPage(
+    DivPage.ID,
+    'Administrator Email',
+    'Email address for the administrator account.',
+    'The "admin" super-user signs in to manage divisions and users. This email is used so the ' +
+    'admin can reset their own password via the "Forgot your password?" link (a reset link is ' +
+    'sent to this address). This page is skipped when an administrator already exists on this machine.');
+  AdminPage.Add('Administrator email address:', False);
+  AdminPage.Values[0] := '';
 end;
 
 function ShouldSkipPage(PageID: Integer): Boolean;
@@ -80,6 +95,16 @@ begin
   Result := False;
   if PageID = DbPage.ID then
     Result := not DbExists;
+  // Don't ask for an admin email if an administrator is already defined
+  // (control.db present). bootstrap_control never overwrites an existing
+  // email, so re-prompting here would be pointless.
+  if PageID = AdminPage.ID then
+    Result := ControlDbExists;
+  // Likewise, don't ask for a first-division name if divisions already exist
+  // (control.db present). migrate_to_division leaves existing divisions
+  // unchanged, so the name would be ignored anyway.
+  if PageID = DivPage.ID then
+    Result := ControlDbExists;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -94,6 +119,12 @@ begin
       Result := False;
     end else
       PortNumber := PortPage.Values[0];
+  end;
+  if CurPageID = AdminPage.ID then begin
+    if Pos('@', Trim(AdminPage.Values[0])) = 0 then begin
+      MsgBox('Please enter a valid administrator email address.', mbError, MB_OK);
+      Result := False;
+    end;
   end;
 end;
 
@@ -118,6 +149,21 @@ end;
 function GetFirstDivision(Param: String): String;
 begin
   Result := Trim(DivPage.Values[0]);
+end;
+
+function GetAdminEmail(Param: String): String;
+begin
+  Result := Trim(AdminPage.Values[0]);
+end;
+
+function ShouldShowCredentials(): Boolean;
+begin
+  // Only pop up the credentials notepad on a fresh setup: when there was no
+  // pre-existing control.db, bootstrap creates a new admin and writes a temp
+  // password. On an upgrade the admin already exists (and any leftover
+  // credentials file holds a stale temp password), so don't show it.
+  Result := (not ControlDbExists) and
+            FileExists(ExpandConstant('{commonappdata}\OverallDashboard\INITIAL_ADMIN_CREDENTIALS.txt'));
 end;
 
 procedure RunPowerShell(Script: String; Args: String);
@@ -148,6 +194,8 @@ begin
     ForceDirectories(ExpandConstant('{commonappdata}\OverallDashboard'));
     SaveStringToFile(ExpandConstant('{commonappdata}\OverallDashboard\first_division.txt'),
                      GetFirstDivision(''), False);
+    SaveStringToFile(ExpandConstant('{commonappdata}\OverallDashboard\admin_email.txt'),
+                     GetAdminEmail(''), False);
     Args := '-InstallDir "' + ExpandConstant('{app}') + '"' +
             ' -DataDir "'    + ExpandConstant('{commonappdata}\OverallDashboard') + '"' +
             ' -Port '        + GetPort('') +
@@ -231,6 +279,14 @@ Name: "{group}\Uninstall";          Filename: "{uninstallexe}"
 ; Nothing here — browser launcher written in [Run] below
 
 [Run]
+; Show the initial admin credentials (username + temp password + reset email) so the
+; person installing knows how to sign in. Only exists on a fresh install.
+Filename: "notepad.exe"; \
+  Parameters: """{commonappdata}\OverallDashboard\INITIAL_ADMIN_CREDENTIALS.txt"""; \
+  Description: "Show the administrator sign-in details"; \
+  Flags: postinstall shellexec skipifsilent nowait; \
+  Check: ShouldShowCredentials
+
 ; Open browser after install (optional, skippable by user)
 Filename: "http://localhost:{code:GetPort}"; \
   Description: "Open dashboard in browser now"; \

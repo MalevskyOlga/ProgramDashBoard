@@ -269,22 +269,55 @@ if ($DbAction -eq 'replace') {
 }
 
 # -- 5b. Bootstrap control DB (users/divisions) + initial super-admin ----------
-Log "      Bootstrapping control database..."
-$bootstrapOut = & $VenvPython (Join-Path $InstallDir "scripts\bootstrap_control.py") `
-    --admin-username "admin" 2>&1
+# Admin email is read from a file (handles any address safely) and used to seed the
+# super-admin on a fresh install, or backfill an emailless admin on upgrade -- so the
+# admin can self-serve a password reset via "Forgot your password?".
+$adminEmail = ""
+$adminEmailFile = Join-Path $DataDir 'admin_email.txt'
+if (Test-Path $adminEmailFile) {
+    # File may be empty (the installer skips the email page when an admin already
+    # exists). Get-Content -Raw returns $null for an empty file, and .Trim() on $null
+    # throws, so guard on truthiness before trimming.
+    $rawEmail = Get-Content $adminEmailFile -Raw
+    if ($rawEmail) { $adminEmail = $rawEmail.Trim() }
+}
+Log "      Bootstrapping control database... (admin email: '$adminEmail')"
+# Build args as an array and only pass --admin-email when we actually have one.
+# Windows PowerShell drops empty-string arguments to native exes, which would turn
+# `--admin-email ""` into a bare `--admin-email` and break argparse. The script
+# defaults the email to '' anyway, so omitting the flag is equivalent.
+$bootstrapArgs = @((Join-Path $InstallDir "scripts\bootstrap_control.py"), '--admin-username', 'admin')
+if ($adminEmail) { $bootstrapArgs += @('--admin-email', $adminEmail) }
+$bootstrapOut = & $VenvPython @bootstrapArgs 2>&1
 $bootstrapOut | ForEach-Object { Log "control: $_" }
+Remove-Item $adminEmailFile -Force -ErrorAction SilentlyContinue
 # If a fresh super-admin was created, persist its temp password where the operator can find it.
 $adminLine = $bootstrapOut | Where-Object { $_ -match 'Password\s*:' } | Select-Object -First 1
 if ($adminLine) {
     $credFile = Join-Path $DataDir "INITIAL_ADMIN_CREDENTIALS.txt"
+    $dashUrl  = "http://${SrvHost}:$Port"
     @(
         "Overall Programs Dashboard - initial administrator account",
         "Created: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')",
-        "Username: admin",
-        ($adminLine.Trim()),
         "",
-        "Sign in at the dashboard URL and change this password immediately.",
-        "Then create your divisions and users from the Admin page."
+        "Open the dashboard:  $dashUrl",
+        "  (on this machine you can also use http://localhost:$Port)",
+        "",
+        "Username : admin",
+        ($adminLine.Trim()),
+        "Email    : $(if ($adminEmail) { $adminEmail } else { '(none set)' })",
+        "",
+        "FIRST SIGN-IN:",
+        "  1. Open the dashboard URL above and sign in with the username/password.",
+        "  2. You'll be prompted to set your own password.",
+        "",
+        "FORGOT YOUR PASSWORD LATER?",
+        $(if ($adminEmail) {
+            "  Go to the login page, click 'Forgot your password?', and enter $adminEmail." } else {
+            "  No email was set, so self-service reset is unavailable. Re-run the installer to set one." }),
+        "",
+        "After signing in, create your divisions and users from the Admin page.",
+        "(Every user you create needs an email so they can self-reset too.)"
     ) -join "`r`n" | Set-Content -Encoding UTF8 -Path $credFile
     Log "      Initial admin credentials written -> $credFile"
 }
@@ -292,9 +325,19 @@ if ($adminLine) {
 # -- 5c. First-division setup: migrate existing data or create a named division
 # The division name is read from a file written by the installer (handles '&'/spaces safely).
 $divFile = Join-Path $DataDir 'first_division.txt'
-if (Test-Path $divFile) { $FirstDivision = (Get-Content $divFile -Raw).Trim() }
+if (Test-Path $divFile) {
+    # File is empty when the operator left the division name blank ("start empty").
+    # Get-Content -Raw returns $null for an empty file and .Trim() on $null throws,
+    # so guard on truthiness before trimming.
+    $rawDiv = Get-Content $divFile -Raw
+    if ($rawDiv) { $FirstDivision = $rawDiv.Trim() }
+}
 Log "      First-division setup (name: '$FirstDivision')..."
-& $VenvPython (Join-Path $InstallDir "scripts\migrate_to_division.py") --name "$FirstDivision" 2>&1 |
+# Same empty-arg guard as the admin email above: only pass --name when non-empty
+# (the script treats a missing/blank name as a vanilla, empty start).
+$divArgs = @((Join-Path $InstallDir "scripts\migrate_to_division.py"))
+if ($FirstDivision) { $divArgs += @('--name', $FirstDivision) }
+& $VenvPython @divArgs 2>&1 |
     ForEach-Object { Log "division: $_" }
 Remove-Item $divFile -Force -ErrorAction SilentlyContinue
 

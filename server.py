@@ -321,6 +321,11 @@ def admin_create_user():
         division_id = int(division_id)
     if not username or not password:
         flash('Username and temporary password are required.', 'error')
+    elif not email or '@' not in email:
+        # Email is mandatory so every account can self-serve a password reset.
+        flash('A valid email address is required (used for self-service password reset).', 'error')
+    elif tenancy.get_user_by_email(email):
+        flash('That email is already in use by another account.', 'error')
     elif tenancy.get_user_by_username(username):
         flash('That username already exists.', 'error')
     elif role != 'superadmin' and not division_id:
@@ -494,13 +499,13 @@ def api_get_task(task_id):
 def api_update_task(task_id):
     """API endpoint to update a task"""
     data = request.json
-    
+
     # Validate required fields
     if not data:
         return jsonify({'error': 'No data provided'}), 400
-    
+
     success = db_manager.update_task(task_id, data)
-    
+
     if success:
         task = db_manager.get_task_by_id(task_id)
         return jsonify({'message': 'Task updated successfully', 'task': task})
@@ -525,7 +530,7 @@ def api_create_task(project_name):
         return jsonify({'error': 'Project not found'}), 404
     
     data['project_id'] = project['id']
-    
+
     task_id = db_manager.create_task(data)
     
     if task_id:
