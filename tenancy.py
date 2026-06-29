@@ -314,8 +314,15 @@ def list_users():
 
 
 def authenticate(username, password):
-    """Return the user dict on success, else None."""
-    user = get_user_by_username(username)
+    """Return the user dict on success, else None.
+
+    Accepts either the username or the account email as the identifier. Password
+    reset is keyed on email, so users naturally try their email at login after a
+    reset; treat both the same. Emails are unique (enforced at user creation)."""
+    identifier = (username or '').strip()
+    user = get_user_by_username(identifier)
+    if not user and '@' in identifier:
+        user = get_user_by_email(identifier)
     if not user or not user['is_active']:
         return None
     if not check_password_hash(user['password_hash'], password):

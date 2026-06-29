@@ -7,6 +7,7 @@ import os
 import sys
 import uuid
 import tempfile
+import threading
 from datetime import datetime
 from pathlib import Path
 from io import BytesIO
@@ -245,7 +246,16 @@ def forgot_password():
         if user:
             raw_token, _code = tenancy.create_reset(user['id'])
             reset_url = config.APP_BASE_URL.rstrip('/') + url_for('reset_password', token=raw_token)
-            mailer.send_password_reset(user['email'], reset_url)
+            # Send the email off the request thread: SMTP can take several seconds
+            # (or stall to the socket timeout if the relay is slow), and the dev
+            # server is single-threaded -- blocking here freezes the whole app and
+            # makes the page look broken. Build the URL here (needs url_for), then
+            # fire-and-forget the actual send.
+            threading.Thread(
+                target=mailer.send_password_reset,
+                args=(user['email'], reset_url),
+                daemon=True,
+            ).start()
         # Always show the same neutral message (no account enumeration).
         sent = True
     return render_template('forgot_password.html', sent=sent,

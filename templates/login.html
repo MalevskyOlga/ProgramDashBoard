@@ -5,7 +5,7 @@
     <p class="subtitle">Sign in to your division</p>
     <form method="post" action="{{ url_for('login') }}">
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
-        <label for="username">Username</label>
+        <label for="username">Username or email</label>
         <input type="text" id="username" name="username" autofocus autocomplete="username" required>
         <label for="password">Password</label>
         <input type="password" id="password" name="password" autocomplete="current-password" required>
