@@ -2086,6 +2086,9 @@
                         {% if is_superadmin %}
                         <a href="{{ url_for('admin_home') }}" class="header-action-btn" style="text-decoration:none;">⚙️ Admin</a>
                         {% endif %}
+                        {% if is_division_admin %}
+                        <a href="{{ url_for('manage_users') }}" class="header-action-btn" style="text-decoration:none;">👥 Manage Users</a>
+                        {% endif %}
                         <a href="{{ url_for('logout') }}" class="header-action-btn" style="text-decoration:none;">Sign out</a>
                     </div>
                     {% endif %}
@@ -2104,8 +2107,19 @@
 
         <div class="tab-pane active" data-pane="schedule">
             <div class="timeline-section">
-                <h2>Portfolio Schedule Overview</h2>
-                <p>Planned milestones & gates</p>
+                <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+                    <div>
+                        <h2 style="margin:0;">Portfolio Schedule Overview</h2>
+                        <p style="margin:4px 0 0;">Planned milestones &amp; gates</p>
+                    </div>
+                    {% if not is_viewer %}
+                    <a href="/api/portfolio-schedule/export-ppt"
+                       class="import-btn"
+                       style="text-decoration:none;font-size:0.82em;padding:6px 14px;white-space:nowrap;">
+                        📊 Export to PPT
+                    </a>
+                    {% endif %}
+                </div>
                 <div id="timelineContainer">
                     <div class="loading">Loading overall gate timeline...</div>
                 </div>
@@ -2126,7 +2140,7 @@
                         <h2>Overall Resource Load</h2>
                         <p>Owners, active work & cross-project load</p>
                     </div>
-                    <a href="/disciplines" target="_blank" class="import-btn" style="text-decoration:none;white-space:nowrap;align-self:center;">🏷️ Manage Discipline Map</a>
+                    {% if not is_viewer %}<a href="/disciplines" target="_blank" class="import-btn" style="text-decoration:none;white-space:nowrap;align-self:center;">🏷️ Manage Discipline Map</a>{% endif %}
                 </div>
                 <div class="sticky-summary-header">
                     <div class="resource-command-center" id="resourceSummary">
@@ -2160,6 +2174,7 @@
             <div class="resource-section">
                 <h2>Projects</h2>
                 <p>All imported Gantt project dashboards</p>
+                {% if not is_viewer %}
                 <div class="import-section">
                     <button class="import-btn" id="importBtn" onclick="document.getElementById('fileInput').click()">
                         📁 Import New Project from Excel
@@ -2167,6 +2182,7 @@
                     <input type="file" id="fileInput" accept=".xlsx" onchange="handleFileSelect(event)">
                     <div class="message" id="message"></div>
                 </div>
+                {% endif %}
                 <div id="projectsContainer">
                     <div class="loading">Loading projects...</div>
                 </div>
@@ -4873,6 +4889,12 @@
                     <div class="gantt-menu" id="gantt-menu-${p.id}">
                         <button onclick="addGanttToPriorityProject(${p.id})">📥 Import from Excel</button>
                         <button onclick="showLinkGanttPicker(${p.id})">🔗 Link existing</button>
+                        <div style="border-top:1px solid #e2e8f0;margin:4px 0;"></div>
+                        <div style="font-size:11px;color:#718096;padding:2px 10px;font-weight:600;">Start from template:</div>
+                        <button onclick="importGanttTemplate('Action Item List _NPD Template.xlsx', ${p.id}, event)">📄 NPD Template</button>
+                        <button onclick="importGanttTemplate('Action Item List _NPD Template Gates.xlsx', ${p.id}, event)">📄 NPD Template — Gates</button>
+                        <button onclick="importGanttTemplate('Action Item List _NPD Template - SS.xlsx', ${p.id}, event)">📄 NPD Template — SS</button>
+                        <button onclick="importGanttTemplate('Action Item List _NPD Template - Discontinuance .xlsx', ${p.id}, event)">📄 NPD Template — Discontinuance</button>
                     </div>
                 </span>`;
             const linkArea = p.dashboard_name
@@ -5315,6 +5337,53 @@
                 _openGanttMenuId = null;
             }
         });
+
+        async function importGanttTemplate(filename, projectId, event) {
+            event.stopPropagation();
+            if (_openGanttMenuId) {
+                const menu = document.getElementById(`gantt-menu-${_openGanttMenuId}`);
+                if (menu) menu.classList.remove('open');
+                _openGanttMenuId = null;
+            }
+            const overlay = document.getElementById('progressOverlay');
+            const progressText = document.getElementById('progressText');
+            overlay.classList.add('show');
+            progressText.textContent = 'Loading template...';
+            try {
+                const resp = await fetch('/static/gantt-templates/' + encodeURIComponent(filename));
+                if (!resp.ok) throw new Error('Template file not found');
+                const blob = await resp.blob();
+                const file = new File([blob], filename, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+                progressText.textContent = 'Processing template...';
+                const formData = new FormData();
+                formData.append('file', file);
+                const tr = document.querySelector(`#priorityTable tr[data-id="${projectId}"]`);
+                const rowName = tr?.querySelector('.priority-editable-name')?.textContent?.trim();
+                if (rowName) formData.append('project_name', rowName);
+
+                const response = await fetch('/api/upload-excel', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Import failed');
+
+                progressText.textContent = 'Linking to project...';
+                if (projectId && result.project_name) {
+                    await fetch(`/api/priority-projects/${projectId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ field: 'linked_dashboard', value: result.project_name })
+                    });
+                }
+                overlay.classList.remove('show');
+                showMessage(`Template imported & linked: ${result.project_name || filename}`, 'success');
+                await loadPrioritySection();
+                await refreshDashboardData();
+            } catch (error) {
+                console.error('Error importing template:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+                overlay.classList.remove('show');
+            }
+        }
 
         let _priorityGanttTargetId = null;
 

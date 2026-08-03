@@ -243,6 +243,13 @@ class DatabaseManager:
         except Exception:
             pass  # column already exists
 
+        # Migration: add gate_5_date field
+        try:
+            cursor.execute('ALTER TABLE projects ADD COLUMN gate_5_date TEXT')
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
         # Risks table — ensure correct schema (project_id nullable, pipeline_project_id present)
         cursor.execute("PRAGMA table_info(risks)")
         risk_info = cursor.fetchall()

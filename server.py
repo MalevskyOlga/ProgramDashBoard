@@ -69,6 +69,18 @@ def login_required(view):
     return wrapped
 
 
+def division_admin_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not session.get('user_id'):
+            return redirect(url_for('login', next=request.path))
+        if session.get('role') not in ('superadmin', 'division_admin'):
+            flash('Division admin access required.', 'error')
+            return redirect(url_for('index'))
+        return view(*args, **kwargs)
+    return wrapped
+
+
 def superadmin_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
@@ -96,7 +108,9 @@ def require_login():
     _no_division_needed = {'logout', 'change_password', 'admin_home',
                            'admin_create_division', 'admin_toggle_division',
                            'admin_create_user', 'admin_update_user', 'admin_toggle_user',
-                           'admin_reset_user', 'admin_switch_division'}
+                           'admin_reset_user', 'admin_switch_division',
+                           'manage_users', 'division_admin_create_user',
+                           'division_admin_toggle_user', 'division_admin_reset_user'}
     if request.endpoint in _no_division_needed:
         return None
     # Resolve the actual division DB. None means: no division selected, OR the session's
@@ -124,6 +138,14 @@ def require_login():
     return None
 
 
+@app.before_request
+def block_viewer_writes():
+    """Viewers may not modify any data."""
+    if session.get('role') == 'viewer' and request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'View-only access — you do not have permission to make changes.'}), 403
+
+
 @app.context_processor
 def inject_user_context():
     """Make the current user + division list available to all templates."""
@@ -141,6 +163,8 @@ def inject_user_context():
             'division': session.get('division'),
         } if session.get('user_id') else None,
         'is_superadmin': session.get('role') == 'superadmin',
+        'is_division_admin': session.get('role') == 'division_admin',
+        'is_viewer': session.get('role') == 'viewer',
         'active_division': tenancy.current_division_key(),
         'all_divisions': divisions,
     }
@@ -389,6 +413,85 @@ def admin_switch_division():
     return redirect(request.referrer or url_for('index'))
 
 
+# ---------------------------------------------------------------------------
+# Division admin: user management scoped to own division
+# ---------------------------------------------------------------------------
+
+def _get_current_division():
+    """Return the division dict for the currently logged-in user."""
+    key = tenancy.current_division_key()
+    return tenancy.get_division_by_key(key) if key else None
+
+
+@app.route('/manage-users')
+@division_admin_required
+def manage_users():
+    division = _get_current_division()
+    if not division:
+        flash('No active division.', 'error')
+        return redirect(url_for('index'))
+    users = tenancy.list_users_by_division(division['id'])
+    return render_template('manage_users.html', division=division, users=users)
+
+
+@app.route('/manage-users/users', methods=['POST'])
+@division_admin_required
+def division_admin_create_user():
+    division = _get_current_division()
+    if not division:
+        flash('No active division.', 'error')
+        return redirect(url_for('manage_users'))
+    username = (request.form.get('username') or '').strip()
+    email = (request.form.get('email') or '').strip() or None
+    password = request.form.get('password') or ''
+    role = request.form.get('role') or 'user'
+    if role not in ('user', 'viewer'):
+        role = 'user'
+    if not username or not password:
+        flash('Username and temporary password are required.', 'error')
+    elif not email or '@' not in email:
+        flash('A valid email address is required.', 'error')
+    elif tenancy.get_user_by_email(email):
+        flash('That email is already in use.', 'error')
+    elif tenancy.get_user_by_username(username):
+        flash('That username already exists.', 'error')
+    else:
+        tenancy.create_user(username, password, email=email, role=role,
+                            division_id=division['id'], must_change_password=True)
+        flash(f'User "{username}" created.', 'success')
+    return redirect(url_for('manage_users'))
+
+
+@app.route('/manage-users/users/<int:user_id>/toggle', methods=['POST'])
+@division_admin_required
+def division_admin_toggle_user(user_id):
+    division = _get_current_division()
+    user = tenancy.get_user_by_id(user_id)
+    if not division or not user or user.get('division_id') != division['id']:
+        flash('User not found in your division.', 'error')
+        return redirect(url_for('manage_users'))
+    if user['id'] == session.get('user_id'):
+        flash('You cannot disable your own account.', 'error')
+        return redirect(url_for('manage_users'))
+    tenancy.update_user(user_id, is_active=not user['is_active'])
+    return redirect(url_for('manage_users'))
+
+
+@app.route('/manage-users/users/<int:user_id>/reset', methods=['POST'])
+@division_admin_required
+def division_admin_reset_user(user_id):
+    division = _get_current_division()
+    user = tenancy.get_user_by_id(user_id)
+    if not division or not user or user.get('division_id') != division['id']:
+        flash('User not found in your division.', 'error')
+        return redirect(url_for('manage_users'))
+    _token, code = tenancy.create_reset(user_id)
+    flash(f'Reset code for "{user["username"]}": {code} '
+          f'(valid {config.RESET_TOKEN_TTL_MINUTES} min). Give this to the user to enter on the reset page.',
+          'success')
+    return redirect(url_for('manage_users'))
+
+
 @app.after_request
 def add_no_cache_headers(response):
     """Force fresh dashboard/API reads so detailed gantt edits propagate everywhere."""
@@ -429,8 +532,9 @@ def view_project(project_name):
                          project_name=project_name,
                          project_manager=project['manager'],
                          PROJECT_NAME=project_name,
-                         PROJECT_MANAGER=project['manager'],
-                         PROGRAM_MANAGER=project.get('program_manager') or '')
+                         PROJECT_MANAGER=project.get('manager') or '',
+                         PROGRAM_MANAGER=project.get('program_manager') or '',
+                         GATE_5_DATE=project.get('gate_5_date') or '')
 
 
 @app.route('/project/<path:project_name>/schematic')
@@ -957,6 +1061,30 @@ def api_export_schematic_to_ppt(project_name):
         )
 
     return jsonify({'error': 'Failed to export schematic to PowerPoint'}), 500
+
+
+@app.route('/api/portfolio-schedule/export-ppt')
+def api_export_portfolio_schedule_ppt():
+    """Export the Portfolio Schedule Overview to a PowerPoint slide."""
+    import traceback
+    try:
+        from portfolio_ppt_exporter import PortfolioScheduleExporter
+        timeline_data = db_manager.get_overall_gate_timeline()
+        div = _get_current_division()
+        division_name = div['name'] if div else 'Portfolio'
+        exporter = PortfolioScheduleExporter()
+        ppt_path = exporter.export(timeline_data, division_name, config.EXCEL_OUTPUT_FOLDER)
+        if ppt_path and os.path.exists(ppt_path):
+            return send_file(
+                ppt_path,
+                as_attachment=True,
+                download_name=os.path.basename(ppt_path),
+                mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            )
+        return jsonify({'error': 'No data — import projects with gate milestones first'}), 422
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/project/<path:project_name>/export-gantt-ppt', methods=['POST'])
@@ -1972,6 +2100,40 @@ def api_update_program_manager(project_name):
         conn.execute('UPDATE projects SET program_manager = ? WHERE name = ?', (value, project_name))
         conn.commit()
         return jsonify({'success': True, 'program_manager': value})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/api/project/<path:project_name>/project_manager', methods=['PUT'])
+def api_update_project_manager(project_name):
+    """Update the project manager for a project."""
+    conn = None
+    try:
+        value = (request.json or {}).get('project_manager', '').strip()
+        conn = db_manager.get_connection()
+        conn.execute('UPDATE projects SET manager = ? WHERE name = ?', (value, project_name))
+        conn.commit()
+        return jsonify({'success': True, 'project_manager': value})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/api/project/<path:project_name>/gate_5_date', methods=['PUT'])
+def api_update_gate_5_date(project_name):
+    """Update the expected end (Gate 5) date for a project."""
+    conn = None
+    try:
+        value = (request.json or {}).get('gate_5_date', '').strip()
+        conn = db_manager.get_connection()
+        conn.execute('UPDATE projects SET gate_5_date = ? WHERE name = ?', (value or None, project_name))
+        conn.commit()
+        return jsonify({'success': True, 'gate_5_date': value})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:

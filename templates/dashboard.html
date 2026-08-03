@@ -1752,10 +1752,10 @@
     <div class="header">
         <h1>🚀 {{PROJECT_NAME}}</h1>
         <div class="header-meta">
-            <span class="header-meta-item">Project Manager: <strong>{{PROJECT_MANAGER}}</strong></span>
-            <span class="header-meta-item">Program Manager: <span id="programManagerDisplay" class="editable-header-field" title="Click to edit" onclick="editProgramManager()">{{PROGRAM_MANAGER or 'Click to add…'}}</span></span>
+            <span class="header-meta-item">Project Manager: <span id="projectManagerDisplay" {% if not is_viewer %}class="editable-header-field" title="Click to edit" onclick="editProjectManager()"{% endif %}>{{PROJECT_MANAGER or 'Click to add…'}}</span></span>
+            <span class="header-meta-item">Program Manager: <span id="programManagerDisplay" {% if not is_viewer %}class="editable-header-field" title="Click to edit" onclick="editProgramManager()"{% endif %}>{{PROGRAM_MANAGER or 'Click to add…'}}</span></span>
             <span class="header-meta-item">Start: <strong id="headerStartDate">—</strong></span>
-            <span class="header-meta-item">Expected End (Gate 5): <strong id="headerEndDate">—</strong></span>
+            <span class="header-meta-item">Expected End (Gate 5): <span id="headerEndDate" {% if not is_viewer %}class="editable-header-field" title="Click to set date" onclick="editGate5Date()"{% endif %}>—</span></span>
         </div>
         <div class="save-indicator" id="saveIndicator"></div>
     </div>
@@ -1793,7 +1793,7 @@
 
     <div class="toolbar">
         <a href="/" class="btn btn-secondary" style="text-decoration: none;">🏠 Main Dashboard</a>
-        <button class="btn btn-primary" onclick="openAddTaskModal()">➕ Add New Task</button>
+        {% if not is_viewer %}<button class="btn btn-primary" onclick="openAddTaskModal()">➕ Add New Task</button>{% endif %}
         <button class="btn btn-danger" onclick="showCriticalPath()">🔴 Show Critical Path</button>
         <div class="export-dropdown" id="exportDropdownWrapper">
             <button class="export-dropdown-toggle" onclick="toggleExportDropdown(event)" title="Export options">
@@ -1814,7 +1814,7 @@
                 <button id="btnLongestChain" onclick="showLongestChain(); closeMoreDropdown()">🔗 Longest Chain</button>
                 <button onclick="openDepMap(); closeMoreDropdown()">🗺 Dependency Map</button>
                 <div class="more-divider"></div>
-                <button id="whatIfBtn" onclick="toggleWhatIf(); closeMoreDropdown()" title="Try date changes without saving — discard or commit when done">🧪 What-If</button>
+                {% if not is_viewer %}<button id="whatIfBtn" onclick="toggleWhatIf(); closeMoreDropdown()" title="Try date changes without saving — discard or commit when done">🧪 What-If</button>{% endif %}
                 <button onclick="refreshDashboard(); closeMoreDropdown()" title="Clear cache and reload">🔄 Force Refresh</button>
             </div>
         </div>
@@ -2877,8 +2877,10 @@
 ];
 
         // API Configuration
-        const PROJECT_NAME = "{{ project_name }}";
-        const PROJECT_MANAGER = "{{ project_manager }}";
+        const PROJECT_NAME = {{ project_name | tojson }};
+        const PROJECT_MANAGER = {{ project_manager | tojson }};
+        let manualGate5Date = {{ GATE_5_DATE | tojson }};
+        const IS_VIEWER = {{ is_viewer | tojson }};
         const API_BASE = '/api/project/' + encodeURIComponent(PROJECT_NAME);
         
         let currentEditId = null;
@@ -4068,9 +4070,12 @@
                 const earliest = activeTasks.reduce((a, b) => new Date(a.entered) < new Date(b.entered) ? a : b);
                 document.getElementById('headerStartDate').textContent = formatDateShort(earliest.entered) || '—';
             }
-            const gate5 = tasks.find(t => t.milestone && t.name && /gate\s*5/i.test(t.name) && t.due);
-            if (gate5) {
-                document.getElementById('headerEndDate').textContent = formatDateShort(gate5.due) || '—';
+            const endEl = document.getElementById('headerEndDate');
+            if (manualGate5Date) {
+                endEl.textContent = formatDateShort(manualGate5Date);
+            } else {
+                const gate5 = tasks.find(t => t.milestone && t.name && /gate\s*5/i.test(t.name) && t.due);
+                if (gate5) endEl.textContent = formatDateShort(gate5.due) || '—';
             }
         }
 
@@ -4096,6 +4101,63 @@
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ program_manager: val })
+                });
+            };
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') { input.value = current; input.blur(); } });
+        }
+
+        function editProjectManager() {
+            const display = document.getElementById('projectManagerDisplay');
+            const current = display.textContent === 'Click to add…' ? '' : display.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = current;
+            input.style.cssText = 'background:transparent;border:none;border-bottom:1px solid white;color:white;font-size:inherit;font-family:inherit;width:160px;outline:none;';
+            display.replaceWith(input);
+            input.focus();
+            const save = async () => {
+                const val = input.value.trim();
+                const span = document.createElement('span');
+                span.id = 'projectManagerDisplay';
+                span.className = 'editable-header-field';
+                span.title = 'Click to edit';
+                span.onclick = editProjectManager;
+                span.textContent = val || 'Click to add…';
+                input.replaceWith(span);
+                await fetch(`${API_BASE}/project_manager`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project_manager: val })
+                });
+            };
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') { input.value = current; input.blur(); } });
+        }
+
+        function editGate5Date() {
+            const display = document.getElementById('headerEndDate');
+            const current = manualGate5Date || '';
+            const input = document.createElement('input');
+            input.type = 'date';
+            input.value = current;
+            input.style.cssText = 'background:transparent;border:none;border-bottom:1px solid white;color:white;font-size:inherit;font-family:inherit;outline:none;cursor:pointer;';
+            display.replaceWith(input);
+            input.focus();
+            const save = async () => {
+                const val = input.value.trim();
+                manualGate5Date = val;
+                const span = document.createElement('span');
+                span.id = 'headerEndDate';
+                span.className = 'editable-header-field';
+                span.title = 'Click to set date';
+                span.onclick = editGate5Date;
+                span.textContent = val ? formatDateShort(val) : '—';
+                input.replaceWith(span);
+                await fetch(`${API_BASE}/gate_5_date`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ gate_5_date: val })
                 });
             };
             input.addEventListener('blur', save);
@@ -4644,13 +4706,13 @@
                     const reworkActive = task.is_rework_cause ? 'active' : '';
                     const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
                     const gateReworkBtn = task.status !== 'Completed' ? `<button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>` : '';
-                    actionsHTML = `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="gate-signoff-btn ${signOffClass}" onclick="openGateSignOff(${task.id})" title="Gate sign-off">${signOffLabel}</button>${gateReworkBtn}`;
+                    actionsHTML = IS_VIEWER ? `<button class="gate-signoff-btn ${signOffClass}" title="Gate sign-off" style="pointer-events:none;opacity:0.6;">${signOffLabel}</button>` : `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="gate-signoff-btn ${signOffClass}" onclick="openGateSignOff(${task.id})" title="Gate sign-off">${signOffLabel}</button>${gateReworkBtn}`;
                 } else {
                     const canRework = (task.critical || task.milestone || (task.name && task.name.toLowerCase().includes('gate'))) && task.status !== 'Completed';
                     const reworkActive = task.is_rework_cause ? 'active' : '';
                     const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
                     const reworkBtn = canRework ? `<button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>` : '';
-                    actionsHTML = `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>${reworkBtn}`;
+                    actionsHTML = IS_VIEWER ? `<button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>` : `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>${reworkBtn}`;
                 }
 
                 const showReworkPill = (gatePassedRework || gatePassedAfterRework) && signOff && signOff.rework_due_date;
@@ -5784,13 +5846,13 @@
                         const reworkActive = task.is_rework_cause ? 'active' : '';
                         const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
                         const gateReworkBtn = task.status !== 'Completed' ? `<button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>` : '';
-                        actionsHTML = `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="gate-signoff-btn ${signOffClass}" onclick="openGateSignOff(${task.id})" title="Gate sign-off">${signOffLabel}</button>${gateReworkBtn}`;
+                        actionsHTML = IS_VIEWER ? `<button class="gate-signoff-btn ${signOffClass}" title="Gate sign-off" style="pointer-events:none;opacity:0.6;">${signOffLabel}</button>` : `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="gate-signoff-btn ${signOffClass}" onclick="openGateSignOff(${task.id})" title="Gate sign-off">${signOffLabel}</button>${gateReworkBtn}`;
                     } else {
                         const canRework = (task.critical || task.milestone || (task.name && task.name.toLowerCase().includes('gate'))) && task.status !== 'Completed';
                         const reworkActive = task.is_rework_cause ? 'active' : '';
                         const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
                         const reworkBtn = canRework ? `<button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>` : '';
-                        actionsHTML = `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>${reworkBtn}`;
+                        actionsHTML = IS_VIEWER ? `<button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>` : `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>${reworkBtn}`;
                     }
 
                     const showReworkPill = (gatePassedRework || gatePassedAfterRework) && signOff && signOff.rework_due_date;
@@ -6552,19 +6614,9 @@
                 var list = document.getElementById('depPickerList');
                 if (!list) return;
 
-                var startDateObj = taskStartDate ? new Date(taskStartDate) : null;
-                var startDateObjPlus2 = startDateObj ? new Date(startDateObj.getTime() + 2 * 24 * 60 * 60 * 1000) : null;
-
                 var candidates = tasks.filter(function(t) {
-                    if (t.id === taskId) return false;
-                    if (!t.due) return false;
-                    if (!startDateObj) return true;
-                    return new Date(t.due) <= startDateObjPlus2;
+                    return t.id !== taskId;
                 });
-
-                if (candidates.length === 0) {
-                    candidates = tasks.filter(function(t) { return t.id !== taskId; });
-                }
 
                 if (candidates.length === 0) {
                     list.innerHTML = '<div style="color:#999;padding:8px;text-align:center;">No other tasks in project</div>';
@@ -8802,7 +8854,7 @@
             ctx.font = `bold ${Math.round(HDR_H * 0.46)}px Segoe UI,sans-serif`;
             ctx.textBaseline = 'middle';
             ctx.textAlign = 'left';
-            ctx.fillText('{{ project_name }}', ML + 6, HDR_H * 0.5);
+            ctx.fillText(PROJECT_NAME, ML + 6, HDR_H * 0.5);
             const today = new Date();
             const todayStr = today.toLocaleDateString('en-US', {day:'2-digit', month:'short', year:'numeric'});
             ctx.font = `${Math.round(HDR_H * 0.30)}px Segoe UI,sans-serif`;

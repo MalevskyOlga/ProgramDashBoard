@@ -313,6 +313,21 @@ def list_users():
         conn.close()
 
 
+def list_users_by_division(division_id):
+    conn = get_control_conn()
+    try:
+        rows = conn.execute(
+            """SELECT u.*, d.name AS division_name, d.key AS division_key
+               FROM users u LEFT JOIN divisions d ON u.division_id = d.id
+               WHERE u.division_id = ?
+               ORDER BY u.username COLLATE NOCASE""",
+            (division_id,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
 def authenticate(username, password):
     """Return the user dict on success, else None.
 

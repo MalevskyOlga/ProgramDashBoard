@@ -224,6 +224,7 @@ function addRow() {
 function deleteRow(idx) {
   rows.splice(idx, 1);
   renderTable();
+  saveAll();
 }
 
 function applyFilter() {
