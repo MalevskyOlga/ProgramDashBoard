@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define AppName        "Overall Programs Dashboard"
-#define AppVersion     "1.3.5"
+#define AppVersion     "1.3.10"
 #define AppPublisher   "Emerson"
 #define ServiceName    "OverallDashboard"
 #define DefaultPort    "8092"
@@ -200,7 +200,8 @@ begin
             ' -DataDir "'    + ExpandConstant('{commonappdata}\OverallDashboard') + '"' +
             ' -Port '        + GetPort('') +
             ' -ServiceName ' + '{#ServiceName}' +
-            ' -DbAction '    + GetDbAction('');
+            ' -DbAction '    + GetDbAction('') +
+            ' -AppVersion '  + '{#AppVersion}';
     RunPowerShell(ExpandConstant('{app}\installer\post_install.ps1'), Args);
   end;
 end;

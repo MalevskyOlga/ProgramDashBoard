@@ -1951,7 +1951,7 @@
             opacity: 1;
         }
         .gantt-menu {
-            display: none; position: absolute; top: calc(100% + 3px); left: 0;
+            display: none; position: fixed;
             z-index: 200; background: white; border: 1px solid #e2e8f0;
             border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);
             min-width: 160px; flex-direction: column; overflow: hidden;
@@ -5323,8 +5323,19 @@
                 if (prev) prev.classList.remove('open');
             }
             if (!isOpen) {
+                const btn = menu.previousElementSibling;
+                const rect = btn.getBoundingClientRect();
+                menu.style.left = rect.left + 'px';
                 menu.classList.add('open');
                 _openGanttMenuId = id;
+                const menuHeight = menu.offsetHeight;
+                if (rect.bottom + 3 + menuHeight > window.innerHeight) {
+                    menu.style.top = 'auto';
+                    menu.style.bottom = (window.innerHeight - rect.top + 3) + 'px';
+                } else {
+                    menu.style.bottom = 'auto';
+                    menu.style.top = (rect.bottom + 3) + 'px';
+                }
             } else {
                 _openGanttMenuId = null;
             }

@@ -6,7 +6,8 @@ param(
     [int]   $Port         = 8092,
     [string]$ServiceName  = "OverallDashboard",
     [string]$DbAction     = "replace",  # 'replace' (start fresh) or 'keep' (migrate existing data)
-    [string]$FirstDivision = ""         # name for the first division (blank = vanilla/empty)
+    [string]$FirstDivision = "",        # name for the first division (blank = vanilla/empty)
+    [string]$AppVersion   = ""          # version being installed now (recorded for the NEXT upgrade's backup tag)
 )
 
 # -- Log to file from the very first line (before ErrorActionPreference) -------
@@ -83,6 +84,39 @@ function Invoke-PythonInstaller {
     return $p
 }
 
+# Helper: find an already-installed Python we can build the venv from.
+# The bundled wheels are cp314, so only 3.14.x is usable.
+function Find-CompatiblePython {
+    $cands = @()
+
+    foreach ($key in @('HKLM:\SOFTWARE\Python\PythonCore\3.14\InstallPath',
+                       'HKLM:\SOFTWARE\WOW6432Node\Python\PythonCore\3.14\InstallPath',
+                       'HKCU:\SOFTWARE\Python\PythonCore\3.14\InstallPath')) {
+        try {
+            $dir = (Get-Item $key -ErrorAction Stop).GetValue('')
+            if ($dir) { $cands += (Join-Path $dir 'python.exe') }
+        } catch { }
+    }
+
+    try {
+        $viaLauncher = & py -3.14 -c "import sys; print(sys.executable)" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $viaLauncher) { $cands += $viaLauncher.Trim() }
+    } catch { }
+
+    try {
+        $onPath = Get-Command python -ErrorAction Stop
+        if ($onPath.Source) { $cands += $onPath.Source }
+    } catch { }
+
+    foreach ($exe in $cands) {
+        if (-not $exe) { continue }
+        if (-not (Test-Path $exe)) { continue }
+        $ver = & $exe -c "import sys; print('%d.%d' % sys.version_info[:2])" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $ver -and $ver.Trim() -eq '3.14') { return $exe }
+    }
+    return $null
+}
+
 # Check if Python exists AND actually runs (file present doesn't mean install succeeded)
 $pythonOK = $false
 if (Test-Path $PythonExe) {
@@ -98,7 +132,26 @@ if (Test-Path $PythonExe) {
 if (-not $pythonOK) {
     $proc = Invoke-PythonInstaller
     if (-not (Test-Path $PythonExe)) {
-        throw "Python install finished (exit $($proc.ExitCode)) but python.exe not found at: $PythonExe"
+        # Exit 1638 = a same-or-newer build of this Python is already registered
+        # machine-wide, so the bundled (older) MSI refuses to downgrade. The private
+        # runtime only ever bootstraps the venv in [3/7], so an existing 3.14.x
+        # interpreter does the job just as well.
+        if ($proc.ExitCode -eq 1638) {
+            Log "      Exit 1638: a same-or-newer Python is already installed machine-wide."
+            Log "      Looking for an existing Python 3.14.x to build the venv from..."
+            $fallbackExe = Find-CompatiblePython
+            if ($fallbackExe) {
+                $PythonExe = $fallbackExe
+                Log "      Using existing interpreter: $PythonExe"
+            } else {
+                throw "Python 3.14.2 could not be installed (exit 1638: a different " +
+                      "version of this product is already installed), and no existing " +
+                      "Python 3.14.x was found to fall back on. Either uninstall the " +
+                      "conflicting Python, or install Python 3.14.x and re-run setup."
+            }
+        } else {
+            throw "Python install finished (exit $($proc.ExitCode)) but python.exe not found at: $PythonExe"
+        }
     }
     # Final verification
     $testOut = & $PythonExe -c "print('ok')" 2>&1
@@ -245,18 +298,83 @@ $cfgLines = @(
 $cfgLines -join "`r`n" | Set-Content -Encoding UTF8 -Path (Join-Path $InstallDir 'config.py')
 Log "      Config written (port $Port)"
 
-# -- 5. Database: in multi-tenant mode dashboards.db is only a MIGRATION SOURCE --
-# 'keep'    -> preserve an existing single-tenant dashboards.db so step 5c can migrate
+# -- 5. Pre-upgrade backup: snapshot all production DBs before anything is touched --
+# Tagged with the OLD version (the version installed on this machine before this run),
+# read from a marker file we maintain across installs, so it's clear which release
+# state you'd be rolling back to. Runs on every install/upgrade, regardless of the
+# DbAction the wizard chose below -- "keep" migrates data in place and "replace" wipes
+# it, and either way you want a pre-change snapshot.
+Log "[5/9] Pre-upgrade database backup..."
+$VersionFile = Join-Path $DataDir 'installed_version.txt'
+$OldVersion  = $null
+if (Test-Path $VersionFile) {
+    $rawVer = Get-Content $VersionFile -Raw
+    if ($rawVer) { $OldVersion = $rawVer.Trim() }
+}
+$dbCandidates = @('control.db', 'portfolio.db', 'dashboards.db')
+$divisionsSrc = Join-Path $DataDir 'divisions'
+$hasDivisionDbs = (Test-Path $divisionsSrc) -and
+                  (Get-ChildItem $divisionsSrc -Filter '*.db' -ErrorAction SilentlyContinue)
+$hasAnyDb = $hasDivisionDbs -or ($dbCandidates | Where-Object { Test-Path (Join-Path $DataDir $_) })
+
+if (-not $OldVersion) {
+    Log "      No prior version on record (fresh install) - nothing to back up."
+} elseif (-not $hasAnyDb) {
+    Log "      No existing database files found - nothing to back up."
+} else {
+    $tagVersion = ($OldVersion -replace '[^\w\.\-]', '_')
+    $stamp      = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $backupDir  = Join-Path $DataDir "backups\pre-upgrade\v${tagVersion}_$stamp"
+    New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
+
+    foreach ($dbName in $dbCandidates) {
+        $src = Join-Path $DataDir $dbName
+        if (Test-Path $src) {
+            Copy-Item $src (Join-Path $backupDir $dbName) -Force
+            Log "      Backed up $dbName"
+        }
+    }
+    if ($hasDivisionDbs) {
+        Copy-Item $divisionsSrc (Join-Path $backupDir 'divisions') -Recurse -Force
+        Log "      Backed up divisions\ folder"
+    }
+    Log "      Pre-upgrade backup (from v$OldVersion) saved -> $backupDir"
+
+    # Retention: keep only the 10 highest-versioned pre-upgrade backups. Sorted by the
+    # version parsed out of each folder's name (v<version>_<timestamp>), NOT by filesystem
+    # timestamp -- so this is correct even if CreationTime is ever off (copied-in folders,
+    # clock skew). A folder whose name doesn't parse as a version sorts as 0.0.0 (pruned
+    # first); CreationTime only breaks ties between equal/unparsable versions.
+    $keepCount  = 10
+    $backupRoot = Join-Path $DataDir 'backups\pre-upgrade'
+    $backupDirs = Get-ChildItem $backupRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+        $parsedVersion = [version]'0.0.0'
+        if ($_.Name -match '^v(?<ver>.+)_\d{8}-\d{6}$') {
+            $tryVersion = $null
+            if ([version]::TryParse($Matches['ver'], [ref]$tryVersion)) { $parsedVersion = $tryVersion }
+        }
+        [PSCustomObject]@{ Item = $_; Version = $parsedVersion }
+    }
+    $backupDirs |
+        Sort-Object -Property @{Expression = 'Version'; Descending = $true},
+                               @{Expression = { $_.Item.CreationTime }; Descending = $true} |
+        Select-Object -Skip $keepCount |
+        ForEach-Object {
+            Remove-Item $_.Item.FullName -Recurse -Force -ErrorAction SilentlyContinue
+            Log "      Pruned old pre-upgrade backup: $($_.Item.Name)"
+        }
+}
+
+# -- 6. Database: in multi-tenant mode dashboards.db is only a MIGRATION SOURCE --
+# 'keep'    -> preserve an existing single-tenant dashboards.db so step 6c can migrate
 #              its data into the first division.
-# 'replace' -> back up and clear it, so the install starts empty (vanilla).
-Log "[5/7] Database setup (action: $DbAction)..."
+# 'replace' -> clear it, so the install starts empty (vanilla). Already backed up above.
+Log "[6/9] Database setup (action: $DbAction)..."
 $TargetDb = Join-Path $DataDir "dashboards.db"
 if ($DbAction -eq 'replace') {
     if (Test-Path $TargetDb) {
-        $BackupName = "dashboards.db.bak.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        Copy-Item $TargetDb (Join-Path $DataDir $BackupName) -Force
         Remove-Item $TargetDb -Force
-        Log "      Backed up and cleared existing single-tenant DB (starting fresh)."
+        Log "      Cleared existing single-tenant DB (already backed up above; starting fresh)."
     } else {
         Log "      No existing DB - starting fresh."
     }
@@ -268,7 +386,7 @@ if ($DbAction -eq 'replace') {
     }
 }
 
-# -- 5b. Bootstrap control DB (users/divisions) + initial super-admin ----------
+# -- 6b. Bootstrap control DB (users/divisions) + initial super-admin ----------
 # Admin email is read from a file (handles any address safely) and used to seed the
 # super-admin on a fresh install, or backfill an emailless admin on upgrade -- so the
 # admin can self-serve a password reset via "Forgot your password?".
@@ -322,7 +440,7 @@ if ($adminLine) {
     Log "      Initial admin credentials written -> $credFile"
 }
 
-# -- 5c. First-division setup: migrate existing data or create a named division
+# -- 6c. First-division setup: migrate existing data or create a named division
 # The division name is read from a file written by the installer (handles '&'/spaces safely).
 $divFile = Join-Path $DataDir 'first_division.txt'
 if (Test-Path $divFile) {
@@ -341,8 +459,8 @@ if ($FirstDivision) { $divArgs += @('--name', $FirstDivision) }
     ForEach-Object { Log "division: $_" }
 Remove-Item $divFile -Force -ErrorAction SilentlyContinue
 
-# -- 6. Register Windows service via WinSW ------------------------------------
-Log "[6/7] Registering Windows service '$ServiceName'..."
+# -- 7. Register Windows service via WinSW ------------------------------------
+Log "[7/9] Registering Windows service '$ServiceName'..."
 
 $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existing) {
@@ -387,8 +505,8 @@ $out = & $winswService install 2>&1
 Log "      WinSW output: $out  (exit $LASTEXITCODE)"
 if ($LASTEXITCODE -ne 0) { throw "WinSW install failed (exit $LASTEXITCODE)" }
 
-# -- 7. Open firewall & register backup task -----------------------------------
-Log "[7/7] Firewall + backup task..."
+# -- 8. Open firewall & register backup task -----------------------------------
+Log "[8/9] Firewall + backup task..."
 $ruleName = "Overall Programs Dashboard (port $Port)"
 Remove-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
 New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Protocol TCP `
@@ -412,6 +530,13 @@ Start-Sleep -Seconds 5
 
 $svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($svc -and $svc.Status -eq 'Running') {
+    # -- 9. Record the installed version so the NEXT upgrade's pre-upgrade backup
+    # (step 5 above) knows what to tag itself with. Only recorded once the install
+    # has actually succeeded, so a failed run doesn't corrupt the version history.
+    if ($AppVersion) {
+        Set-Content -Path $VersionFile -Value $AppVersion -Encoding UTF8
+        Log "[9/9] Recorded installed version: $AppVersion"
+    }
     Log "========================================="
     Log "  Installation complete!"
     Log "  Dashboard: http://localhost:$Port"
