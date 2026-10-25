@@ -13,6 +13,7 @@ from pathlib import Path
 from io import BytesIO
 import openpyxl
 from risk_ppt_exporter import export_risks_to_pptx
+from risk_excel_exporter import export_risks_to_excel
 
 # Ensure stdout/stderr use UTF-8 so Unicode characters (✓ ✗ etc.) don't crash on Windows
 if sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
@@ -2546,6 +2547,30 @@ def api_export_pipeline_risks_ppt(pipeline_project_id):
     return send_file(buf, as_attachment=True,
                      download_name=f'{safe_name}_Risks.pptx',
                      mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+
+
+@app.route('/api/project/<path:project_name>/risks/export-excel')
+def api_export_risks_excel(project_name):
+    risks = db_manager.get_risks(project_name=project_name)
+    buf = export_risks_to_excel(project_name, risks)
+    safe_name = project_name.replace('/', '_').replace('\\', '_')
+    return send_file(buf, as_attachment=True,
+                     download_name=f'{safe_name}_Risks.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+
+@app.route('/api/pipeline-project/<int:pipeline_project_id>/risks/export-excel')
+def api_export_pipeline_risks_excel(pipeline_project_id):
+    conn = _ensure_priority_tables()
+    row = conn.execute('SELECT name FROM priority_projects WHERE id = ?', (pipeline_project_id,)).fetchone()
+    conn.close()
+    project_name = row['name'] if row else f'Project {pipeline_project_id}'
+    risks = db_manager.get_pipeline_risks(pipeline_project_id)
+    buf = export_risks_to_excel(project_name, risks)
+    safe_name = project_name.replace('/', '_').replace('\\', '_')
+    return send_file(buf, as_attachment=True,
+                     download_name=f'{safe_name}_Risks.xlsx',
+                     mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
 
 if __name__ == '__main__':

@@ -6,6 +6,7 @@
     <title>{{ project_name }} - Task Manager Dashboard</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
     <style>
+        {% include "_tokens.html" %}
         * {
             margin: 0;
             padding: 0;
@@ -13,31 +14,35 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
+            font-family: var(--font-family-base);
+            background: var(--color-bg);
+            color: var(--color-text);
             overflow-x: auto;
         }
 
         .header {
-            background: linear-gradient(135deg, #2c5f2d 0%, #3d8b40 100%);
+            background: var(--color-nav-bg);
             color: white;
-            padding: 25px 30px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            padding: 12px 24px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
         }
 
         .header h1 {
-            font-size: 2em;
-            margin-bottom: 8px;
+            font-size: 1.3em;
+            margin-bottom: 2px;
         }
 
         .header-meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 24px;
-            font-size: 0.95em;
-            opacity: 0.95;
-            margin-bottom: 6px;
+            gap: 16px;
+            font-size: 0.8em;
+            opacity: 0.85;
         }
         .header-meta-item { white-space: nowrap; }
 
@@ -49,37 +54,43 @@
         .editable-header-field:hover { border-bottom-color: white; }
 
         .header .save-indicator {
-            font-size: 0.82em;
+            font-size: 0.78em;
             opacity: 0.8;
             font-style: italic;
             min-height: 1em;
+            white-space: nowrap;
         }
 
         .stats-bar {
-            padding: 15px 30px;
+            padding: 7px 24px;
             background: #fff9e6;
-            border-bottom: 1px solid #ddd;
-            font-size: 0.9em;
+            border-bottom: 1px solid var(--color-border);
+            font-size: 0.8em;
             display: flex;
-            gap: 30px;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
         .stat-item {
             display: flex;
-            gap: 8px;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.6);
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 6px;
+            padding: 3px 10px;
         }
 
         .stat-item strong {
-            color: #2c5f2d;
+            color: var(--color-accent);
         }
 
         .toolbar {
             background: white;
-            padding: 15px 30px;
-            border-bottom: 1px solid #ddd;
+            padding: 7px 24px;
+            border-bottom: 1px solid var(--color-border);
             display: flex;
-            gap: 15px;
+            gap: 8px;
             align-items: center;
             flex-wrap: wrap;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
@@ -87,8 +98,8 @@
 
         .toolbar-label {
             font-weight: 600;
-            color: #666;
-            font-size: 0.9em;
+            color: var(--color-text-muted);
+            font-size: 0.8em;
         }
 
         .toolbar-label.info {
@@ -98,36 +109,36 @@
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 7px 14px;
             border: none;
             border-radius: 5px;
-            font-size: 0.95em;
+            font-size: 0.85em;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
 
         .btn-primary {
-            background: #2c5f2d;
+            background: var(--color-accent);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #1e4620;
+            background: var(--color-accent-hover);
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
 
         .btn-danger {
-            background: #dc3545;
+            background: var(--color-overdue);
             color: white;
         }
 
         .btn-danger:hover {
-            background: #c82333;
+            background: var(--color-overdue-dark);
         }
 
         .btn-secondary {
@@ -141,7 +152,7 @@
 
         .btn-warning {
             background: #ffc107;
-            color: #333;
+            color: var(--color-text);
             font-weight: 700;
         }
 
@@ -187,7 +198,7 @@
             top: calc(100% + 6px);
             right: 0;
             background: white;
-            border: 1px solid #ddd;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
             min-width: 200px;
@@ -208,7 +219,7 @@
             cursor: pointer;
             font-size: 0.92em;
             font-weight: 600;
-            color: #333;
+            color: var(--color-text);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -216,12 +227,12 @@
         }
 
         .more-dropdown-menu button:hover {
-            background: #f5f5f5;
+            background: var(--color-surface-alt);
         }
 
         .more-dropdown-menu .more-divider {
             height: 1px;
-            background: #eee;
+            background: var(--color-border);
             margin: 4px 0;
         }
 
@@ -231,7 +242,7 @@
         }
 
         .export-dropdown-toggle {
-            background: #2c5f2d;
+            background: var(--color-accent);
             color: white;
             padding: 10px 20px;
             border: none;
@@ -246,7 +257,7 @@
         }
 
         .export-dropdown-toggle:hover {
-            background: #1e4620;
+            background: var(--color-accent-hover);
             transform: translateY(-1px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
@@ -263,7 +274,7 @@
             top: calc(100% + 6px);
             left: 0;
             background: white;
-            border: 1px solid #ddd;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
             min-width: 220px;
@@ -284,7 +295,7 @@
             cursor: pointer;
             font-size: 0.92em;
             font-weight: 600;
-            color: #333;
+            color: var(--color-text);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -292,12 +303,12 @@
         }
 
         .export-dropdown-menu button:hover {
-            background: #f0f4f0;
+            background: var(--color-surface-alt);
         }
 
         .export-dropdown-menu .export-divider {
             height: 1px;
-            background: #eee;
+            background: var(--color-border);
             margin: 4px 0;
         }
 
@@ -305,20 +316,20 @@
         .gantt-view-toggle {
             display: flex;
             gap: 0;
-            border: 1px solid #ddd;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             overflow: hidden;
         }
 
         .view-btn,
         .gantt-view-btn {
-            padding: 8px 16px;
+            padding: 6px 13px;
             border: none;
             background: white;
             cursor: pointer;
-            font-size: 0.85em;
+            font-size: 0.8em;
             transition: all 0.2s;
-            border-right: 1px solid #ddd;
+            border-right: 1px solid var(--color-border);
             font-weight: 500;
         }
 
@@ -329,11 +340,11 @@
 
         .view-btn:hover,
         .gantt-view-btn:hover {
-            background: #f0f0f0;
+            background: var(--color-surface-alt);
         }
 
         .edit-task-btn {
-            background: #2c5f2d;
+            background: var(--color-accent);
             color: white;
             border: none;
             padding: 4px 10px;
@@ -345,13 +356,13 @@
         }
 
         .edit-task-btn:hover {
-            background: #1e4620;
+            background: var(--color-accent-hover);
             transform: scale(1.05);
         }
 
         .view-btn.active,
         .gantt-view-btn.active {
-            background: #2c5f2d;
+            background: var(--color-accent);
             color: white;
         }
 
@@ -363,32 +374,32 @@
 
         .filter-group label {
             font-weight: 600;
-            color: #555;
+            color: var(--color-text-muted);
             font-size: 0.9em;
         }
 
         .filter-group select, .filter-group input {
-            padding: 8px 12px;
-            border: 1px solid #ddd;
+            padding: 5px 10px;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
-            font-size: 0.9em;
+            font-size: 0.8em;
         }
 
         .checkbox-label {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             cursor: pointer;
-            font-size: 0.85em;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
+            font-size: 0.78em;
+            padding: 5px 9px;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             background: white;
             transition: background 0.2s;
         }
 
         .checkbox-label:hover {
-            background: #f8f8f8;
+            background: var(--color-surface-alt);
         }
 
         /* Gantt Container */
@@ -402,27 +413,27 @@
         }
 
         .task-table {
-            min-width: 1080px;
-            max-width: 1080px;
-            background: #f8f9fa;
-            border-right: 2px solid #ddd;
+            min-width: 1180px;
+            max-width: 1180px;
+            background: var(--color-surface-alt);
+            border-right: 2px solid var(--color-border);
             overflow-y: auto;
             overflow-x: hidden;
         }
 
         .table-header {
             display: grid;
-            grid-template-columns: 40px 200px 120px 105px 65px 105px 85px 120px 140px;
+            grid-template-columns: 40px 200px 120px 90px 105px 65px 105px 85px 120px 140px;
             gap: 8px;
             padding: 13px 12px;
-            background: #2c5f2d;
+            background: var(--color-accent);
             color: white;
             font-weight: 600;
             font-size: 0.8em;
             position: sticky;
             top: 0;
             z-index: 20;
-            border-bottom: 2px solid #1e4620;
+            border-bottom: 2px solid var(--color-accent-hover);
         }
 
         .table-header > div {
@@ -463,10 +474,10 @@
 
         .task-row {
             display: grid;
-            grid-template-columns: 40px 200px 120px 105px 65px 105px 85px 120px 140px;
+            grid-template-columns: 40px 200px 120px 90px 105px 65px 105px 85px 120px 140px;
             gap: 8px;
             padding: 10px 12px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--color-border);
             font-size: 0.75em;
             align-items: center;
             transition: background 0.2s;
@@ -480,9 +491,9 @@
 
         .task-row.phase-header {
             background: rgba(212, 233, 214, 0.5);
-            border-bottom: 2px solid #2c5f2d;
+            border-bottom: 2px solid var(--color-accent);
             font-weight: 700;
-            color: #2c5f2d;
+            color: var(--color-accent);
             grid-template-columns: 1fr;
             padding: 12px;
             min-height: 45px;
@@ -499,10 +510,10 @@
             display: inline-flex; align-items: center; gap: 5px;
             padding: 2px 9px; border-radius: 12px; font-size: 0.95em;
         }
-        .gate-health-pill.green  { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .gate-health-pill.green  { background: #e8f5e9; color: var(--color-gate-passed); border: 1px solid #a5d6a7; }
         .gate-health-pill.yellow { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
-        .gate-health-pill.red    { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-        .gate-health-stat { color: #555; font-weight: 400; }
+        .gate-health-pill.red    { background: #ffebee; color: var(--color-overdue-dark); border: 1px solid #ef9a9a; }
+        .gate-health-stat { color: var(--color-text-muted); font-weight: 400; }
 
         /* What-If simulation mode */
         .whatif-banner {
@@ -514,12 +525,12 @@
         .whatif-banner.active { display: flex; }
         .whatif-banner button { font-size: 0.85em; padding: 3px 12px; border-radius: 6px; cursor: pointer; border: 1px solid; }
         .whatif-commit { background: #198754; color: #fff; border-color: #198754 !important; }
-        .whatif-discard { background: #dc3545; color: #fff; border-color: #dc3545 !important; }
+        .whatif-discard { background: var(--color-overdue); color: #fff; border-color: var(--color-overdue) !important; }
         .btn-whatif { background: #fff3cd !important; color: #856404 !important; border: 1px solid #ffc107 !important; }
         .btn-whatif.active { background: #ffc107 !important; color: #000 !important; }
 
         .task-row.critical {
-            border-left: 4px solid #dc3545;
+            border-left: 4px solid var(--color-overdue);
             background: #fff5f5;
         }
         
@@ -553,7 +564,7 @@
 
         .date-cell {
             font-size: 0.8em;
-            color: #555;
+            color: var(--color-text-muted);
             font-weight: 500;
             padding: 4px 6px;
             border-radius: 3px;
@@ -562,26 +573,38 @@
 
         .date-cell.start-date {
             background: #e8f5e9;
-            color: #2e7d32;
+            color: var(--color-gate-passed);
         }
 
         .date-cell.end-date {
             background: #ffebee;
-            color: #c62828;
+            color: var(--color-overdue-dark);
         }
 
         .duration-cell {
             font-size: 0.8em;
             font-weight: 600;
-            color: #555;
+            color: var(--color-text-muted);
             background: #f3f0ff;
             border-radius: 3px;
             padding: 4px 4px;
             text-align: center;
         }
 
+        .dept-cell {
+            font-size: 0.78em;
+            color: var(--color-text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .dept-cell.dept-unassigned {
+            color: var(--color-text-muted);
+            font-style: italic;
+        }
+
         .date-cell.end-date.overdue {
-            background: #d32f2f;
+            background: var(--color-overdue);
             color: white;
             font-weight: 700;
             animation: pulse 2s ease-in-out infinite;
@@ -640,18 +663,18 @@
             transform: scale(1.05);
         }
 
-        .status-completed { background: #d4edda; color: #155724; }
-        .status-in-process { background: #d1ecf1; color: #0c5460; }
-        .status-planned { background: #f8d7da; color: #721c24; }
-        .status-on-hold { background: #e1bee7; color: #4a148c; }
-        .status-review { background: #bbdefb; color: #0d47a1; }
-        .status-cancelled { background: #cfd8dc; color: #37474f; text-decoration: line-through; }
+        .status-completed { background: var(--status-completed-bg); color: var(--status-completed-fg); }
+        .status-in-process { background: var(--status-inprocess-bg); color: var(--status-inprocess-fg); }
+        .status-planned { background: var(--status-planned-bg); color: var(--status-planned-fg); }
+        .status-on-hold { background: var(--status-onhold-bg); color: var(--status-onhold-fg); }
+        .status-review { background: var(--status-review-bg); color: var(--status-review-fg); }
+        .status-cancelled { background: var(--status-cancelled-bg); color: var(--status-cancelled-fg); text-decoration: line-through; }
 
         /* Status Edit Dropdown */
         .status-edit-container {
             position: absolute;
             background: white;
-            border: 2px solid #2c5f2d;
+            border: 2px solid var(--color-accent);
             border-radius: 8px;
             padding: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -675,33 +698,33 @@
         }
 
         .status-option.planned {
-            background: #f8d7da;
-            color: #721c24;
+            background: var(--status-planned-bg);
+            color: var(--status-planned-fg);
         }
 
         .status-option.in-process {
-            background: #d1ecf1;
-            color: #0c5460;
+            background: var(--status-inprocess-bg);
+            color: var(--status-inprocess-fg);
         }
 
         .status-option.completed {
-            background: #d4edda;
-            color: #155724;
+            background: var(--status-completed-bg);
+            color: var(--status-completed-fg);
         }
 
         .status-option.on-hold {
-            background: #e1bee7;
-            color: #4a148c;
+            background: var(--status-onhold-bg);
+            color: var(--status-onhold-fg);
         }
 
         .status-option.review {
-            background: #bbdefb;
-            color: #0d47a1;
+            background: var(--status-review-bg);
+            color: var(--status-review-fg);
         }
 
         .status-option.cancelled {
-            background: #cfd8dc;
-            color: #37474f;
+            background: var(--status-cancelled-bg);
+            color: var(--status-cancelled-fg);
         }
 
         /* Timeline */
@@ -714,8 +737,8 @@
 
         .timeline-header {
             display: flex;
-            background: #e7e7e7;
-            border-bottom: 2px solid #ccc;
+            background: var(--color-border);
+            border-bottom: 2px solid var(--color-border);
             position: sticky;
             top: 0;
             z-index: 15;
@@ -727,7 +750,7 @@
             text-align: center;
             font-weight: 600;
             font-size: 0.85em;
-            border-right: 1px solid #d0d0d0;
+            border-right: 1px solid var(--color-border);
             flex-shrink: 0;
         }
 
@@ -735,7 +758,7 @@
             display: block;
             font-weight: 500;
             font-size: 0.78em;
-            color: #777;
+            color: var(--color-text-muted);
             margin-top: 2px;
         }
 
@@ -761,7 +784,7 @@
 
         .grid-column {
             min-width: 120px;
-            border-right: 1px solid #e8e8e8;
+            border-right: 1px solid var(--color-border);
             position: relative;
             flex-shrink: 0;
         }
@@ -776,7 +799,7 @@
             top: 0;
             bottom: 0;
             width: 2px;
-            background: #e53935;
+            background: var(--color-overdue);
             z-index: 6;
             pointer-events: none;
         }
@@ -784,7 +807,7 @@
             position: absolute;
             top: 2px;
             left: 4px;
-            background: #e53935;
+            background: var(--color-overdue);
             color: #fff;
             font-size: 10px;
             font-weight: 700;
@@ -799,13 +822,13 @@
 
         .timeline-task-row {
             height: 41px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--color-border);
             position: relative;
         }
 
         .timeline-task-row.phase-header {
             background: rgba(212, 233, 214, 0.3);
-            border-bottom: 2px solid #2c5f2d;
+            border-bottom: 2px solid var(--color-accent);
             height: 45px;
         }
 
@@ -837,27 +860,27 @@
         }
 
         .gantt-bar.completed {
-            background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);
+            background: var(--status-completed-fg);
         }
 
         .gantt-bar.in-process {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: var(--status-inprocess-fg);
         }
 
         .gantt-bar.planned {
-            background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+            background: var(--status-planned-fg);
         }
 
         .gantt-bar.on-hold {
-            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+            background: var(--status-onhold-fg);
         }
 
         .gantt-bar.review {
-            background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);
+            background: var(--status-review-fg);
         }
 
         .gantt-bar.cancelled {
-            background: linear-gradient(135deg, #607d8b 0%, #455a64 100%);
+            background: var(--status-cancelled-fg);
             text-decoration: line-through;
             opacity: 0.75;
         }
@@ -873,18 +896,18 @@
         }
         .float-bar.float-green  { background: #4caf50; }
         .float-bar.float-yellow { background: #ff9800; }
-        .float-bar.float-red    { background: #f44336; }
+        .float-bar.float-red    { background: var(--color-overdue); }
         .float-bar:hover { opacity: 0.7; }
 
         .gantt-bar.critical {
-            background: linear-gradient(135deg, #ff1744 0%, #d50000 100%);
-            border: 3px solid #b71c1c;
+            background: var(--color-critical);
+            border: 3px solid var(--color-critical-border);
             height: 26px;
             top: 7px;
         }
 
         .gantt-bar.overdue {
-            background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+            background: var(--color-overdue);
         }
 
         /* Old milestone diamond style - DISABLED, keeping for reference only */
@@ -902,8 +925,8 @@
         
         /* NEW: Milestone bars show as regular bars with special styling */
         .gantt-bar.milestone-bar {
-            border: 3px solid #ffd700 !important;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ff4444 100%) !important;
+            border: 3px solid var(--color-milestone-border) !important;
+            background: var(--color-milestone-fill) !important;
             box-shadow: 0 0 8px rgba(255, 215, 0, 0.6) !important;
             height: 22px !important;
             top: 9px !important;
@@ -911,11 +934,11 @@
         }
 
         /* Dependency highlight mode */
-        .gantt-bar.dep-self    { outline: 3px solid #212121; outline-offset: 3px; z-index: 10; }
-        .gantt-bar.dep-predecessor { outline: 3px solid #1565c0; outline-offset: 3px; filter: brightness(1.1); }
-        .gantt-bar.dep-predecessor-done { outline: 3px solid #2e7d32; outline-offset: 3px; filter: brightness(1.1); }
+        .gantt-bar.dep-self    { outline: 3px solid var(--color-dep-self); outline-offset: 3px; z-index: 10; }
+        .gantt-bar.dep-predecessor { outline: 3px solid var(--color-dep-predecessor); outline-offset: 3px; filter: brightness(1.1); }
+        .gantt-bar.dep-predecessor-done { outline: 3px solid var(--color-dep-predecessor-done); outline-offset: 3px; filter: brightness(1.1); }
         .task-row.dep-predecessor-done { background: rgba(46,125,50,0.12) !important; }
-        .gantt-bar.dep-successor   { outline: 3px solid #e65100; outline-offset: 3px; filter: brightness(1.1); }
+        .gantt-bar.dep-successor   { outline: 3px solid var(--color-dep-successor); outline-offset: 3px; filter: brightness(1.1); }
         .gantt-bar.dep-dimmed  { opacity: 0.18; filter: grayscale(60%); }
         .task-row.dep-self        { background: rgba(33,33,33,0.07) !important; }
         .task-row.dep-predecessor { background: rgba(21,101,192,0.13) !important; }
@@ -926,12 +949,12 @@
         .dmap-node.dmap-self rect,
         .dmap-node.dmap-self polygon { stroke-width: 3.5 !important; filter: drop-shadow(0 0 6px rgba(33,33,33,0.5)); }
         .dmap-node.dmap-ancestor rect,
-        .dmap-node.dmap-ancestor polygon { stroke: #1565c0 !important; stroke-width: 3 !important; }
+        .dmap-node.dmap-ancestor polygon { stroke: var(--color-dep-predecessor) !important; stroke-width: 3 !important; }
         .dmap-node.dmap-descendant rect,
-        .dmap-node.dmap-descendant polygon { stroke: #e65100 !important; stroke-width: 3 !important; }
+        .dmap-node.dmap-descendant polygon { stroke: var(--color-dep-successor) !important; stroke-width: 3 !important; }
         .dmap-edge.dmap-edge-dimmed    { opacity: 0.08; }
-        .dmap-edge.dmap-edge-ancestor  { stroke: #1565c0 !important; stroke-width: 2.5 !important; opacity: 1 !important; marker-end: url(#dmap-arr-sel) !important; }
-        .dmap-edge.dmap-edge-descendant{ stroke: #e65100 !important; stroke-width: 2.5 !important; opacity: 1 !important; }
+        .dmap-edge.dmap-edge-ancestor  { stroke: var(--color-dep-predecessor) !important; stroke-width: 2.5 !important; opacity: 1 !important; marker-end: url(#dmap-arr-sel) !important; }
+        .dmap-edge.dmap-edge-descendant{ stroke: var(--color-dep-successor) !important; stroke-width: 2.5 !important; opacity: 1 !important; }
         .dmap-node { transition: opacity 0.2s; }
         .dmap-edge { transition: opacity 0.2s; }
 
@@ -940,10 +963,10 @@
             position: fixed; top: 80px; right: 20px; width: 340px;
             background: white; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,0.18);
             z-index: 9999; font-size: 0.85em; overflow: hidden;
-            border: 1px solid #e0e0e0;
+            border: 1px solid var(--color-border);
         }
         .dep-panel-header {
-            background: #212121; color: white; padding: 10px 14px;
+            background: var(--color-dep-self); color: white; padding: 10px 14px;
             display: flex; justify-content: space-between; align-items: center;
             font-weight: 600; font-size: 0.95em; gap: 8px;
         }
@@ -964,7 +987,8 @@
         /* Standalone dep editor modal */
         .dep-editor-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 10000;
-            display: flex; align-items: center; justify-content: center;
+            display: flex; align-items: center; justify-content: flex-start;
+            padding-left: 32px; box-sizing: border-box;
         }
         .dep-editor-modal {
             background: white; border-radius: 12px; width: 480px; max-height: 80vh;
@@ -972,16 +996,22 @@
             overflow: hidden;
         }
         .dep-editor-header {
-            background: #2c5f2d; color: white; padding: 14px 18px;
+            background: var(--color-accent); color: white; padding: 14px 18px;
             display: flex; justify-content: space-between; align-items: center;
             font-weight: 600; font-size: 1em; gap: 8px;
         }
         .dep-editor-header span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dep-editor-toolbar {
+            padding: 10px 14px 0; display: flex; justify-content: flex-end; gap: 6px;
+        }
+        .dep-editor-chips {
+            padding: 6px 14px 0;
+        }
         .dep-editor-search {
-            padding: 10px 14px; border-bottom: 1px solid #eee;
+            padding: 10px 14px; border-bottom: 1px solid var(--color-border);
         }
         .dep-editor-search input {
-            width: 100%; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px;
+            width: 100%; padding: 7px 10px; border: 1px solid var(--color-border); border-radius: 6px;
             font-size: 0.9em; box-sizing: border-box;
         }
         .dep-editor-list {
@@ -993,76 +1023,117 @@
         }
         .dep-editor-phase-header:hover { background: #d0e4fd; }
         .dep-editor-task-row {
-            display: flex; align-items: center; gap: 8px; padding: 5px 6px;
+            display: flex; align-items: center; gap: 8px; padding: 7px 6px;
             border-radius: 4px; cursor: pointer; font-size: 0.85em;
         }
-        .dep-editor-task-row:hover { background: #f5f5f5; }
+        .dep-editor-task-row:hover { background: var(--color-surface-alt); }
+        .dep-editor-task-row.dep-editor-row-selected { background: #e3f2fd; }
         .dep-editor-task-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
         .dep-editor-task-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dep-editor-task-meta { color: #999; font-size: 0.8em; white-space: nowrap; }
+        .dep-editor-task-meta { color: var(--color-text-muted); font-size: 0.8em; white-space: nowrap; }
         .dep-editor-footer {
-            padding: 12px 18px; border-top: 1px solid #eee;
+            padding: 12px 18px; border-top: 1px solid var(--color-border);
             display: flex; justify-content: flex-end; gap: 10px;
         }
         .dep-editor-save {
-            background: #2c5f2d; color: white; border: none; padding: 8px 22px;
+            background: var(--color-accent); color: white; border: none; padding: 8px 22px;
             border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9em;
         }
-        .dep-editor-save:hover { background: #1e4620; }
+        .dep-editor-save:hover { background: var(--color-accent-hover); }
         .dep-editor-cancel {
-            background: #f5f5f5; color: #444; border: 1px solid #ccc; padding: 8px 18px;
+            background: var(--color-surface-alt); color: var(--color-text); border: 1px solid var(--color-border); padding: 8px 18px;
             border-radius: 6px; cursor: pointer; font-size: 0.9em;
         }
-        .dep-editor-cancel:hover { background: #e0e0e0; }
+        .dep-editor-cancel:hover { background: var(--color-border); }
         .dep-panel-section { padding: 8px 10px; }
-        .dep-panel-section + .dep-panel-section { border-top: 1px solid #f0f0f0; }
+        .dep-panel-section + .dep-panel-section { border-top: 1px solid var(--color-surface-alt); }
         .dep-panel-section-title { font-weight: 700; font-size: 0.8em; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-        .pred-title { color: #1565c0; }
-        .succ-title { color: #e65100; }
+        .pred-title { color: var(--color-dep-predecessor); }
+        .succ-title { color: var(--color-dep-successor); }
         .dep-panel-row {
             display: grid; grid-template-columns: 26px 1fr auto auto;
             gap: 6px; align-items: center; padding: 5px 4px; border-radius: 5px; cursor: pointer;
         }
-        .dep-panel-row:hover { background: #f5f5f5; }
+        .dep-panel-row:hover { background: var(--color-surface-alt); }
         .dep-panel-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9em; }
-        .dep-panel-date { color: #777; font-size: 0.82em; white-space: nowrap; }
-        .dep-panel-empty { color: #aaa; font-style: italic; padding: 4px; font-size: 0.88em; }
+        .dep-panel-date { color: var(--color-text-muted); font-size: 0.82em; white-space: nowrap; }
+        .dep-panel-empty { color: var(--color-text-muted); font-style: italic; padding: 4px; font-size: 0.88em; }
 
         .pred-cell { display: flex; flex-wrap: wrap; gap: 3px; }
         .pred-link {
-            display: inline-block; background: #e3f2fd; color: #1565c0;
+            display: inline-block; background: #e3f2fd; color: var(--color-dep-predecessor);
             border: 1px solid #90caf9; border-radius: 3px;
             padding: 0 4px; font-size: 0.78em; cursor: pointer; font-weight: 600;
         }
-        .pred-link:hover { background: #1565c0; color: white; }
-        .pred-link-blocking { background: #ffebee !important; color: #c62828 !important; border-color: #ef9a9a !important; font-weight: 700 !important; }
-        .pred-link-blocking:hover { background: #c62828 !important; color: white !important; }
+        .pred-link:hover { background: var(--color-dep-predecessor); color: white; }
+        .pred-link-blocking { background: #ffebee !important; color: var(--color-overdue-dark) !important; border-color: #ef9a9a !important; font-weight: 700 !important; }
+        .pred-link-blocking:hover { background: var(--color-overdue-dark) !important; color: white !important; }
         .blocked-pill {
-            display: inline-block; margin-top: 3px; background: #ffebee; color: #c62828;
+            display: inline-block; margin-top: 3px; background: #ffebee; color: var(--color-overdue-dark);
             border: 1px solid #ef9a9a; border-radius: 8px; font-size: 0.72em;
             font-weight: 600; padding: 1px 6px; white-space: nowrap; cursor: pointer;
             transition: filter 0.15s;
         }
         .blocked-pill:hover { filter: brightness(0.92); }
         .blocked-pill.overlap-pill {
-            background: #fff8e1; color: #e65100; border-color: #ffcc80;
+            background: #fff8e1; color: var(--color-dep-successor); border-color: #ffcc80;
         }
-        .pred-link-done { background: #f0f0f0 !important; color: #999 !important; border-color: #ccc !important; }
-        .pred-link-done:hover { background: #bdbdbd !important; color: white !important; }
-        .succ-link { background: #fff3e0 !important; color: #e65100 !important; border-color: #ffb74d !important; }
-        .succ-link:hover { background: #e65100 !important; color: white !important; }
-        .succ-link-done { background: #f0f0f0 !important; color: #999 !important; border-color: #ccc !important; }
-        .succ-link-done:hover { background: #bdbdbd !important; color: white !important; }
+        .pred-link-done { background: var(--color-surface-alt) !important; color: var(--color-text-muted) !important; border-color: var(--color-border) !important; }
+        .pred-link-done:hover { background: var(--color-border) !important; color: white !important; }
+        .succ-link { background: #fff3e0 !important; color: var(--color-dep-successor) !important; border-color: #ffb74d !important; }
+        .succ-link:hover { background: var(--color-dep-successor) !important; color: white !important; }
+        .succ-link-done { background: var(--color-surface-alt) !important; color: var(--color-text-muted) !important; border-color: var(--color-border) !important; }
+        .succ-link-done:hover { background: var(--color-border) !important; color: white !important; }
+
+        /* Dependency picker (Add/Edit Task modal) */
+        .dep-picker-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; margin-bottom: 8px; flex-wrap: wrap;
+        }
+        .dep-mini-btn {
+            padding: 4px 10px; font-size: 0.78em; border: 1px solid #bcd4f0;
+            background: white; border-radius: 4px; cursor: pointer; font-weight: 600;
+            display: inline-flex; align-items: center; gap: 4px; transition: background 0.15s, opacity 0.15s;
+        }
+        .dep-mini-btn:hover { background: #e3f2fd; }
+        .dep-mini-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .dep-mini-btn:disabled:hover { background: white; }
+        .dep-mini-btn.dep-clear-btn { color: var(--color-overdue-dark); }
+        .dep-mini-btn.dep-clear-btn:hover { background: #ffebee; }
+        .dep-selected-chips {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 26px;
+            align-items: center;
+        }
+        .dep-selected-chips.empty { font-size: 0.82em; color: var(--color-text-muted); font-style: italic; }
+        .dep-selected-chip {
+            display: inline-flex; align-items: center; gap: 6px; background: var(--color-accent);
+            color: white; border-radius: 999px; padding: 3px 6px 3px 10px; font-size: 0.8em; font-weight: 600;
+            max-width: 220px;
+        }
+        .dep-selected-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dep-selected-chip button {
+            background: rgba(255,255,255,0.25); border: none; color: white; cursor: pointer;
+            border-radius: 50%; width: 16px; height: 16px; font-size: 0.75em; line-height: 1;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .dep-selected-chip button:hover { background: rgba(255,255,255,0.45); }
+        .dep-task-row {
+            display: flex; align-items: center; gap: 8px; padding: 7px 8px; cursor: pointer;
+            font-size: 0.85em; border-radius: 4px; transition: background 0.12s;
+        }
+        .dep-task-row:hover { background: var(--color-surface-alt); }
+        .dep-task-row.dep-row-selected { background: #e3f2fd; }
+        .dep-checkbox { width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
 
         .dep-btn {
-            background: none; border: 1px solid #bbb; border-radius: 4px;
-            cursor: pointer; font-size: 0.85em; padding: 2px 5px; color: #555;
+            background: none; border: 1px solid var(--color-border); border-radius: 4px;
+            cursor: pointer; font-size: 0.85em; padding: 2px 5px; color: var(--color-text-muted);
         }
-        .dep-btn:hover { background: #e3f2fd; border-color: #1565c0; color: #1565c0; }
+        .dep-btn:hover { background: #e3f2fd; border-color: var(--color-dep-predecessor); color: var(--color-dep-predecessor); }
         .attach-badge {
             display: inline-block;
             background: #e8f5e9;
-            color: #2e7d32;
+            color: var(--color-gate-passed);
             border: 1px solid #a5d6a7;
             border-radius: 8px;
             font-size: 0.72em;
@@ -1079,7 +1150,7 @@
             position: absolute;
             z-index: 10001;
             background: #fff;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 6px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.2);
             overflow: hidden;
@@ -1094,31 +1165,31 @@
             padding: 9px 14px;
             font-size: 0.85em;
             cursor: pointer;
-            color: #333;
+            color: var(--color-text);
         }
-        .task-context-menu button:hover { background: #f0f0f0; }
+        .task-context-menu button:hover { background: var(--color-surface-alt); }
 
         /* Tailed Out tasks */
         .gantt-bar.tailed-out {
-            background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%) !important;
+            background: var(--color-tailed-out) !important;
             border: none !important;
             opacity: 0.55;
             text-decoration: line-through;
             box-shadow: none !important;
         }
         .task-row.tailed-out { opacity: 0.6; }
-        .task-row.tailed-out .task-name { text-decoration: line-through; color: #999; }
+        .task-row.tailed-out .task-name { text-decoration: line-through; color: var(--color-text-muted); }
 
         /* Sub-tasks (one level deep): indented under their parent */
         .task-row.subtask {
-            background: #fafbfc;
+            background: var(--row-subtask-bg);
         }
         .task-row.subtask:hover {
             background: #eef6ef;
         }
         .task-row.subtask .task-name {
             padding-left: 4px;
-            color: #444;
+            color: var(--color-text);
         }
         .subtask-caret {
             display: inline-block;
@@ -1144,7 +1215,7 @@
         .add-sub-btn {
             background: #eef6ef;
             border: 1px solid #a5d6a7;
-            color: #2c5f2d;
+            color: var(--color-accent);
             border-radius: 4px;
             padding: 2px 6px;
             font-size: 0.92em;
@@ -1155,21 +1226,21 @@
 
         /* Rework cause task highlight */
         .task-row.rework-cause {
-            background: #fff8e1 !important;
-            border-left: 4px solid #ffc107 !important;
+            background: var(--row-rework-bg) !important;
+            border-left: 4px solid var(--row-rework-border) !important;
         }
         .task-row.rework-cause:hover {
-            background: #fff3cd !important;
+            background: var(--row-gate-passed-rework-bg) !important;
         }
 
         /* Gate passed styles */
         .task-row.gate-passed {
-            background: #e8f5e9 !important;
-            border-left: 4px solid #4caf50 !important;
+            background: var(--row-gate-passed-bg) !important;
+            border-left: 4px solid var(--row-gate-passed-border) !important;
         }
         .task-row.gate-passed-rework {
-            background: #fff3cd !important;
-            border-left: 4px solid #ff9800 !important;
+            background: var(--row-gate-passed-rework-bg) !important;
+            border-left: 4px solid var(--row-gate-passed-rework-border) !important;
         }
         .task-row.gate-passed-rework:hover {
             background: #ffe0b2 !important;
@@ -1209,8 +1280,8 @@
         }
         .rework-tasks-btn {
             background: #fff3e0;
-            border: 1px solid #e65100;
-            color: #e65100;
+            border: 1px solid var(--color-dep-successor);
+            color: var(--color-dep-successor);
             border-radius: 10px;
             padding: 1px 8px;
             font-size: 0.75em;
@@ -1223,7 +1294,7 @@
         .cloned-from-badge {
             display: inline-block;
             background: #e3f2fd;
-            color: #1565c0;
+            color: var(--color-dep-predecessor);
             border: 1px solid #90caf9;
             border-radius: 8px;
             font-size: 0.72em;
@@ -1307,20 +1378,20 @@
         }
         .comment-empty {
             padding: 14px 12px;
-            color: #888;
+            color: var(--color-text-muted);
             font-size: 0.85em;
             text-align: center;
         }
         .comment-row {
             padding: 8px 12px;
-            border-bottom: 1px solid #f3f3f3;
+            border-bottom: 1px solid var(--color-surface-alt);
         }
         .comment-row:last-child { border-bottom: none; }
         .comment-row.closed { opacity: 0.6; }
         .comment-row.closed .comment-body { text-decoration: line-through; }
         .comment-meta {
             font-size: 0.72em;
-            color: #888;
+            color: var(--color-text-muted);
             margin-bottom: 3px;
         }
         .comment-body {
@@ -1331,28 +1402,28 @@
         }
         .comment-actions { margin-top: 5px; }
         .comment-actions button {
-            background: #f7f7f7;
-            border: 1px solid #ccc;
+            background: var(--color-surface-alt);
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             padding: 1px 8px;
             font-size: 0.74em;
             cursor: pointer;
-            color: #444;
+            color: var(--color-text);
         }
         .comment-actions button:hover { background: #ececec; }
         .comment-add-box {
             display: flex;
             gap: 6px;
             padding: 8px 12px;
-            border-top: 1px solid #eee;
-            background: #fafafa;
+            border-top: 1px solid var(--color-border);
+            background: var(--color-surface-alt);
         }
         .comment-add-box textarea {
             flex: 1;
             resize: vertical;
             min-height: 38px;
             max-height: 120px;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 5px;
             padding: 6px 8px;
             font-size: 0.85em;
@@ -1376,7 +1447,7 @@
             position: absolute;
             z-index: 10000;
             background: #fff;
-            border: 2px solid #2c5f2d;
+            border: 2px solid var(--color-accent);
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.22);
             width: 360px;
@@ -1386,7 +1457,7 @@
             overflow: hidden;
         }
         .reparent-picker-popup .rp-header {
-            background: #2c5f2d;
+            background: var(--color-accent);
             color: #fff;
             padding: 8px 12px;
             display: flex;
@@ -1415,7 +1486,7 @@
         .reparent-picker-popup .rp-option:hover { background: #eef6ef; }
         .reparent-picker-popup .rp-footer {
             padding: 8px 10px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid var(--color-border);
             display: flex;
             justify-content: flex-end;
             gap: 8px;
@@ -1424,7 +1495,7 @@
             position: absolute;
             z-index: 10000;
             background: #fff;
-            border: 2px solid #2e7d32;
+            border: 2px solid var(--color-gate-passed);
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.22);
             width: 400px;
@@ -1434,7 +1505,7 @@
             overflow: hidden;
         }
         .attachments-header {
-            background: #2e7d32;
+            background: var(--color-gate-passed);
             color: #fff;
             padding: 8px 12px;
             display: flex;
@@ -1464,13 +1535,13 @@
         }
         .attach-empty {
             padding: 14px 12px;
-            color: #888;
+            color: var(--color-text-muted);
             font-size: 0.85em;
             text-align: center;
         }
         .attach-row {
             padding: 8px 12px;
-            border-bottom: 1px solid #f3f3f3;
+            border-bottom: 1px solid var(--color-surface-alt);
             display: flex;
             align-items: flex-start;
             gap: 8px;
@@ -1480,7 +1551,7 @@
         .attach-main { flex: 1; min-width: 0; }
         .attach-label {
             font-size: 0.86em;
-            color: #1565c0;
+            color: var(--color-dep-predecessor);
             font-weight: 600;
             cursor: pointer;
             word-break: break-word;
@@ -1488,24 +1559,24 @@
         .attach-label:hover { text-decoration: underline; }
         .attach-meta {
             font-size: 0.72em;
-            color: #888;
+            color: var(--color-text-muted);
             margin-top: 2px;
         }
         .attach-del {
-            background: #f7f7f7;
-            border: 1px solid #ccc;
+            background: var(--color-surface-alt);
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             padding: 1px 8px;
             font-size: 0.74em;
             cursor: pointer;
-            color: #b71c1c;
+            color: var(--color-overdue-dark);
             flex-shrink: 0;
         }
-        .attach-del:hover { background: #ffebee; border-color: #b71c1c; }
+        .attach-del:hover { background: #ffebee; border-color: var(--color-overdue-dark); }
         .attach-add-box {
             padding: 8px 12px;
-            border-top: 1px solid #eee;
-            background: #fafafa;
+            border-top: 1px solid var(--color-border);
+            background: var(--color-surface-alt);
             display: flex;
             flex-direction: column;
             gap: 8px;
@@ -1514,14 +1585,14 @@
         .attach-add-row input[type="text"], .attach-add-row input[type="url"] {
             flex: 1;
             min-width: 0;
-            border: 1px solid #ccc;
+            border: 1px solid var(--color-border);
             border-radius: 5px;
             padding: 5px 8px;
             font-size: 0.82em;
             font-family: inherit;
         }
         .attach-add-row button {
-            background: #2e7d32;
+            background: var(--color-gate-passed);
             border: none;
             color: #fff;
             font-weight: 600;
@@ -1535,12 +1606,12 @@
         .attach-add-divider {
             text-align: center;
             font-size: 0.72em;
-            color: #aaa;
+            color: var(--color-text-muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
         .attach-error {
-            color: #b71c1c;
+            color: var(--color-overdue-dark);
             font-size: 0.76em;
             padding: 0 12px 6px;
         }
@@ -1548,7 +1619,7 @@
             position: absolute;
             z-index: 9999;
             background: #fff;
-            border: 2px solid #e65100;
+            border: 2px solid var(--color-dep-successor);
             border-radius: 8px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.22);
             min-width: 430px;
@@ -1556,7 +1627,7 @@
             overflow: hidden;
         }
         .rework-popup-header {
-            background: #e65100;
+            background: var(--color-dep-successor);
             color: #fff;
             padding: 8px 12px;
             display: flex;
@@ -1579,7 +1650,7 @@
         }
         .rework-log-table td {
             padding: 5px 10px;
-            border-bottom: 1px solid #f5f5f5;
+            border-bottom: 1px solid var(--color-surface-alt);
         }
         .rework-log-table tr:last-child td { border-bottom: none; }
         .rework-orig-date-input {
@@ -1587,13 +1658,13 @@
             border-radius: 4px;
             padding: 2px 5px;
             font-size: 0.82em;
-            color: #555;
+            color: var(--color-text-muted);
             background: #fff8e1;
             cursor: pointer;
             transition: background 0.3s;
         }
         .rework-orig-date-input:focus {
-            outline: 2px solid #e65100;
+            outline: 2px solid var(--color-dep-successor);
             background: #fff;
         }
 
@@ -1616,34 +1687,34 @@
         }
         .gate-signoff-btn.signed-rework {
             background: #ffe0b2;
-            border-color: #e65100;
+            border-color: var(--color-dep-successor);
             color: #bf360c;
         }
 
         /* Rework cause toggle button */
         .rework-cause-btn {
             padding: 2px 6px;
-            border: 1px solid #bbb;
-            background: #f5f5f5;
-            color: #888;
+            border: 1px solid var(--color-border);
+            background: var(--color-surface-alt);
+            color: var(--color-text-muted);
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.8em;
         }
-        .rework-cause-btn:hover { background: #fff3e0; border-color: #ff9800; color: #e65100; }
+        .rework-cause-btn:hover { background: #fff3e0; border-color: #ff9800; color: var(--color-dep-successor); }
         .rework-cause-btn.active {
             background: #ff9800;
-            border-color: #e65100;
+            border-color: var(--color-dep-successor);
             color: white;
         }
 
         /* Gantt bars for gate sign-off states */
         .gantt-bar.gate-passed-bar {
-            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%) !important;
+            background: var(--color-gate-passed) !important;
             border-color: #1b5e20 !important;
         }
         .gantt-bar.gate-rework-bar {
-            background: linear-gradient(135deg, #ff9800 0%, #e65100 100%) !important;
+            background: var(--color-gate-rework) !important;
             border-color: #bf360c !important;
         }
 
@@ -1653,7 +1724,7 @@
             gap: 20px;
             padding: 15px 30px;
             background: white;
-            border-top: 1px solid #ddd;
+            border-top: 1px solid var(--color-border);
             flex-wrap: wrap;
             font-size: 0.85em;
         }
@@ -1703,7 +1774,7 @@
         .modal-header {
             font-size: 1.5em;
             margin-bottom: 20px;
-            color: #2c5f2d;
+            color: var(--color-accent);
             font-weight: 600;
         }
 
@@ -1715,7 +1786,7 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #555;
+            color: var(--color-text-muted);
         }
 
         .form-group input,
@@ -1723,7 +1794,7 @@
         .form-group textarea {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--color-border);
             border-radius: 4px;
             font-size: 0.95em;
             font-family: inherit;
@@ -1738,7 +1809,7 @@
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #2c5f2d;
+            border-color: var(--color-accent);
             box-shadow: 0 0 0 3px rgba(44, 95, 45, 0.1);
         }
 
@@ -1797,7 +1868,7 @@
         }
 
         .notification.success { background: #28a745; }
-        .notification.error { background: #dc3545; }
+        .notification.error { background: var(--color-overdue); }
         .notification.info { background: #17a2b8; }
 
         .date-edit-container {
@@ -1911,11 +1982,11 @@
         </div>
         <div class="stat-item">
             <span>Critical Path:</span>
-            <strong id="criticalTasks" style="color: #dc3545;">0</strong>
+            <strong id="criticalTasks" style="color: var(--color-overdue);">0</strong>
         </div>
         <div class="stat-item">
             <span>Overdue:</span>
-            <strong id="overdueTasks" style="color: #dc3545;">0</strong>
+            <strong id="overdueTasks" style="color: var(--color-overdue);">0</strong>
         </div>
         <div class="stat-item">
             <span>Milestones:</span>
@@ -2002,19 +2073,23 @@
             <input type="checkbox" id="filterMilestone" onchange="applyFilters()">
             <span>⭐ Milestones Only</span>
         </label>
-        
+        <label class="checkbox-label">
+            <input type="checkbox" id="filterTailedOut" onchange="applyFilters()">
+            <span>🚫 Tailed Out Only</span>
+        </label>
+
         <select class="filter-group" id="phaseFilter" onchange="applyFilters()">
             <option value="all">All Gates</option>
         </select>
 
         <div class="filter-group" id="ownerFilterWrapper" style="position:relative;padding:0;">
             <button id="ownerFilterBtn" onclick="toggleOwnerDropdown(event)"
-                style="height:100%;width:100%;min-width:140px;padding:0 10px;background:white;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:0.9em;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                style="height:100%;width:100%;min-width:120px;padding:5px 10px;background:white;border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:0.8em;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                 All Owners ▾
             </button>
             <div id="ownerFilterDropdown"
-                style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:200px;background:white;border:1px solid #ccc;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:3000;">
-                <div style="padding:8px;border-bottom:1px solid #eee;display:flex;gap:6px;">
+                style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:200px;background:white;border:1px solid var(--color-border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:3000;">
+                <div style="padding:8px;border-bottom:1px solid var(--color-border);display:flex;gap:6px;">
                     <button onclick="selectAllOwners()" style="flex:1;padding:4px 8px;font-size:0.8em;background:#e3f2fd;border:1px solid #90caf9;border-radius:4px;cursor:pointer;">✓ All</button>
                     <button onclick="clearOwnerFilter()" style="flex:1;padding:4px 8px;font-size:0.8em;background:#fff3e0;border:1px solid #ffcc80;border-radius:4px;cursor:pointer;">✕ Clear</button>
                 </div>
@@ -2022,19 +2097,23 @@
             </div>
         </div>
 
+        <select class="filter-group" id="departmentFilter" onchange="applyFilters()" title="Derived from the owner's discipline map">
+            <option value="all">All Departments</option>
+        </select>
+
         <input type="text" class="filter-group" id="searchInput" placeholder="Search tasks..." oninput="applyFilters()">
         
         <button class="btn btn-secondary" id="clearSortBtn" onclick="clearSort()" style="display: none;">
             Clear Sort
         </button>
         <button class="btn" id="tailedOutBtn" onclick="showTailedOutReport()"
-            style="background:#f5f5f5;border:1px solid #bbb;color:#555;display:none;">
+            style="background:var(--color-surface-alt);border:1px solid var(--color-border);color:var(--color-text-muted);display:none;">
             🚫 Tailed Out (<span id="tailedOutCount">0</span>)
         </button>
     </div>
 
-    <div style="padding:4px 30px 2px;display:flex;align-items:center;gap:10px;font-size:0.75em;color:#666;">
-        <span style="font-weight:600;color:#444;">Deps:</span>
+    <div style="padding:3px 24px;display:flex;align-items:center;gap:10px;font-size:0.68em;color:var(--color-text-muted);">
+        <span style="font-weight:600;color:var(--color-text);">Deps:</span>
         <span class="pred-link" style="pointer-events:none;">1</span><span>Predecessor</span>
         <span class="pred-link pred-link-done" style="pointer-events:none;">2</span><span>Done</span>
         <span class="pred-link pred-link-blocking" style="pointer-events:none;">3</span><span>Overdue — blocking</span>
@@ -2054,6 +2133,7 @@
                 <div class="sortable" data-sort="id" onclick="sortTasks('id')">ID</div>
                 <div class="sortable" data-sort="name" onclick="sortTasks('name')">Task Name</div>
                 <div class="sortable" data-sort="owner" onclick="sortTasks('owner')">Owner</div>
+                <div class="sortable" data-sort="department" onclick="sortTasks('department')" title="Derived from the owner's discipline map">Dept.</div>
                 <div class="sortable" data-sort="start" onclick="sortTasks('start')">Start (Plan)</div>
                 <div title="Duration in calendar days">Dur.</div>
                 <div class="sortable" data-sort="end" onclick="sortTasks('end')">End (Plan)</div>
@@ -2075,51 +2155,51 @@
 
     <div class="legend">
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #ff1744 0%, #d50000 100%); border: 3px solid #b71c1c;"></div>
+            <div class="legend-color" style="background: var(--color-critical); border: 3px solid var(--color-critical-border);"></div>
             <span><strong>🔴 CRITICAL PATH</strong></span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);"></div>
+            <div class="legend-color" style="background: var(--color-overdue);"></div>
             <span>Overdue</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%);"></div>
+            <div class="legend-color" style="background: var(--status-completed-fg);"></div>
             <span>Completed</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);"></div>
+            <div class="legend-color" style="background: var(--status-inprocess-fg);"></div>
             <span>In Process</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);"></div>
+            <div class="legend-color" style="background: var(--status-planned-fg);"></div>
             <span>Planned</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);"></div>
+            <div class="legend-color" style="background: var(--status-onhold-fg);"></div>
             <span>On Hold</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);"></div>
+            <div class="legend-color" style="background: var(--status-review-fg);"></div>
             <span>Review</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #607d8b 0%, #455a64 100%);"></div>
+            <div class="legend-color" style="background: var(--status-cancelled-fg);"></div>
             <span>Cancelled</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="width: 20px; height: 20px; transform: rotate(45deg); background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);"></div>
+            <div class="legend-color" style="background: var(--color-milestone-fill); border: 3px solid var(--color-milestone-border);"></div>
             <span>Milestone</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);"></div>
+            <div class="legend-color" style="background: var(--color-gate-passed);"></div>
             <span>✅ Gate Passed</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: linear-gradient(135deg, #ff9800 0%, #e65100 100%);"></div>
+            <div class="legend-color" style="background: var(--color-gate-rework);"></div>
             <span>⚠ Gate Passed with Rework</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color" style="background: #fff8e1; border: 2px solid #ffc107;"></div>
+            <div class="legend-color" style="background: var(--row-rework-bg); border: 2px solid var(--row-rework-border);"></div>
             <span>⚠ Rework Cause Task</span>
         </div>
     </div>
@@ -2186,7 +2266,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Duration (days) <span style="font-weight:400;color:#888;font-size:0.88em;">— enter to auto-calculate Due Date</span></label>
+                    <label>Duration (days) <span style="font-weight:400;color:var(--color-text-muted);font-size:0.88em;">— enter to auto-calculate Due Date</span></label>
                     <input type="number" id="taskDuration" min="1" step="1" placeholder="e.g. 10" style="width:140px;">
                 </div>
 
@@ -2196,19 +2276,26 @@
                 </div>
 
                 <div id="overlapAlertSection" style="display:none;margin-bottom:12px;padding:10px 12px;background:#ffebee;border:1.5px solid #ef9a9a;border-radius:6px;">
-                    <div style="font-weight:700;color:#c62828;margin-bottom:6px;">⚠ Overlapping / Blocking Tasks</div>
+                    <div style="font-weight:700;color:var(--color-overdue-dark);margin-bottom:6px;">⚠ Overlapping / Blocking Tasks</div>
                     <div id="overlapAlertList"></div>
                 </div>
 
                 <div class="form-group" id="dependencyPickerSection" style="border:2px solid #4a90d9;border-radius:6px;padding:12px;background:#f0f7ff;">
-                    <label style="font-weight:700;margin-bottom:8px;display:block;color:#2c5f9e;font-size:1em;">🔗 Depends On (Predecessors)</label>
+                    <div class="dep-picker-toolbar">
+                        <label style="font-weight:700;margin:0;color:#2c5f9e;font-size:1em;">🔗 Depends On (Predecessors)</label>
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" id="depUndoBtn" class="dep-mini-btn" onclick="undoDepChange()" title="Undo last change" disabled>↩ Undo</button>
+                            <button type="button" id="depClearBtn" class="dep-mini-btn dep-clear-btn" onclick="clearAllDepSelections()" title="Clear all dependencies" disabled>✕ Clear All</button>
+                        </div>
+                    </div>
+                    <div id="depSelectedChips" class="dep-selected-chips empty">No dependencies selected yet</div>
                     <div id="depPickerSearch" style="margin-bottom:8px;">
-                        <input type="text" id="depSearchInput" placeholder="🔍 Search tasks by name..." 
+                        <input type="text" id="depSearchInput" placeholder="🔍 Search tasks by name..."
                                style="width:100%;padding:6px 10px;border:1px solid #bcd4f0;border-radius:4px;font-size:0.9em;"
                                oninput="filterDepPicker(this.value)">
                     </div>
                     <div id="depPickerList" style="max-height:200px;overflow-y:auto;border:1px solid #bcd4f0;border-radius:4px;padding:4px;background:white;">
-                        <div style="color:#999;padding:8px;text-align:center;">Loading tasks...</div>
+                        <div style="color:var(--color-text-muted);padding:8px;text-align:center;">Loading tasks...</div>
                     </div>
                 </div>
 
@@ -2228,7 +2315,7 @@
                 </div>
 
                 <div class="modal-footer" style="justify-content:space-between;">
-                    <button type="button" id="deleteTaskBtn" class="btn" style="background:#c62828;color:#fff;display:none;" onclick="deleteTask(currentEditId);closeTaskModal()">🗑 Delete Task</button>
+                    <button type="button" id="deleteTaskBtn" class="btn" style="background:var(--color-overdue-dark);color:#fff;display:none;" onclick="deleteTask(currentEditId);closeTaskModal()">🗑 Delete Task</button>
                     <div style="display:flex;gap:10px;">
                         <button type="button" class="btn btn-secondary" onclick="closeTaskModal()">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save Task</button>
@@ -2241,7 +2328,7 @@
     <!-- Tailed Out Report Modal -->
     <div class="modal" id="tailedOutModal">
         <div class="modal-content" style="max-width:750px;">
-            <div class="modal-header" style="background:linear-gradient(135deg,#757575 0%,#424242 100%);">
+            <div class="modal-header" style="background:var(--color-nav-bg);">
                 🚫 Tailed Out Tasks — Removed from Scope
             </div>
             <div id="tailedOutModalContent" style="padding:20px;max-height:70vh;overflow-y:auto;"></div>
@@ -2254,31 +2341,31 @@
     <!-- Tailed Out Carry Forward Modal -->
     <div class="modal" id="tailedOutCloneModal">
         <div class="modal-content" style="max-width:500px;">
-            <div class="modal-header" style="background:linear-gradient(135deg,#757575 0%,#424242 100%);">
+            <div class="modal-header" style="background:var(--color-nav-bg);">
                 🚫 Task Tailed Out — Carry Forward?
             </div>
             <div style="padding:22px;">
                 <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:12px 16px;margin-bottom:18px;">
-                    <div style="font-weight:700;font-size:1em;color:#333;" id="cloneOriginalTaskName"></div>
-                    <div style="font-size:0.85em;color:#888;margin-top:3px;">Original phase: <span id="cloneOriginalPhase" style="font-weight:600;color:#666;"></span></div>
+                    <div style="font-weight:700;font-size:1em;color:var(--color-text);" id="cloneOriginalTaskName"></div>
+                    <div style="font-size:0.85em;color:var(--color-text-muted);margin-top:3px;">Original phase: <span id="cloneOriginalPhase" style="font-weight:600;color:var(--color-text-muted);"></span></div>
                 </div>
-                <p style="margin:0 0 18px 0;color:#555;font-size:0.93em;">
+                <p style="margin:0 0 18px 0;color:var(--color-text-muted);font-size:0.93em;">
                     Would you like to carry this task forward into a future gate as a new open task?
                 </p>
                 <div style="margin-bottom:16px;">
-                    <label style="font-weight:600;display:block;margin-bottom:7px;color:#444;">Target gate:</label>
+                    <label style="font-weight:600;display:block;margin-bottom:7px;color:var(--color-text);">Target gate:</label>
                     <select id="cloneTargetGate" onchange="updateCloneDatePreview()"
-                        style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:0.92em;background:#fff;">
+                        style="width:100%;padding:9px 12px;border:1px solid var(--color-border);border-radius:6px;font-size:0.92em;background:#fff;">
                     </select>
                 </div>
-                <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 14px;font-size:0.88em;color:#555;margin-bottom:16px;">
-                    📅 Clone start date: <strong id="cloneDatePreview" style="color:#2e7d32;">—</strong>
-                    <span style="color:#999;margin-left:8px;font-size:0.9em;">(= gate due date)</span>
+                <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:10px 14px;font-size:0.88em;color:var(--color-text-muted);margin-bottom:16px;">
+                    📅 Clone start date: <strong id="cloneDatePreview" style="color:var(--color-gate-passed);">—</strong>
+                    <span style="color:var(--color-text-muted);margin-left:8px;font-size:0.9em;">(= gate due date)</span>
                 </div>
                 <div style="margin-bottom:4px;">
-                    <label style="font-weight:600;display:block;margin-bottom:7px;color:#444;">End date (due date) for clone: <span style="color:#c62828;">*</span></label>
+                    <label style="font-weight:600;display:block;margin-bottom:7px;color:var(--color-text);">End date (due date) for clone: <span style="color:var(--color-overdue-dark);">*</span></label>
                     <input type="date" id="cloneEndDate"
-                        style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:0.92em;box-sizing:border-box;">
+                        style="width:100%;padding:9px 12px;border:1px solid var(--color-border);border-radius:6px;font-size:0.92em;box-sizing:border-box;">
                 </div>
                 <input type="hidden" id="cloneOriginalTaskId">
             </div>
@@ -2303,18 +2390,18 @@
             <!-- Body: diagram + orphans side by side -->
             <div style="display:flex;flex:1;overflow:hidden;min-height:0;">
                 <!-- Network diagram -->
-                <div style="flex:1;display:flex;flex-direction:column;border-right:2px solid #eee;min-width:0;">
-                    <div style="padding:10px 16px 6px;font-weight:600;font-size:0.85em;color:#444;border-bottom:1px solid #eee;flex-shrink:0;">
-                        Network Diagram <span style="font-weight:400;color:#888;font-size:0.9em;">— tasks with dependencies</span>
+                <div style="flex:1;display:flex;flex-direction:column;border-right:2px solid var(--color-border);min-width:0;">
+                    <div style="padding:10px 16px 6px;font-weight:600;font-size:0.85em;color:var(--color-text);border-bottom:1px solid var(--color-border);flex-shrink:0;">
+                        Network Diagram <span style="font-weight:400;color:var(--color-text-muted);font-size:0.9em;">— tasks with dependencies</span>
                     </div>
-                    <div id="depMapDiagram" style="flex:1;overflow:auto;padding:16px;background:#fafafa;"></div>
+                    <div id="depMapDiagram" style="flex:1;overflow:auto;padding:16px;background:var(--color-surface-alt);"></div>
                 </div>
                 <!-- Orphan panel -->
                 <div style="width:320px;display:flex;flex-direction:column;flex-shrink:0;">
-                    <div style="padding:10px 16px 6px;font-weight:600;font-size:0.85em;color:#444;border-bottom:1px solid #eee;flex-shrink:0;display:flex;align-items:center;gap:8px;">
+                    <div style="padding:10px 16px 6px;font-weight:600;font-size:0.85em;color:var(--color-text);border-bottom:1px solid var(--color-border);flex-shrink:0;display:flex;align-items:center;gap:8px;">
                         Orphan Tasks
-                        <span id="depMapOrphanCount" style="background:#e53935;color:white;border-radius:10px;padding:1px 8px;font-size:0.78em;font-weight:700;"></span>
-                        <span style="font-weight:400;color:#888;font-size:0.85em;">no deps at all</span>
+                        <span id="depMapOrphanCount" style="background:var(--color-overdue);color:white;border-radius:10px;padding:1px 8px;font-size:0.78em;font-weight:700;"></span>
+                        <span style="font-weight:400;color:var(--color-text-muted);font-size:0.85em;">no deps at all</span>
                     </div>
                     <div id="depMapOrphans" style="flex:1;overflow-y:auto;padding:8px;"></div>
                 </div>
@@ -2325,12 +2412,12 @@
     <!-- Gate Change Log Modal -->
     <div class="modal" id="gateChangeLogModal">
         <div class="modal-content" style="max-width: 900px;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);">
+            <div class="modal-header" style="background: var(--color-accent);">
                 📋 Gate Deadline Change Log
             </div>
             <div id="gateChangeLogContent" style="padding: 25px; max-height: 600px; overflow-y: auto;">
                 <!-- Content loaded dynamically -->
-                <div style="text-align: center; padding: 40px; color: #999;">
+                <div style="text-align: center; padding: 40px; color: var(--color-text-muted);">
                     <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
                     <div>Loading change log...</div>
                 </div>
@@ -3172,10 +3259,10 @@
                 const rows = byPhase[phase].map(t => `
                     <label class="rp-option">
                         <input type="radio" name="rp-parent" value="${t.id}" ${task.parent_id === t.id ? 'checked' : ''}>
-                        <span>${escapeHtml(t.name)} <span style="color:#999;">(${formatDateShort(t.entered)} → ${formatDateShort(t.due)})</span></span>
+                        <span>${escapeHtml(t.name)} <span style="color:var(--color-text-muted);">(${formatDateShort(t.entered)} → ${formatDateShort(t.due)})</span></span>
                     </label>`).join('');
-                return `<div style="font-weight:600;font-size:0.78em;color:#2c5f2d;padding:4px 6px;">${escapeHtml(phase)}</div>${rows}`;
-            }).join('') || '<div style="padding:10px;color:#999;text-align:center;">No eligible macro tasks in this project</div>';
+                return `<div style="font-weight:600;font-size:0.78em;color:var(--color-accent);padding:4px 6px;">${escapeHtml(phase)}</div>${rows}`;
+            }).join('') || '<div style="padding:10px;color:var(--color-text-muted);text-align:center;">No eligible macro tasks in this project</div>';
 
             const popup = document.createElement('div');
             popup.id = 'reparent-picker-popup';
@@ -3525,7 +3612,7 @@
                 html += '<h3 style="color: #1976D2; border-bottom: 2px solid #1976D2; padding-bottom: 10px; margin-bottom: 20px;">📊 Summary</h3>';
                 
                 if (baselines.length === 0) {
-                    html += '<div style="padding: 20px; background: #f5f5f5; border-radius: 8px; text-align: center; color: #666;">';
+                    html += '<div style="padding: 20px; background: var(--color-surface-alt); border-radius: 8px; text-align: center; color: var(--color-text-muted);">';
                     html += 'No Gate baselines have been established yet.';
                     html += '</div>';
                 } else {
@@ -3551,13 +3638,13 @@
                             html += '<button class="btn btn-warning" style="padding: 4px 10px; font-size: 0.8em;" onclick="undoToBaseline(\'' + baseline.gate_name + '\', \'' + baseline.baseline_date + '\', \'' + currentDate + '\')">↶ Reset to Baseline</button>';
                         }
                         html += '</div>';
-                        html += '<div style="font-size: 0.9em; color: #666; margin-bottom: 4px;">Baseline: ' + baseline.baseline_date + '</div>';
+                        html += '<div style="font-size: 0.9em; color: var(--color-text-muted); margin-bottom: 4px;">Baseline: ' + baseline.baseline_date + '</div>';
                         if (current) {
-                            html += '<div style="font-size: 0.9em; color: #666; margin-bottom: 8px;">Current: ' + currentDate + '</div>';
+                            html += '<div style="font-size: 0.9em; color: var(--color-text-muted); margin-bottom: 8px;">Current: ' + currentDate + '</div>';
                             if (isDelayed) {
                                 html += '<div style="color: #d84315; font-weight: bold;">⚠️ Delayed by ' + daysDelayed + ' days</div>';
                             } else if (daysDelayed < 0) {
-                                html += '<div style="color: #2e7d32; font-weight: bold;">✓ Ahead by ' + Math.abs(daysDelayed) + ' days</div>';
+                                html += '<div style="color: var(--color-gate-passed); font-weight: bold;">✓ Ahead by ' + Math.abs(daysDelayed) + ' days</div>';
                             } else {
                                 html += '<div style="color: #4caf50; font-weight: bold;">✓ On Track</div>';
                             }
@@ -3573,7 +3660,7 @@
                 html += '<h3 style="color: #1976D2; border-bottom: 2px solid #1976D2; padding-bottom: 10px; margin-bottom: 20px;">📜 Change History</h3>';
                 
                 if (changeLog.length === 0) {
-                    html += '<div style="padding: 20px; background: #f5f5f5; border-radius: 8px; text-align: center; color: #666;">';
+                    html += '<div style="padding: 20px; background: var(--color-surface-alt); border-radius: 8px; text-align: center; color: var(--color-text-muted);">';
                     html += 'No Gate deadline changes have been recorded yet.';
                     html += '</div>';
                 } else {
@@ -3582,27 +3669,27 @@
                         const changeDate = new Date(entry.changed_at);
                         const formattedDate = changeDate.toLocaleString();
                         
-                        html += '<div style="padding: 15px; background: white; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">';
+                        html += '<div style="padding: 15px; background: white; border: 1px solid var(--color-border); border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">';
                         html += '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">';
                         html += '<div style="font-weight: bold; font-size: 1.1em; color: #1976D2;">' + entry.gate_name + '</div>';
                         html += '<div style="display: flex; align-items: center; gap: 10px;">';
-                        html += '<div style="font-size: 0.85em; color: #999;">' + formattedDate + '</div>';
+                        html += '<div style="font-size: 0.85em; color: var(--color-text-muted);">' + formattedDate + '</div>';
                         html += '<button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85em;" onclick="undoGateChange(' + entry.id + ', \'' + entry.gate_name + '\', \'' + entry.old_date + '\')">↶ Undo</button>';
                         html += '</div>';
                         html += '</div>';
                         html += '<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; font-size: 0.9em;">';
-                        html += '<div><span style="color: #666;">Baseline:</span> <strong>' + entry.baseline_date + '</strong></div>';
-                        html += '<div><span style="color: #666;">Previous:</span> <strong>' + entry.old_date + '</strong></div>';
-                        html += '<div><span style="color: #666;">New:</span> <strong style="color: #d84315;">' + entry.new_date + '</strong></div>';
+                        html += '<div><span style="color: var(--color-text-muted);">Baseline:</span> <strong>' + entry.baseline_date + '</strong></div>';
+                        html += '<div><span style="color: var(--color-text-muted);">Previous:</span> <strong>' + entry.old_date + '</strong></div>';
+                        html += '<div><span style="color: var(--color-text-muted);">New:</span> <strong style="color: #d84315;">' + entry.new_date + '</strong></div>';
                         html += '</div>';
                         html += '<div style="background: #fff3e0; padding: 10px; border-radius: 4px; margin-bottom: 10px;">';
                         html += '<strong>Days Delayed from Baseline:</strong> <span style="color: #d84315; font-weight: bold;">' + entry.days_delayed + ' days</span>';
                         html += '</div>';
                         if (entry.triggered_by_task_name) {
-                            html += '<div style="font-size: 0.9em; color: #666;">Triggered by: <em>' + entry.triggered_by_task_name + '</em></div>';
+                            html += '<div style="font-size: 0.9em; color: var(--color-text-muted);">Triggered by: <em>' + entry.triggered_by_task_name + '</em></div>';
                         }
                         if (entry.impact_description) {
-                            html += '<div style="background: #ffebee; padding: 10px; border-radius: 4px; border-left: 3px solid #f44336; margin-top: 10px; font-size: 0.9em;">';
+                            html += '<div style="background: #ffebee; padding: 10px; border-radius: 4px; border-left: 3px solid var(--color-overdue); margin-top: 10px; font-size: 0.9em;">';
                             html += '<strong>Impact:</strong> ' + entry.impact_description;
                             html += '</div>';
                         }
@@ -3616,7 +3703,7 @@
                 
             } catch (error) {
                 console.error('Error loading Gate change log:', error);
-                contentDiv.innerHTML = '<div style="padding: 20px; color: #d32f2f; text-align: center;">⚠️ Failed to load change log</div>';
+                contentDiv.innerHTML = '<div style="padding: 20px; color: var(--color-overdue); text-align: center;">⚠️ Failed to load change log</div>';
             }
         }
 
@@ -3707,6 +3794,7 @@
                 // Refresh the Gantt
                 populateOwnerFilter();
                 populatePhaseFilter();
+                populateDepartmentFilter();
                 applyFilters();
                 
             } catch (error) {
@@ -3816,6 +3904,7 @@
                 // Refresh the Gantt with the reloaded tasks
                 populateOwnerFilter();
                 populatePhaseFilter();
+                populateDepartmentFilter();
                 applyFilters();
                 
             } catch (error) {
@@ -3834,16 +3923,16 @@
                 const modalHtml = `
                     <div class="modal active" id="undoBaselineModal" style="z-index: 20003;">
                         <div class="modal-content" style="max-width: 550px;">
-                            <div class="modal-header" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); color: white;">
+                            <div class="modal-header" style="background: var(--color-overdue); color: white;">
                                 ⟲ Reset to Original Baseline
                             </div>
                             <div style="padding: 25px;">
-                                <div style="background: #ffebee; border-left: 4px solid #f44336; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: #c62828;">
+                                <div style="background: #ffebee; border-left: 4px solid var(--color-overdue); padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: var(--color-overdue-dark);">
                                         Reset ${gateName} to Original Plan
                                     </div>
                                     <div style="margin-bottom: 15px; line-height: 1.8;">
-                                        <div><strong>Original Baseline:</strong> <span style="color: #2e7d32;">${baselineDate}</span></div>
+                                        <div><strong>Original Baseline:</strong> <span style="color: var(--color-gate-passed);">${baselineDate}</span></div>
                                         <div><strong>Current Date:</strong> <span style="color: #d84315;">${currentDate}</span></div>
                                         <div style="margin-top: 8px; padding: 8px; background: rgba(244,67,54,0.1); border-radius: 4px;">
                                             <strong>Total Delay to Remove:</strong> <span style="color: #d84315; font-weight: bold;">${totalDelay} days</span>
@@ -3852,13 +3941,13 @@
                                     <div style="padding: 10px; background: rgba(244,67,54,0.15); border-radius: 4px; font-size: 0.95em;">
                                         ⚠️ This will <strong>revert ALL changes</strong> to ${gateName} and restore it to the original planned date.
                                     </div>
-                                    <div style="margin-top: 10px; padding: 10px; background: rgba(244,67,54,0.2); border-radius: 4px; font-size: 0.95em; border-left: 3px solid #f44336;">
+                                    <div style="margin-top: 10px; padding: 10px; background: rgba(244,67,54,0.2); border-radius: 4px; font-size: 0.95em; border-left: 3px solid var(--color-overdue);">
                                         🗑️ <strong>All change log entries</strong> for this Gate will be permanently deleted.
                                     </div>
                                     </div>
                                 </div>
                                 
-                                <div style="font-weight: 600; margin-bottom: 15px; font-size: 1.05em; text-align: center; color: #c62828;">
+                                <div style="font-weight: 600; margin-bottom: 15px; font-size: 1.05em; text-align: center; color: var(--color-overdue-dark);">
                                     Are you absolutely sure?
                                 </div>
                                 
@@ -3902,12 +3991,12 @@
                 const modalHtml = `
                     <div class="modal active" id="undoConfirmModal" style="z-index: 20003;">
                         <div class="modal-content" style="max-width: 500px;">
-                            <div class="modal-header" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white;">
+                            <div class="modal-header" style="background: var(--status-planned-fg); color: white;">
                                 ↶ Undo Gate Change
                             </div>
                             <div style="padding: 25px;">
                                 <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: #e65100;">
+                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: var(--color-dep-successor);">
                                         Revert ${gateName}
                                     </div>
                                     <div style="margin-bottom: 15px; line-height: 1.6;">
@@ -3960,7 +4049,7 @@
                 top: 80px;
                 right: 20px;
                 max-width: 400px;
-                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+                background: var(--color-overdue);
                 color: white;
                 padding: 20px;
                 border-radius: 10px;
@@ -4172,7 +4261,7 @@
         function getPredCellHTML(taskId) {
             const predIds = dependencies.filter(d => d.successor_id === taskId).map(d => d.predecessor_id);
             const succIds = dependencies.filter(d => d.predecessor_id === taskId).map(d => d.successor_id);
-            if (predIds.length === 0 && succIds.length === 0) return '<div style="color:#ccc;">—</div>';
+            if (predIds.length === 0 && succIds.length === 0) return '<div style="color:var(--color-border);">—</div>';
 
             const blockingPredMap = new Map((_atRiskMap.get(taskId) || []).map(t => [t.id, t._blockReason]));
             const predLinks = predIds.map(pid => {
@@ -4200,7 +4289,7 @@
                 return `<span class="${cls}" onclick="scrollToTask(${sid})" title="→ ${escapeHtml(name)}">${num}</span>`;
             });
 
-            const sep = (predLinks.length && succLinks.length) ? '<span style="color:#ccc;font-size:0.7em;align-self:center;">|</span>' : '';
+            const sep = (predLinks.length && succLinks.length) ? '<span style="color:var(--color-border);font-size:0.7em;align-self:center;">|</span>' : '';
             return `<div class="pred-cell">${predLinks.join(' ')}${sep}${succLinks.join(' ')}</div>`;
         }
 
@@ -4286,57 +4375,57 @@
             const fmt    = d => d ? d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'}) : '—';
             const isoStr = d => d ? d.toISOString().slice(0,10) : null;
             const blockerSummary = blockers.map(b =>
-                `<span style="color:#c62828;cursor:pointer;text-decoration:underline;font-weight:600;" onclick="document.getElementById('suggestDatesPopup')?.remove();scrollToTask(${b.id})" title="Jump to task #${b.rowNum} in Gantt">#${b.rowNum} ${escapeHtml(b.name)}</span> ends ${b.due}`).join('<br>');
+                `<span style="color:var(--color-overdue-dark);cursor:pointer;text-decoration:underline;font-weight:600;" onclick="document.getElementById('suggestDatesPopup')?.remove();scrollToTask(${b.id})" title="Jump to task #${b.rowNum} in Gantt">#${b.rowNum} ${escapeHtml(b.name)}</span> ends ${b.due}`).join('<br>');
 
             let optionsHTML = '';
             if (fitsBeforeGate === true) {
                 optionsHTML = `
-                    <div style="margin-top:8px;padding:6px 8px;background:#e8f5e9;border-radius:6px;color:#2e7d32;font-weight:600;">✅ Fits before ${relevantGate.name} (${fmt(gateDate)})</div>
+                    <div style="margin-top:8px;padding:6px 8px;background:#e8f5e9;border-radius:6px;color:var(--color-gate-passed);font-weight:600;">✅ Fits before ${relevantGate.name} (${fmt(gateDate)})</div>
                     <table style="width:100%;border-collapse:collapse;margin-top:8px;">
-                        <tr><td style="color:#1565c0;padding:2px 4px 2px 0;">➜ Start</td><td style="font-weight:700;color:#1565c0;">${fmt(suggestedStart)}</td></tr>
-                        <tr><td style="color:#1565c0;padding:2px 4px 2px 0;">➜ End</td><td style="font-weight:700;color:#1565c0;">${fmt(shiftedEnd)}</td></tr>
-                        <tr><td style="color:#999;padding:2px 4px 2px 0;">Duration</td><td>${durationDays} days (unchanged)</td></tr>
+                        <tr><td style="color:var(--color-dep-predecessor);padding:2px 4px 2px 0;">➜ Start</td><td style="font-weight:700;color:var(--color-dep-predecessor);">${fmt(suggestedStart)}</td></tr>
+                        <tr><td style="color:var(--color-dep-predecessor);padding:2px 4px 2px 0;">➜ End</td><td style="font-weight:700;color:var(--color-dep-predecessor);">${fmt(shiftedEnd)}</td></tr>
+                        <tr><td style="color:var(--color-text-muted);padding:2px 4px 2px 0;">Duration</td><td>${durationDays} days (unchanged)</td></tr>
                     </table>
                     <div style="display:flex;gap:8px;margin-top:12px;">
-                        <button onclick="applySuggestedDates(${taskId},'${isoStr(suggestedStart)}','${isoStr(shiftedEnd)}')" style="flex:1;background:#1565c0;color:#fff;border:none;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:600;font-size:0.95em;">✓ Apply</button>
-                        <button onclick="document.getElementById('suggestDatesPopup').remove()" style="flex:1;background:#f5f5f5;color:#333;border:1px solid #ccc;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:0.95em;">Cancel</button>
+                        <button onclick="applySuggestedDates(${taskId},'${isoStr(suggestedStart)}','${isoStr(shiftedEnd)}')" style="flex:1;background:var(--color-dep-predecessor);color:#fff;border:none;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:600;font-size:0.95em;">✓ Apply</button>
+                        <button onclick="document.getElementById('suggestDatesPopup').remove()" style="flex:1;background:var(--color-surface-alt);color:var(--color-text);border:1px solid var(--color-border);border-radius:6px;padding:7px 10px;cursor:pointer;font-size:0.95em;">Cancel</button>
                     </div>`;
             } else if (fitsBeforeGate === false && compressedEnd) {
                 optionsHTML = `
-                    <div style="margin-top:8px;padding:5px 8px;background:#fff8e1;border-radius:6px;color:#e65100;font-size:0.9em;">⚠ ${relevantGate.name} is ${fmt(gateDate)} — task needs adjustment</div>
+                    <div style="margin-top:8px;padding:5px 8px;background:#fff8e1;border-radius:6px;color:var(--color-dep-successor);font-size:0.9em;">⚠ ${relevantGate.name} is ${fmt(gateDate)} — task needs adjustment</div>
                     <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div style="border:1.5px solid #e0e0e0;border-radius:8px;padding:8px;">
-                            <div style="font-weight:700;color:#555;margin-bottom:4px;font-size:0.9em;">Option A — Shift</div>
-                            <div style="color:#999;font-size:0.82em;margin-bottom:4px;">Keep duration, gate moves</div>
+                        <div style="border:1.5px solid var(--color-border);border-radius:8px;padding:8px;">
+                            <div style="font-weight:700;color:var(--color-text-muted);margin-bottom:4px;font-size:0.9em;">Option A — Shift</div>
+                            <div style="color:var(--color-text-muted);font-size:0.82em;margin-bottom:4px;">Keep duration, gate moves</div>
                             <div style="font-size:0.88em;">Start: <strong>${fmt(suggestedStart)}</strong></div>
                             <div style="font-size:0.88em;">End: <strong>${fmt(shiftedEnd)}</strong></div>
-                            <div style="font-size:0.82em;color:#999;">${durationDays} days</div>
-                            <div style="margin-top:3px;font-size:0.82em;color:#c62828;">⚠ Overshoots gate by ${overshootDays}d</div>
+                            <div style="font-size:0.82em;color:var(--color-text-muted);">${durationDays} days</div>
+                            <div style="margin-top:3px;font-size:0.82em;color:var(--color-overdue-dark);">⚠ Overshoots gate by ${overshootDays}d</div>
                             <button onclick="applySuggestedDates(${taskId},'${isoStr(suggestedStart)}','${isoStr(shiftedEnd)}')"
                                 style="width:100%;margin-top:6px;background:#546e7a;color:#fff;border:none;border-radius:5px;padding:5px 0;cursor:pointer;font-size:0.88em;">Apply A</button>
                         </div>
-                        <div style="border:1.5px solid #1565c0;border-radius:8px;padding:8px;background:#f0f4ff;">
-                            <div style="font-weight:700;color:#1565c0;margin-bottom:4px;font-size:0.9em;">Option B — Compress ✓</div>
-                            <div style="color:#1565c0;font-size:0.82em;margin-bottom:4px;">Fit to ${relevantGate.name}</div>
+                        <div style="border:1.5px solid var(--color-dep-predecessor);border-radius:8px;padding:8px;background:#f0f4ff;">
+                            <div style="font-weight:700;color:var(--color-dep-predecessor);margin-bottom:4px;font-size:0.9em;">Option B — Compress ✓</div>
+                            <div style="color:var(--color-dep-predecessor);font-size:0.82em;margin-bottom:4px;">Fit to ${relevantGate.name}</div>
                             <div style="font-size:0.88em;">Start: <strong>${fmt(suggestedStart)}</strong></div>
                             <div style="font-size:0.88em;">End: <strong>${fmt(compressedEnd)}</strong></div>
-                            <div style="font-size:0.82em;color:#999;">${compressedDays} days <span style="color:#c62828;">(-${compressionNeeded}d)</span></div>
-                            <div style="margin-top:3px;font-size:0.82em;color:#2e7d32;">✅ Fits before gate</div>
+                            <div style="font-size:0.82em;color:var(--color-text-muted);">${compressedDays} days <span style="color:var(--color-overdue-dark);">(-${compressionNeeded}d)</span></div>
+                            <div style="margin-top:3px;font-size:0.82em;color:var(--color-gate-passed);">✅ Fits before gate</div>
                             <button onclick="applySuggestedDates(${taskId},'${isoStr(suggestedStart)}','${isoStr(compressedEnd)}')"
-                                style="width:100%;margin-top:6px;background:#1565c0;color:#fff;border:none;border-radius:5px;padding:5px 0;cursor:pointer;font-weight:600;font-size:0.88em;">Apply B</button>
+                                style="width:100%;margin-top:6px;background:var(--color-dep-predecessor);color:#fff;border:none;border-radius:5px;padding:5px 0;cursor:pointer;font-weight:600;font-size:0.88em;">Apply B</button>
                         </div>
                     </div>
-                    <button onclick="document.getElementById('suggestDatesPopup').remove()" style="width:100%;margin-top:8px;background:#f5f5f5;color:#333;border:1px solid #ccc;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:0.9em;">Cancel</button>`;
+                    <button onclick="document.getElementById('suggestDatesPopup').remove()" style="width:100%;margin-top:8px;background:var(--color-surface-alt);color:var(--color-text);border:1px solid var(--color-border);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:0.9em;">Cancel</button>`;
             } else {
                 optionsHTML = `
                     <table style="width:100%;border-collapse:collapse;margin-top:8px;">
-                        <tr><td style="color:#1565c0;padding:2px 4px 2px 0;">➜ Start</td><td style="font-weight:700;color:#1565c0;">${fmt(suggestedStart)}</td></tr>
-                        <tr><td style="color:#1565c0;padding:2px 4px 2px 0;">➜ End</td><td style="font-weight:700;color:#1565c0;">${fmt(shiftedEnd)}</td></tr>
-                        <tr><td style="color:#999;padding:2px 4px 2px 0;">Duration</td><td>${durationDays} days</td></tr>
+                        <tr><td style="color:var(--color-dep-predecessor);padding:2px 4px 2px 0;">➜ Start</td><td style="font-weight:700;color:var(--color-dep-predecessor);">${fmt(suggestedStart)}</td></tr>
+                        <tr><td style="color:var(--color-dep-predecessor);padding:2px 4px 2px 0;">➜ End</td><td style="font-weight:700;color:var(--color-dep-predecessor);">${fmt(shiftedEnd)}</td></tr>
+                        <tr><td style="color:var(--color-text-muted);padding:2px 4px 2px 0;">Duration</td><td>${durationDays} days</td></tr>
                     </table>
                     <div style="display:flex;gap:8px;margin-top:12px;">
-                        ${shiftedEnd ? `<button onclick="applySuggestedDates(${taskId},'${isoStr(suggestedStart)}','${isoStr(shiftedEnd)}')" style="flex:1;background:#1565c0;color:#fff;border:none;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:600;font-size:0.95em;">✓ Apply</button>` : ''}
-                        <button onclick="document.getElementById('suggestDatesPopup').remove()" style="flex:1;background:#f5f5f5;color:#333;border:1px solid #ccc;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:0.95em;">Cancel</button>
+                        ${shiftedEnd ? `<button onclick="applySuggestedDates(${taskId},'${isoStr(suggestedStart)}','${isoStr(shiftedEnd)}')" style="flex:1;background:var(--color-dep-predecessor);color:#fff;border:none;border-radius:6px;padding:7px 10px;cursor:pointer;font-weight:600;font-size:0.95em;">✓ Apply</button>` : ''}
+                        <button onclick="document.getElementById('suggestDatesPopup').remove()" style="flex:1;background:var(--color-surface-alt);color:var(--color-text);border:1px solid var(--color-border);border-radius:6px;padding:7px 10px;cursor:pointer;font-size:0.95em;">Cancel</button>
                     </div>`;
             }
 
@@ -4344,28 +4433,28 @@
             const gateDateIso  = gateDate ? isoStr(gateDate) : '';
             const startDateIso = isoStr(suggestedStart);
             const manualHTML = `
-                <div style="margin-top:10px;border-top:1px solid #e0e0e0;padding-top:10px;">
-                    <div style="font-weight:600;color:#555;margin-bottom:6px;font-size:0.9em;">✏ Custom duration</div>
+                <div style="margin-top:10px;border-top:1px solid var(--color-border);padding-top:10px;">
+                    <div style="font-weight:600;color:var(--color-text-muted);margin-bottom:6px;font-size:0.9em;">✏ Custom duration</div>
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <span style="color:#888;font-size:0.88em;">Start: <strong>${fmt(suggestedStart)}</strong> +</span>
+                        <span style="color:var(--color-text-muted);font-size:0.88em;">Start: <strong>${fmt(suggestedStart)}</strong> +</span>
                         <input id="customDurInput" type="number" min="1" max="3650" value="${durationDays || ''}"
-                            style="width:64px;padding:4px 6px;border:1.5px solid #1565c0;border-radius:5px;font-size:0.95em;text-align:center;"
+                            style="width:64px;padding:4px 6px;border:1.5px solid var(--color-dep-predecessor);border-radius:5px;font-size:0.95em;text-align:center;"
                             oninput="updateCustomDuration('${startDateIso}','${gateDateIso}')">
-                        <span style="color:#888;font-size:0.88em;">days</span>
-                        <span id="customEndLabel" style="font-weight:700;color:#1565c0;font-size:0.9em;"></span>
+                        <span style="color:var(--color-text-muted);font-size:0.88em;">days</span>
+                        <span id="customEndLabel" style="font-weight:700;color:var(--color-dep-predecessor);font-size:0.9em;"></span>
                     </div>
                     <div id="customGateStatus" style="margin-top:4px;font-size:0.82em;"></div>
                     <button onclick="applyCustomDuration(${taskId},'${startDateIso}')"
-                        style="width:100%;margin-top:8px;background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-weight:600;font-size:0.9em;">✓ Apply Custom</button>
+                        style="width:100%;margin-top:8px;background:var(--color-gate-passed);color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-weight:600;font-size:0.9em;">✓ Apply Custom</button>
                 </div>`;
 
             const popup = document.createElement('div');
             popup.id = 'suggestDatesPopup';
-            popup.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1.5px solid #1565c0;border-radius:10px;padding:14px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.18);min-width:300px;max-width:400px;font-size:0.84em;';
+            popup.style.cssText = 'position:fixed;z-index:9999;background:#fff;border:1.5px solid var(--color-dep-predecessor);border-radius:10px;padding:14px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.18);min-width:300px;max-width:400px;font-size:0.84em;';
             popup.innerHTML = `
-                <div style="font-weight:700;color:#1565c0;font-size:1.05em;margin-bottom:8px;">📅 Suggested Dates</div>
-                <div style="margin-bottom:6px;color:#555;line-height:1.5;">${blockerSummary}</div>
-                <div style="color:#888;font-size:0.88em;margin-bottom:4px;">Current: ${fmt(origStart)} → ${fmt(origEnd)} (${durationDays} days)</div>
+                <div style="font-weight:700;color:var(--color-dep-predecessor);font-size:1.05em;margin-bottom:8px;">📅 Suggested Dates</div>
+                <div style="margin-bottom:6px;color:var(--color-text-muted);line-height:1.5;">${blockerSummary}</div>
+                <div style="color:var(--color-text-muted);font-size:0.88em;margin-bottom:4px;">Current: ${fmt(origStart)} → ${fmt(origEnd)} (${durationDays} days)</div>
                 ${optionsHTML}${manualHTML}`;
 
             document.body.appendChild(popup);
@@ -4417,10 +4506,10 @@
                 const gate = new Date(gateDateIso);
                 if (end <= gate) {
                     const slack = Math.round((gate - end) / 86400000);
-                    gateStatus.innerHTML = `<span style="color:#2e7d32;">✅ Fits before gate (${slack}d slack)</span>`;
+                    gateStatus.innerHTML = `<span style="color:var(--color-gate-passed);">✅ Fits before gate (${slack}d slack)</span>`;
                 } else {
                     const over = Math.round((end - gate) / 86400000);
-                    gateStatus.innerHTML = `<span style="color:#c62828;">⚠ Overshoots gate by ${over}d</span>`;
+                    gateStatus.innerHTML = `<span style="color:var(--color-overdue-dark);">⚠ Overshoots gate by ${over}d</span>`;
                 }
             }
         }
@@ -4614,7 +4703,7 @@
 
             const list = document.getElementById('ownerChecklist');
             list.innerHTML = owners.map(owner => `
-                <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:0.88em;white-space:nowrap;user-select:none;" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
+                <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:0.88em;white-space:nowrap;user-select:none;" onmouseover="this.style.background='var(--color-surface-alt)'" onmouseout="this.style.background=''">
                     <input type="checkbox" value="${escapeHtml(owner)}"
                         ${_selectedOwners.has(owner) ? 'checked' : ''}
                         onchange="onOwnerCheckboxChange()">
@@ -4652,7 +4741,7 @@
                 let label = names.slice(0, 2).join(', ');
                 if (names.length > 2) label += ` +${names.length - 2}`;
                 btn.textContent = label + ' ▾';
-                btn.style.color = '#1565c0';
+                btn.style.color = 'var(--color-dep-predecessor)';
             }
         }
 
@@ -4719,8 +4808,47 @@
             populateTaskPhaseOptions();
         }
 
+        // ── Department (derived from the owner → discipline map) ──────────
+        // "department" is not a field stored on the task — it's looked up from
+        // knownOwners (owner_name -> team_name), the same mapping the Resource
+        // Load view and the Add-Task owner autocomplete already use. A task
+        // with multiple comma-separated owners can belong to multiple departments.
+        function getTaskDepartments(task) {
+            const owners = (task.owner || '').split(',').map(o => o.trim()).filter(Boolean);
+            if (!owners.length) return ['Unassigned'];
+            const depts = owners.map(o => {
+                const match = knownOwners.find(k => k.owner_name.toLowerCase() === o.toLowerCase());
+                return (match && match.team_name) ? match.team_name : 'Unassigned';
+            });
+            return [...new Set(depts)];
+        }
+
+        function getTaskDepartmentLabel(task) {
+            return getTaskDepartments(task).join(', ');
+        }
+
+        function populateDepartmentFilter() {
+            const depts = new Set();
+            tasks.forEach(t => getTaskDepartments(t).forEach(d => depts.add(d)));
+            const sorted = [...depts].filter(d => d !== 'Unassigned').sort();
+            if (depts.has('Unassigned')) sorted.push('Unassigned');
+
+            const select = document.getElementById('departmentFilter');
+            if (!select) return;
+            const previousValue = select.value;
+            select.innerHTML = '<option value="all">All Departments</option>';
+            sorted.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                select.appendChild(option);
+            });
+            if (sorted.includes(previousValue)) select.value = previousValue;
+        }
+
         async function applyFilters() {
             const phaseFilter = document.getElementById('phaseFilter').value;
+            const departmentFilter = document.getElementById('departmentFilter').value;
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             
             // Mark Gates that have been moved from baseline and load sign-offs
@@ -4735,6 +4863,7 @@
             const filterCritical = document.getElementById('filterCritical').checked;
             const filterOverdue = document.getElementById('filterOverdue').checked;
             const filterMilestone = document.getElementById('filterMilestone').checked;
+            const filterTailedOut = document.getElementById('filterTailedOut').checked;
 
             let filtered;
 
@@ -4746,7 +4875,10 @@
                 filtered = tasks.filter(task => {
                     // Phase filter
                     if (phaseFilter !== 'all' && task.phase !== phaseFilter) return false;
-                    
+
+                    // Department filter (derived from owner's discipline map)
+                    if (departmentFilter !== 'all' && !getTaskDepartments(task).includes(departmentFilter)) return false;
+
                     // Owner filter — OR logic across all selected owners
                     if (_selectedOwners.size > 0) {
                         const taskOwners = task.owner.split(',').map(o => o.trim());
@@ -4767,7 +4899,8 @@
                     }
                     if (filterOverdue && !isOverdue(task.due, task.status)) return false;
                     if (filterMilestone && !task.milestone) return false;
-                    
+                    if (filterTailedOut && !task.tailed_out) return false;
+
                     // Search filter
                     if (searchText) {
                         const matchesSearch = 
@@ -5117,7 +5250,7 @@
                         <div>${task.owner}</div>
                         <div class="date-cell start-date editable" data-task-id="${task.id}" data-date-type="start" data-date-value="${task.entered}">${formatDateShort(task.entered)}</div>
                         <div class="duration-cell">${(task.entered && task.due) ? Math.max(1, Math.round((new Date(task.due) - new Date(task.entered)) / 86400000) + 1) : '—'}</div>
-                        <div class="date-cell ${endDateClass} editable" data-task-id="${task.id}" data-date-type="end" data-date-value="${task.due}">${formatDateShort(task.due)}${showReworkPill ? `<br><span style="display:inline-block;margin-top:2px;background:#e65100;color:#fff;font-size:0.78em;font-weight:600;padding:1px 6px;border-radius:8px;white-space:nowrap;">🔄 Rework by: ${formatDateShort(signOff.rework_due_date)}</span>` : ''}</div>
+                        <div class="date-cell ${endDateClass} editable" data-task-id="${task.id}" data-date-type="end" data-date-value="${task.due}">${formatDateShort(task.due)}${showReworkPill ? `<br><span style="display:inline-block;margin-top:2px;background:var(--color-dep-successor);color:#fff;font-size:0.78em;font-weight:600;padding:1px 6px;border-radius:8px;white-space:nowrap;">🔄 Rework by: ${formatDateShort(signOff.rework_due_date)}</span>` : ''}</div>
                         <div>${buildStatusCell(task)}</div>
                         ${getPredCellHTML(task.id)}
                         <div style="display:flex;gap:4px;flex-wrap:wrap;">${actionsHTML}</div>
@@ -5306,7 +5439,7 @@
             if (openReworkTasks.length > 0) {
                 reworkInfo.style.display = 'block';
                 document.getElementById('openReworkTasksList').innerHTML =
-                    openReworkTasks.map(t => `<div>• ${t.name} <span style="color:#999;">(${t.status})</span></div>`).join('');
+                    openReworkTasks.map(t => `<div>• ${t.name} <span style="color:var(--color-text-muted);">(${t.status})</span></div>`).join('');
             } else {
                 reworkInfo.style.display = 'none';
             }
@@ -5416,7 +5549,7 @@
                             title="Click to edit original due date"
                             onchange="saveReworkOriginalDate(${t.id}, this.value, this)">
                     </td>
-                    <td style="white-space:nowrap;font-weight:600;color:#e65100;">${formatDateShort(t.due)}</td>
+                    <td style="white-space:nowrap;font-weight:600;color:var(--color-dep-successor);">${formatDateShort(t.due)}</td>
                     <td><span class="status-badge status-${(t.status||'').toLowerCase().replace(/ /g,'-')}">${t.status}</span></td>
                 </tr>`).join('');
             const popup = document.createElement('div');
@@ -6029,6 +6162,10 @@
                                 valueA = (a.owner || '').toLowerCase();
                                 valueB = (b.owner || '').toLowerCase();
                                 break;
+                            case 'department':
+                                valueA = getTaskDepartmentLabel(a).toLowerCase();
+                                valueB = getTaskDepartmentLabel(b).toLowerCase();
+                                break;
                             case 'start':
                                 valueA = parseDate(a.entered) || new Date(0);
                                 valueB = parseDate(b.entered) || new Date(0);
@@ -6295,9 +6432,10 @@
                             <div>${rowNum}</div>
                             <div class="task-name" title="${task.name}">${caretHTML}${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge}${commentBadge}${attachBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
                             <div>${task.owner}</div>
+                            <div class="dept-cell${getTaskDepartments(task).includes('Unassigned') ? ' dept-unassigned' : ''}" title="${escapeHtml(getTaskDepartmentLabel(task))}">${escapeHtml(getTaskDepartmentLabel(task))}</div>
                             <div class="date-cell start-date editable" data-task-id="${task.id}" data-date-type="start" data-date-value="${task.entered}">${formatDateShort(task.entered)}</div>
                             <div class="duration-cell">${(task.entered && task.due) ? Math.max(1, Math.round((new Date(task.due) - new Date(task.entered)) / 86400000) + 1) : '—'}</div>
-                            <div class="date-cell ${endDateClass} editable" data-task-id="${task.id}" data-date-type="end" data-date-value="${task.due}">${formatDateShort(task.due)}${showReworkPill ? `<br><span style="display:inline-block;margin-top:2px;background:#e65100;color:#fff;font-size:0.78em;font-weight:600;padding:1px 6px;border-radius:8px;white-space:nowrap;">🔄 Rework by: ${formatDateShort(signOff.rework_due_date)}</span>` : ''}</div>
+                            <div class="date-cell ${endDateClass} editable" data-task-id="${task.id}" data-date-type="end" data-date-value="${task.due}">${formatDateShort(task.due)}${showReworkPill ? `<br><span style="display:inline-block;margin-top:2px;background:var(--color-dep-successor);color:#fff;font-size:0.78em;font-weight:600;padding:1px 6px;border-radius:8px;white-space:nowrap;">🔄 Rework by: ${formatDateShort(signOff.rework_due_date)}</span>` : ''}</div>
                             <div>${buildStatusCell(task)}</div>
                             ${getPredCellHTML(task.id)}
                             <div style="display:flex;gap:4px;flex-wrap:wrap;">${actionsHTML}</div>
@@ -6421,10 +6559,12 @@
                     emptyMessage = '✅ Good news! No tasks are overdue. All tasks are on track or completed.';
                 } else if (document.getElementById('filterMilestone').checked) {
                     emptyMessage = 'No milestone tasks found. Edit a task and check "Milestone" or tasks with "Gate" in the name are automatically marked as milestones.';
+                } else if (document.getElementById('filterTailedOut').checked) {
+                    emptyMessage = 'No tailed-out tasks exist in this project.';
                 }
                 
                 document.getElementById('taskTableBody').innerHTML = `
-                    <div class="task-row" style="padding: 40px; text-align: center; color: #999; grid-column: 1 / -1;">
+                    <div class="task-row" style="padding: 40px; text-align: center; color: var(--color-text-muted); grid-column: 1 / -1;">
                         <div style="font-size: 1.2em; margin-bottom: 10px;">📋 No tasks match the current filters</div>
                         <div style="font-size: 0.9em;">
                             ${emptyMessage}
@@ -6472,10 +6612,10 @@
             const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
             defs.innerHTML = `
                 <marker id="arr-pred" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#1565c0"/>
+                    <polygon points="0 0, 8 3, 0 6" fill="var(--color-dep-predecessor)"/>
                 </marker>
                 <marker id="arr-succ" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#e65100"/>
+                    <polygon points="0 0, 8 3, 0 6" fill="var(--color-dep-successor)"/>
                 </marker>`;
             svg.appendChild(defs);
 
@@ -6497,7 +6637,7 @@
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 const cx = (x1 + x2) / 2;
                 path.setAttribute('d', `M ${x1} ${y1} C ${cx} ${y1} ${cx} ${y2} ${x2} ${y2}`);
-                path.setAttribute('stroke', isPred ? '#1565c0' : '#e65100');
+                path.setAttribute('stroke', isPred ? 'var(--color-dep-predecessor)' : 'var(--color-dep-successor)');
                 path.setAttribute('stroke-width', '2');
                 path.setAttribute('fill', 'none');
                 path.setAttribute('opacity', '0.8');
@@ -6719,7 +6859,7 @@
                 <strong>Start:</strong> ${formatDateDisplay(task.entered)}<br>
                 <strong>End:</strong> ${formatDateDisplay(task.due)}<br>
                 <strong>Duration:</strong> ${getDuration(task.entered, task.due)}
-                ${task.critical ? '<br><strong style="color: #ff1744;">🔴 CRITICAL PATH</strong>' : ''}
+                ${task.critical ? '<br><strong style="color: var(--color-critical);">🔴 CRITICAL PATH</strong>' : ''}
                 ${task.milestone ? '<br><strong style="color: #ffc107;">⭐ MILESTONE</strong>' : ''}
             `;
             tooltip.classList.add('show');
@@ -7059,7 +7199,14 @@
             showNotification(`🔗 Longest chain: ${chain.length} tasks, ~${Math.round(duration)} days`, 'info');
         }
 
+        var depUndoStack = [];
+        var depTaskNameById = {};
+
         function populateDepPicker(taskId, taskStartDate) {
+            depUndoStack = [];
+            depTaskNameById = {};
+            updateDepUndoButton();
+
             setTimeout(function() {
                 var list = document.getElementById('depPickerList');
                 if (!list) return;
@@ -7067,9 +7214,11 @@
                 var candidates = tasks.filter(function(t) {
                     return t.id !== taskId;
                 });
+                candidates.forEach(function(t) { depTaskNameById[t.id] = t.name || ''; });
 
                 if (candidates.length === 0) {
-                    list.innerHTML = '<div style="color:#999;padding:8px;text-align:center;">No other tasks in project</div>';
+                    list.innerHTML = '<div style="color:var(--color-text-muted);padding:8px;text-align:center;">No other tasks in project</div>';
+                    renderDepSelectedChips();
                     return;
                 }
 
@@ -7104,18 +7253,28 @@
 
                     byPhase[phase].forEach(function(t) {
                         var lbl = document.createElement('label');
-                        lbl.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 6px;cursor:pointer;font-size:0.85em;border-radius:3px;';
+                        lbl.className = 'dep-task-row';
 
                         var cb = document.createElement('input');
                         cb.type = 'checkbox';
                         cb.className = 'dep-checkbox';
                         cb.dataset.predId = t.id;
-                        cb.style.cssText = 'width:14px;height:14px;cursor:pointer;';
-                        if (existingPredIds.indexOf(t.id) !== -1) cb.checked = true;
+                        if (existingPredIds.indexOf(t.id) !== -1) {
+                            cb.checked = true;
+                            lbl.classList.add('dep-row-selected');
+                        }
+
+                        cb.onchange = function() {
+                            depUndoStack.push([{ predId: t.id, prevChecked: !cb.checked }]);
+                            if (depUndoStack.length > 30) depUndoStack.shift();
+                            lbl.classList.toggle('dep-row-selected', cb.checked);
+                            renderDepSelectedChips();
+                            updateDepUndoButton();
+                        };
 
                         var safeName = (t.name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                         var span = document.createElement('span');
-                        span.innerHTML = '<strong>' + safeName + '</strong> <span style="color:#999;">(ends: ' + (t.due || 'N/A') + ')</span>';
+                        span.innerHTML = '<strong>' + safeName + '</strong> <span style="color:var(--color-text-muted);">(ends: ' + (t.due || 'N/A') + ')</span>';
 
                         lbl.appendChild(cb);
                         lbl.appendChild(span);
@@ -7126,7 +7285,77 @@
                     group.appendChild(body);
                     list.appendChild(group);
                 });
+
+                renderDepSelectedChips();
             }, 50);
+        }
+
+        function renderDepSelectedChips() {
+            var container = document.getElementById('depSelectedChips');
+            if (!container) return;
+            var checked = Array.from(document.querySelectorAll('.dep-checkbox:checked'));
+            var clearBtn = document.getElementById('depClearBtn');
+            if (clearBtn) clearBtn.disabled = checked.length === 0;
+
+            if (!checked.length) {
+                container.className = 'dep-selected-chips empty';
+                container.textContent = 'No dependencies selected yet';
+                return;
+            }
+            container.className = 'dep-selected-chips';
+            container.innerHTML = checked.map(function(cb) {
+                var predId = cb.dataset.predId;
+                var safeName = (depTaskNameById[predId] || ('Task #' + predId))
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                return '<span class="dep-selected-chip" title="' + safeName + '"><span>' + safeName + '</span>' +
+                       '<button type="button" onclick="removeDepSelection(' + predId + ')" title="Remove">✕</button></span>';
+            }).join('');
+        }
+
+        function removeDepSelection(predId) {
+            var cb = document.querySelector('.dep-checkbox[data-pred-id="' + predId + '"]');
+            if (!cb || !cb.checked) return;
+            depUndoStack.push([{ predId: predId, prevChecked: true }]);
+            if (depUndoStack.length > 30) depUndoStack.shift();
+            cb.checked = false;
+            var lbl = cb.closest('label');
+            if (lbl) lbl.classList.remove('dep-row-selected');
+            renderDepSelectedChips();
+            updateDepUndoButton();
+        }
+
+        function clearAllDepSelections() {
+            var checked = Array.from(document.querySelectorAll('.dep-checkbox:checked'));
+            if (!checked.length) return;
+            var batch = checked.map(function(cb) { return { predId: cb.dataset.predId, prevChecked: true }; });
+            depUndoStack.push(batch);
+            if (depUndoStack.length > 30) depUndoStack.shift();
+            checked.forEach(function(cb) {
+                cb.checked = false;
+                var lbl = cb.closest('label');
+                if (lbl) lbl.classList.remove('dep-row-selected');
+            });
+            renderDepSelectedChips();
+            updateDepUndoButton();
+        }
+
+        function undoDepChange() {
+            var batch = depUndoStack.pop();
+            if (!batch) { updateDepUndoButton(); return; }
+            batch.forEach(function(entry) {
+                var cb = document.querySelector('.dep-checkbox[data-pred-id="' + entry.predId + '"]');
+                if (!cb) return;
+                cb.checked = entry.prevChecked;
+                var lbl = cb.closest('label');
+                if (lbl) lbl.classList.toggle('dep-row-selected', entry.prevChecked);
+            });
+            renderDepSelectedChips();
+            updateDepUndoButton();
+        }
+
+        function updateDepUndoButton() {
+            var btn = document.getElementById('depUndoBtn');
+            if (btn) btn.disabled = depUndoStack.length === 0;
         }
 
         function toggleDepPhase(header) {
@@ -7287,9 +7516,9 @@
                     const reason = b._blockReason === 'overdue' ? 'OVERDUE' : 'OVERLAP';
                     const label = `#${b.rowNum || '?'} ${escapeHtml(b.name)} (due ${b.due || '?'})`;
                     return `<div style="margin-bottom:4px;">
-                        <span style="font-size:0.78em;font-weight:700;color:#c62828;background:#ffcdd2;padding:1px 5px;border-radius:3px;margin-right:6px;">${reason}</span>
+                        <span style="font-size:0.78em;font-weight:700;color:var(--color-overdue-dark);background:#ffcdd2;padding:1px 5px;border-radius:3px;margin-right:6px;">${reason}</span>
                         <button type="button" onclick="closeTaskModal();scrollToTask(${b.id})"
-                            style="background:none;border:none;color:#c62828;cursor:pointer;text-decoration:underline;font-size:0.9em;padding:0;font-weight:600;">
+                            style="background:none;border:none;color:var(--color-overdue-dark);cursor:pointer;text-decoration:underline;font-size:0.9em;padding:0;font-weight:600;">
                             ${label} ↗
                         </button>
                     </div>`;
@@ -7460,6 +7689,7 @@
                                     
                                     populateOwnerFilter();
                                     populatePhaseFilter();
+                                    populateDepartmentFilter();
                                     applyFilters();
                                     closeTaskModal();
                                     return; // Exit early since we handled the refresh
@@ -7474,12 +7704,11 @@
 
                     // Add to local array with server-assigned ID
                     tasks.push({ ...taskData, id: savedTask.id, parent_id: taskData.parent_id });
-                    // For a sub-task, re-establish hierarchy order + row numbers so it nests
-                    // directly under its parent immediately (matches the load-time ordering).
-                    if (taskData.parent_id) {
-                        tasks = orderTasksByHierarchy(tasks);
-                        tasks.forEach((t, i) => { t.rowNum = i + 1; });
-                    }
+                    // Re-establish hierarchy order + row numbers so the new task (a) nests
+                    // directly under its parent if it's a sub-task, and (b) immediately gets
+                    // a real "#" value instead of showing "undefined" until the next reload.
+                    tasks = orderTasksByHierarchy(tasks);
+                    tasks.forEach((t, i) => { t.rowNum = i + 1; });
                     showNotification('✓ Task added successfully!', 'success');
 
                     // Sync dependencies for new task
@@ -7547,6 +7776,7 @@
 
                 populateOwnerFilter();
                 populatePhaseFilter();
+                populateDepartmentFilter();
                 updateTailedOutBtn();
                 applyFilters();
 
@@ -7662,9 +7892,9 @@
             function taskRow(t) {
                 if (!t) return '';
                 const statusCls = t.status ? t.status.toLowerCase().replace(' ', '-') : '';
-                const overdue = t.due && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due) < new Date() ? ' style="color:#e53935;font-weight:600;"' : '';
+                const overdue = t.due && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due) < new Date() ? ' style="color:var(--color-overdue);font-weight:600;"' : '';
                 return `<div class="dep-panel-row" onclick="scrollToTask(${t.id})">
-                    <span class="pred-link" style="min-width:22px;text-align:center;${(t.status === 'Completed' || t.status === 'Cancelled') ? 'background:#f0f0f0;color:#999;border-color:#ccc;' : ''}">${t.rowNum || '?'}</span>
+                    <span class="pred-link" style="min-width:22px;text-align:center;${(t.status === 'Completed' || t.status === 'Cancelled') ? 'background:var(--color-surface-alt);color:var(--color-text-muted);border-color:var(--color-border);' : ''}">${t.rowNum || '?'}</span>
                     <span class="dep-panel-name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
                     <span class="status-badge status-${statusCls}" style="font-size:0.72em;padding:1px 6px;">${t.status}</span>
                     <span class="dep-panel-date"${overdue}>${formatDateShort(t.due) || '—'}</span>
@@ -7784,15 +8014,15 @@
             if (!task) return;
             const blockers = _atRiskMap.get(task.id);
             const blockedPart = blockers && blockers.length
-                ? `<div style="margin-top:6px;color:#e53935;font-weight:600;">⚠ Blocked by: ${blockers.map(t=>'#'+t.rowNum+' '+t.name).join(', ')}</div>`
+                ? `<div style="margin-top:6px;color:var(--color-overdue);font-weight:600;">⚠ Blocked by: ${blockers.map(t=>'#'+t.rowNum+' '+t.name).join(', ')}</div>`
                 : '';
             const tip = document.createElement('div');
             tip.id = 'depMapTooltip';
-            tip.style.cssText = 'position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:#212121;color:white;padding:10px 16px;border-radius:10px;font-size:0.82em;z-index:20;box-shadow:0 4px 16px rgba(0,0,0,0.4);max-width:420px;pointer-events:none;';
+            tip.style.cssText = 'position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:var(--color-dep-self);color:white;padding:10px 16px;border-radius:10px;font-size:0.82em;z-index:20;box-shadow:0 4px 16px rgba(0,0,0,0.4);max-width:420px;pointer-events:none;';
             tip.innerHTML = `<strong>#${task.rowNum} ${escapeHtml(task.name)}</strong>
                 <span style="margin-left:12px;color:#90caf9;">▲ ${ancCount} ancestor${ancCount!==1?'s':''}</span>
                 <span style="margin-left:8px;color:#ffcc80;">▼ ${descCount} descendant${descCount!==1?'s':''}</span>
-                <span style="margin-left:8px;color:#aaa;">${task.status} · ${formatDateShort(task.due)||'—'}</span>
+                <span style="margin-left:8px;color:var(--color-text-muted);">${task.status} · ${formatDateShort(task.due)||'—'}</span>
                 ${blockedPart}`;
             document.getElementById('depMapDiagram').style.position = 'relative';
             document.getElementById('depMapDiagram').appendChild(tip);
@@ -7818,7 +8048,7 @@
             // ── Orphan panel ────────────────────────────────────────────────
             const orphanCount = document.getElementById('depMapOrphanCount');
             orphanCount.textContent = orphans.length;
-            orphanCount.style.background = orphans.length ? '#e53935' : '#43a047';
+            orphanCount.style.background = orphans.length ? 'var(--color-overdue)' : '#43a047';
 
             const orphanEl = document.getElementById('depMapOrphans');
             if (!orphans.length) {
@@ -7827,12 +8057,12 @@
                 orphanEl.innerHTML = orphans.map(t => {
                     const statusCls = t.status ? t.status.toLowerCase().replace(' ','-') : '';
                     const overdue = t.due && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due) < today;
-                    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;margin-bottom:4px;background:#fff;border:1px solid #eee;font-size:0.82em;">
+                    return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;margin-bottom:4px;background:#fff;border:1px solid var(--color-border);font-size:0.82em;">
                         <span class="pred-link" style="pointer-events:none;min-width:22px;text-align:center;">${t.rowNum}</span>
                         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
                         <span class="status-badge status-${t.status ? t.status.toLowerCase().replace(' ','-') : ''}" style="font-size:0.72em;padding:1px 5px;flex-shrink:0;">${t.status}</span>
-                        <span style="color:${overdue?'#e53935':'#999'};font-size:0.78em;flex-shrink:0;">${formatDateShort(t.due)||'—'}</span>
-                        <button onclick="closeDepMap();openDepEditor(${t.id})" style="background:#e8f0fe;border:1px solid #90caf9;border-radius:4px;color:#1565c0;cursor:pointer;font-size:0.75em;padding:2px 6px;flex-shrink:0;">✏️</button>
+                        <span style="color:${overdue?'var(--color-overdue)':'var(--color-text-muted)'};font-size:0.78em;flex-shrink:0;">${formatDateShort(t.due)||'—'}</span>
+                        <button onclick="closeDepMap();openDepEditor(${t.id})" style="background:#e8f0fe;border:1px solid #90caf9;border-radius:4px;color:var(--color-dep-predecessor);cursor:pointer;font-size:0.75em;padding:2px 6px;flex-shrink:0;">✏️</button>
                     </div>`;
                 }).join('');
             }
@@ -7899,27 +8129,27 @@
 
             // 6. Node color by status
             function nodeColor(t) {
-                if (t.status === 'Completed') return { fill:'#e8f5e9', stroke:'#43a047', text:'#1b5e20' };
-                if (t.status === 'Cancelled') return { fill:'#eceff1', stroke:'#607d8b', text:'#455a64' };
+                if (t.status === 'Completed') return { fill:'var(--status-completed-bg)', stroke:'var(--status-completed-fg)', text:'var(--status-completed-fg)' };
+                if (t.status === 'Cancelled') return { fill:'var(--status-cancelled-bg)', stroke:'var(--status-cancelled-fg)', text:'var(--status-cancelled-fg)' };
                 if (t.status === 'In Process') {
                     const blocking = _atRiskMap.has(t.id) || (succMap[t.id]||[]).some(sid => (_atRiskMap.get(sid)||[]).some(p => p.id === t.id));
                     return blocking
-                        ? { fill:'#ffebee', stroke:'#e53935', text:'#b71c1c' }
-                        : { fill:'#e3f2fd', stroke:'#1565c0', text:'#0d47a1' };
+                        ? { fill:'#fdecea', stroke:'var(--color-overdue)', text:'var(--color-overdue-dark)' }
+                        : { fill:'var(--status-inprocess-bg)', stroke:'var(--status-inprocess-fg)', text:'var(--status-inprocess-fg)' };
                 }
                 if (t.due && new Date(t.due) < today && t.status !== 'Completed')
-                    return { fill:'#ffebee', stroke:'#e53935', text:'#b71c1c' };
-                return { fill:'#f5f5f5', stroke:'#9e9e9e', text:'#333' };
+                    return { fill:'#fdecea', stroke:'var(--color-overdue)', text:'var(--color-overdue-dark)' };
+                return { fill:'var(--color-surface-alt)', stroke:'var(--color-tailed-out)', text:'var(--color-text)' };
             }
 
             // 7. Build SVG
             let svg = `<svg id="depMapSvg" width="${svgW}" height="${svgH}" style="font-family:inherit;">
                 <defs>
                     <marker id="dmap-arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                        <polygon points="0 0,8 3,0 6" fill="#9e9e9e"/>
+                        <polygon points="0 0,8 3,0 6" fill="var(--color-tailed-out)"/>
                     </marker>
                     <marker id="dmap-arr-sel" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                        <polygon points="0 0,8 3,0 6" fill="#1565c0"/>
+                        <polygon points="0 0,8 3,0 6" fill="var(--color-dep-predecessor)"/>
                     </marker>
                 </defs>`;
 
@@ -7933,7 +8163,7 @@
                 const cx = (x1 + x2) / 2;
                 svg += `<path class="dmap-edge" data-pred="${d.predecessor_id}" data-succ="${d.successor_id}"
                     d="M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}"
-                    stroke="#bdbdbd" stroke-width="1.5" fill="none" marker-end="url(#dmap-arr)" opacity="0.7"/>`;
+                    stroke="var(--color-border)" stroke-width="1.5" fill="none" marker-end="url(#dmap-arr)" opacity="0.7"/>`;
             });
 
             // Nodes
@@ -7949,7 +8179,7 @@
                         fill="${c.fill}" stroke="${c.stroke}" stroke-width="2"/>`;
                 svg += `<g class="dmap-node" data-task-id="${t.id}" style="cursor:pointer;" onclick="depMapNodeClick(${t.id})">
                     ${shape}
-                    <text x="${p.cx}" y="${p.y+16}" text-anchor="middle" font-size="10" fill="#666" font-weight="600">#${t.rowNum}</text>
+                    <text x="${p.cx}" y="${p.y+16}" text-anchor="middle" font-size="10" fill="var(--color-text-muted)" font-weight="600">#${t.rowNum}</text>
                     <text x="${p.cx}" y="${p.y+30}" text-anchor="middle" font-size="11" fill="${c.text}" font-weight="500">${escapeHtml(label)}</text>
                     <text x="${p.cx}" y="${p.y+NODE_H-5}" text-anchor="middle" font-size="9" fill="${c.stroke}">${t.status}</text>
                     <title>${escapeHtml(t.name)} | ${t.status} | ${formatDateShort(t.due)||'no date'}</title>
@@ -7962,6 +8192,9 @@
         // ─────────────────────────────────────────────────────────────────────
 
         // ── Standalone Dependency Editor ──────────────────────────────────────
+        var depEditorUndoStack = [];
+        var depEditorTaskNameById = {};
+
         function openDepEditor(taskId) {
             const task = tasks.find(t => t.id === taskId);
             if (!task) return;
@@ -7969,6 +8202,9 @@
             // Remove existing overlay
             const existing = document.getElementById('depEditorOverlay');
             if (existing) existing.remove();
+
+            depEditorUndoStack = [];
+            depEditorTaskNameById = {};
 
             const originalPredIds = new Set(
                 dependencies.filter(d => d.successor_id === taskId).map(d => d.predecessor_id)
@@ -7985,11 +8221,16 @@
                         <span>🔗 Edit Dependencies — ${escapeHtml(task.name)}</span>
                         <button onclick="document.getElementById('depEditorOverlay').remove()" class="dep-panel-close">✕</button>
                     </div>
+                    <div class="dep-editor-toolbar">
+                        <button type="button" id="depEditorUndoBtn" class="dep-mini-btn" onclick="undoDepEditorChange()" title="Undo last change" disabled>↩ Undo</button>
+                        <button type="button" id="depEditorClearBtn" class="dep-mini-btn dep-clear-btn" onclick="clearAllDepEditorSelections()" title="Clear all dependencies" disabled>✕ Clear All</button>
+                    </div>
+                    <div id="depEditorChips" class="dep-editor-chips dep-selected-chips empty">No dependencies selected yet</div>
                     <div class="dep-editor-search">
                         <input type="text" id="depEditorSearch" placeholder="🔍 Search tasks…" oninput="filterDepEditor(this.value)" autocomplete="off">
                     </div>
                     <div class="dep-editor-list" id="depEditorList">
-                        <div style="color:#999;padding:12px;text-align:center;">Loading…</div>
+                        <div style="color:var(--color-text-muted);padding:12px;text-align:center;">Loading…</div>
                     </div>
                     <div class="dep-editor-footer">
                         <button class="dep-editor-cancel" onclick="document.getElementById('depEditorOverlay').remove()">Cancel</button>
@@ -8003,9 +8244,11 @@
             // Populate list
             const listEl = document.getElementById('depEditorList');
             const otherTasks = tasks.filter(t => t.id !== taskId);
+            otherTasks.forEach(t => { depEditorTaskNameById[t.id] = t.name || ''; });
 
             if (!otherTasks.length) {
-                listEl.innerHTML = '<div style="color:#999;padding:12px;text-align:center;">No other tasks in project</div>';
+                listEl.innerHTML = '<div style="color:var(--color-text-muted);padding:12px;text-align:center;">No other tasks in project</div>';
+                renderDepEditorChips();
                 return;
             }
 
@@ -8044,6 +8287,15 @@
                     cb.className = 'dep-editor-cb';
                     cb.dataset.predId = t.id;
                     cb.checked = originalPredIds.has(t.id);
+                    if (cb.checked) row.classList.add('dep-editor-row-selected');
+
+                    cb.onchange = function () {
+                        depEditorUndoStack.push([{ predId: t.id, prevChecked: !cb.checked }]);
+                        if (depEditorUndoStack.length > 30) depEditorUndoStack.shift();
+                        row.classList.toggle('dep-editor-row-selected', cb.checked);
+                        renderDepEditorChips();
+                        updateDepEditorUndoButton();
+                    };
 
                     const statusCls = t.status ? t.status.toLowerCase().replace(' ', '-') : '';
                     row.innerHTML = '';
@@ -8067,6 +8319,76 @@
                 group.appendChild(phaseBody);
                 listEl.appendChild(group);
             });
+
+            renderDepEditorChips();
+            updateDepEditorUndoButton();
+        }
+
+        function renderDepEditorChips() {
+            const container = document.getElementById('depEditorChips');
+            if (!container) return;
+            const checked = Array.from(document.querySelectorAll('.dep-editor-cb:checked'));
+            const clearBtn = document.getElementById('depEditorClearBtn');
+            if (clearBtn) clearBtn.disabled = checked.length === 0;
+
+            if (!checked.length) {
+                container.className = 'dep-editor-chips dep-selected-chips empty';
+                container.textContent = 'No dependencies selected yet';
+                return;
+            }
+            container.className = 'dep-editor-chips dep-selected-chips';
+            container.innerHTML = checked.map(cb => {
+                const predId = cb.dataset.predId;
+                const safeName = escapeHtml(depEditorTaskNameById[predId] || ('Task #' + predId));
+                return `<span class="dep-selected-chip" title="${safeName}"><span>${safeName}</span>` +
+                       `<button type="button" onclick="removeDepEditorSelection(${predId})" title="Remove">✕</button></span>`;
+            }).join('');
+        }
+
+        function removeDepEditorSelection(predId) {
+            const cb = document.querySelector(`.dep-editor-cb[data-pred-id="${predId}"]`);
+            if (!cb || !cb.checked) return;
+            depEditorUndoStack.push([{ predId: predId, prevChecked: true }]);
+            if (depEditorUndoStack.length > 30) depEditorUndoStack.shift();
+            cb.checked = false;
+            const row = cb.closest('.dep-editor-task-row');
+            if (row) row.classList.remove('dep-editor-row-selected');
+            renderDepEditorChips();
+            updateDepEditorUndoButton();
+        }
+
+        function clearAllDepEditorSelections() {
+            const checked = Array.from(document.querySelectorAll('.dep-editor-cb:checked'));
+            if (!checked.length) return;
+            const batch = checked.map(cb => ({ predId: cb.dataset.predId, prevChecked: true }));
+            depEditorUndoStack.push(batch);
+            if (depEditorUndoStack.length > 30) depEditorUndoStack.shift();
+            checked.forEach(cb => {
+                cb.checked = false;
+                const row = cb.closest('.dep-editor-task-row');
+                if (row) row.classList.remove('dep-editor-row-selected');
+            });
+            renderDepEditorChips();
+            updateDepEditorUndoButton();
+        }
+
+        function undoDepEditorChange() {
+            const batch = depEditorUndoStack.pop();
+            if (!batch) { updateDepEditorUndoButton(); return; }
+            batch.forEach(entry => {
+                const cb = document.querySelector(`.dep-editor-cb[data-pred-id="${entry.predId}"]`);
+                if (!cb) return;
+                cb.checked = entry.prevChecked;
+                const row = cb.closest('.dep-editor-task-row');
+                if (row) row.classList.toggle('dep-editor-row-selected', entry.prevChecked);
+            });
+            renderDepEditorChips();
+            updateDepEditorUndoButton();
+        }
+
+        function updateDepEditorUndoButton() {
+            const btn = document.getElementById('depEditorUndoBtn');
+            if (btn) btn.disabled = depEditorUndoStack.length === 0;
         }
 
         function filterDepEditor(searchText) {
@@ -8182,7 +8504,7 @@
 
             const endDate = document.getElementById('cloneEndDate').value;
             if (!endDate) {
-                document.getElementById('cloneEndDate').style.border = '2px solid #c62828';
+                document.getElementById('cloneEndDate').style.border = '2px solid var(--color-overdue-dark)';
                 document.getElementById('cloneEndDate').focus();
                 return;
             }
@@ -8241,7 +8563,7 @@
             const content = document.getElementById('tailedOutModalContent');
 
             if (tailedTasks.length === 0) {
-                content.innerHTML = '<div style="text-align:center;color:#999;padding:30px;">No tailed-out tasks found.</div>';
+                content.innerHTML = '<div style="text-align:center;color:var(--color-text-muted);padding:30px;">No tailed-out tasks found.</div>';
             } else {
                 // Group by phase
                 const byPhase = {};
@@ -8253,28 +8575,28 @@
 
                 content.innerHTML = Object.entries(byPhase).sort(([a],[b]) => a.localeCompare(b)).map(([phase, pTasks]) => `
                     <div style="margin-bottom:20px;">
-                        <div style="font-weight:700;font-size:1em;padding:8px 12px;background:#f5f5f5;border-left:4px solid #757575;border-radius:4px;margin-bottom:8px;">
-                            ${escapeHtml(phase)} <span style="font-weight:400;color:#999;font-size:0.88em;">(${pTasks.length} task${pTasks.length!==1?'s':''})</span>
+                        <div style="font-weight:700;font-size:1em;padding:8px 12px;background:var(--color-surface-alt);border-left:4px solid var(--color-tailed-out);border-radius:4px;margin-bottom:8px;">
+                            ${escapeHtml(phase)} <span style="font-weight:400;color:var(--color-text-muted);font-size:0.88em;">(${pTasks.length} task${pTasks.length!==1?'s':''})</span>
                         </div>
                         <table style="width:100%;border-collapse:collapse;font-size:0.88em;">
-                            <thead><tr style="background:#fafafa;color:#666;font-size:0.85em;">
-                                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid #eee;">Task</th>
-                                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid #eee;">Owner</th>
-                                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid #eee;">Due Date</th>
-                                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid #eee;">Status</th>
-                                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid #eee;"></th>
+                            <thead><tr style="background:var(--color-surface-alt);color:var(--color-text-muted);font-size:0.85em;">
+                                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--color-border);">Task</th>
+                                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--color-border);">Owner</th>
+                                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--color-border);">Due Date</th>
+                                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--color-border);">Status</th>
+                                <th style="padding:6px 10px;text-align:center;border-bottom:1px solid var(--color-border);"></th>
                             </tr></thead>
                             <tbody>${pTasks.map(t => `
                                 <tr style="border-bottom:1px solid #f0f0f0;opacity:0.75;">
-                                    <td style="padding:7px 10px;text-decoration:line-through;color:#777;">🚫 ${escapeHtml(t.name)}</td>
-                                    <td style="padding:7px 10px;color:#888;">${escapeHtml(t.owner||'—')}</td>
-                                    <td style="padding:7px 10px;text-align:center;color:#888;">${t.due||'—'}</td>
+                                    <td style="padding:7px 10px;text-decoration:line-through;color:var(--color-text-muted);">🚫 ${escapeHtml(t.name)}</td>
+                                    <td style="padding:7px 10px;color:var(--color-text-muted);">${escapeHtml(t.owner||'—')}</td>
+                                    <td style="padding:7px 10px;text-align:center;color:var(--color-text-muted);">${t.due||'—'}</td>
                                     <td style="padding:7px 10px;text-align:center;">
-                                        <span style="font-size:0.82em;background:#eee;padding:2px 7px;border-radius:10px;color:#666;">${escapeHtml(t.status||'—')}</span>
+                                        <span style="font-size:0.82em;background:var(--color-border);padding:2px 7px;border-radius:10px;color:var(--color-text-muted);">${escapeHtml(t.status||'—')}</span>
                                     </td>
                                     <td style="padding:7px 10px;text-align:center;">
                                         <button onclick="editTask(${t.id});document.getElementById('tailedOutModal').classList.remove('active');"
-                                            style="font-size:0.8em;padding:3px 8px;background:#fff;border:1px solid #ccc;border-radius:4px;cursor:pointer;">✏️ Edit</button>
+                                            style="font-size:0.8em;padding:3px 8px;background:#fff;border:1px solid var(--color-border);border-radius:4px;cursor:pointer;">✏️ Edit</button>
                                     </td>
                                 </tr>`).join('')}
                             </tbody>
@@ -8353,16 +8675,16 @@
                 const taskShiftSection = shiftedTasks.length > 0 ? `
                     <div style="margin-bottom:16px;overflow-x:auto;">
                         <table style="width:100%;border-collapse:collapse;font-size:0.88em;">
-                            <thead><tr style="background:#f5f5f5;font-weight:600;">
-                                <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Task</th>
-                                <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Phase</th>
-                                <th style="padding:8px;text-align:center;border-bottom:2px solid #ddd;">Start (old → new)</th>
-                                <th style="padding:8px;text-align:center;border-bottom:2px solid #ddd;">Due (old → new)</th>
+                            <thead><tr style="background:var(--color-surface-alt);font-weight:600;">
+                                <th style="padding:8px;text-align:left;border-bottom:2px solid var(--color-border);">Task</th>
+                                <th style="padding:8px;text-align:left;border-bottom:2px solid var(--color-border);">Phase</th>
+                                <th style="padding:8px;text-align:center;border-bottom:2px solid var(--color-border);">Start (old → new)</th>
+                                <th style="padding:8px;text-align:center;border-bottom:2px solid var(--color-border);">Due (old → new)</th>
                             </tr></thead>
                             <tbody>${shiftedTasks.map(t => `
-                                <tr style="border-bottom:1px solid #eee;">
+                                <tr style="border-bottom:1px solid var(--color-border);">
                                     <td style="padding:6px 8px;">${escapeHtml(t.name)}</td>
-                                    <td style="padding:6px 8px;color:#666;font-size:0.85em;">${escapeHtml(t.phase || '')}</td>
+                                    <td style="padding:6px 8px;color:var(--color-text-muted);font-size:0.85em;">${escapeHtml(t.phase || '')}</td>
                                     <td style="padding:6px 8px;text-align:center;font-size:0.85em;">${t.entered || '—'} → <strong>${t.newStart || '—'}</strong></td>
                                     <td style="padding:6px 8px;text-align:center;font-size:0.85em;">${t.due || '—'} → <strong style="color:${delta > 0 ? '#c0392b' : '#27ae60'}">${t.newDue || '—'}</strong></td>
                                 </tr>`).join('')}
@@ -8375,10 +8697,10 @@
                 if (gateImpacts.length > 0) {
                     const gateRows = gateImpacts.map(({ gate, affectedTasks, newGateDate }) => `
                         <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:12px;margin-bottom:8px;">
-                            <div style="font-weight:600;margin-bottom:6px;color:#e65100;">
+                            <div style="font-weight:600;margin-bottom:6px;color:var(--color-dep-successor);">
                                 ⚠️ ${escapeHtml(gate.name)} (current deadline: ${gate.due}) will be exceeded by:
                             </div>
-                            <ul style="margin:0 0 8px 18px;font-size:0.88em;color:#555;">
+                            <ul style="margin:0 0 8px 18px;font-size:0.88em;color:var(--color-text-muted);">
                                 ${affectedTasks.map(t => `<li>${escapeHtml(t.name)} (new due: ${t.newDue})</li>`).join('')}
                             </ul>
                             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.9em;">
@@ -8388,7 +8710,7 @@
                         </div>`).join('');
                     gateSection = `
                         <div style="margin-bottom:16px;">
-                            <div style="font-weight:700;margin-bottom:10px;color:#b71c1c;">🚪 Gate Impact</div>
+                            <div style="font-weight:700;margin-bottom:10px;color:var(--color-overdue-dark);">🚪 Gate Impact</div>
                             ${gateRows}
                         </div>`;
                 }
@@ -8403,11 +8725,11 @@
                 overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:19999;display:flex;align-items:center;justify-content:center;';
                 overlay.innerHTML = `
                     <div style="background:white;border-radius:10px;padding:28px;max-width:700px;width:92%;max-height:85vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.35);">
-                        <h3 style="margin:0 0 6px;color:#333;">🔗 Change Impact Preview</h3>
-                        <div style="color:#666;font-size:0.9em;margin-bottom:16px;">${subtitle}</div>
+                        <h3 style="margin:0 0 6px;color:var(--color-text);">🔗 Change Impact Preview</h3>
+                        <div style="color:var(--color-text-muted);font-size:0.9em;margin-bottom:16px;">${subtitle}</div>
                         ${taskShiftSection}
                         ${gateSection}
-                        <div style="display:flex;gap:12px;justify-content:flex-end;border-top:1px solid #eee;padding-top:16px;">
+                        <div style="display:flex;gap:12px;justify-content:flex-end;border-top:1px solid var(--color-border);padding-top:16px;">
                             <button id="cascadeCancelBtn" style="padding:10px 22px;background:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:0.9em;">✕ Cancel</button>
                             <button id="cascadeApplyBtn" style="padding:10px 22px;background:#28a745;color:white;border:none;border-radius:5px;cursor:pointer;font-size:0.9em;font-weight:700;">✓ Apply Changes</button>
                         </div>
@@ -8490,12 +8812,12 @@
                 const modalHtml = `
                     <div class="modal active" id="gateConfirmModal" style="z-index: 20000;">
                         <div class="modal-content" style="max-width: 550px;">
-                            <div class="modal-header" style="background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%); color: white;">
+                            <div class="modal-header" style="background: var(--status-planned-fg); color: white;">
                                 ⚠️ Gate Deadline Warning
                             </div>
                             <div style="padding: 25px;">
                                 <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: #e65100;">
+                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: var(--color-dep-successor);">
                                         Task End Date Exceeds Gate Deadline
                                     </div>
                                     <div style="margin-bottom: 15px; line-height: 1.6;">
@@ -8666,6 +8988,7 @@
                     // Refresh the Gantt to show moved Gate
                     populateOwnerFilter();
                     populatePhaseFilter();
+                    populateDepartmentFilter();
                     applyFilters();
                 }
                 
@@ -8685,12 +9008,12 @@
                 const modalHtml = `
                     <div class="modal active" id="cascadeGateModal" style="z-index: 20001;">
                         <div class="modal-content" style="max-width: 600px;">
-                            <div class="modal-header" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); color: white;">
+                            <div class="modal-header" style="background: var(--status-planned-fg); color: white;">
                                 ⚠️ Cascade Gate Impact Warning
                             </div>
                             <div style="padding: 25px;">
                                 <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: #e65100;">
+                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: var(--color-dep-successor);">
                                         ${movedGateName} Moved, Subsequent Gates Affected
                                     </div>
                                     <div style="margin-bottom: 15px; line-height: 1.6;">
@@ -8788,25 +9111,25 @@
                         additionalDelay
                     };
                 }).map(g => `
-                    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <div style="background: white; border: 1px solid var(--color-border); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                         <div style="font-weight: bold; font-size: 1.1em; color: #1976D2; margin-bottom: 10px;">${g.name}</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; font-size: 0.9em;">
                             <div>
-                                <div style="color: #666; font-size: 0.85em;">Baseline (Planned)</div>
-                                <div style="font-weight: bold; color: #2e7d32;">${g.baseline}</div>
+                                <div style="color: var(--color-text-muted); font-size: 0.85em;">Baseline (Planned)</div>
+                                <div style="font-weight: bold; color: var(--color-gate-passed);">${g.baseline}</div>
                             </div>
                             <div>
-                                <div style="color: #666; font-size: 0.85em;">Current (Actual)</div>
-                                <div style="font-weight: bold; color: ${g.currentDelay > 0 ? '#ff9800' : '#2e7d32'};">${g.current}</div>
-                                ${g.currentDelay !== 0 ? `<div style="font-size: 0.8em; color: ${g.currentDelay > 0 ? '#d84315' : '#2e7d32'};">(${g.currentDelay > 0 ? '+' : ''}${g.currentDelay} days)</div>` : ''}
+                                <div style="color: var(--color-text-muted); font-size: 0.85em;">Current (Actual)</div>
+                                <div style="font-weight: bold; color: ${g.currentDelay > 0 ? '#ff9800' : 'var(--color-gate-passed)'};">${g.current}</div>
+                                ${g.currentDelay !== 0 ? `<div style="font-size: 0.8em; color: ${g.currentDelay > 0 ? '#d84315' : 'var(--color-gate-passed)'};">(${g.currentDelay > 0 ? '+' : ''}${g.currentDelay} days)</div>` : ''}
                             </div>
                             <div>
-                                <div style="color: #666; font-size: 0.85em;">Proposed (New)</div>
+                                <div style="color: var(--color-text-muted); font-size: 0.85em;">Proposed (New)</div>
                                 <div style="font-weight: bold; color: #d84315;">${g.proposed}</div>
                                 <div style="font-size: 0.8em; color: #d84315;">(+${g.proposedDelay} days from baseline)</div>
                             </div>
                         </div>
-                        <div style="background: #ffebee; padding: 10px; border-radius: 4px; border-left: 3px solid #f44336; font-size: 0.9em;">
+                        <div style="background: #ffebee; padding: 10px; border-radius: 4px; border-left: 3px solid var(--color-overdue); font-size: 0.9em;">
                             <strong>Additional Delay:</strong> <span style="color: #d84315; font-weight: bold;">${g.additionalDelay} days</span> beyond current
                         </div>
                     </div>
@@ -8815,12 +9138,12 @@
                 const modalHtml = `
                     <div class="modal active" id="gateMoveConfirmModal" style="z-index: 20002;">
                         <div class="modal-content" style="max-width: 800px;">
-                            <div class="modal-header" style="background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%); color: white;">
+                            <div class="modal-header" style="background: var(--color-overdue); color: white;">
                                 ⚠️ Confirm Gate Deadline Changes
                             </div>
                             <div style="padding: 25px; max-height: 600px; overflow-y: auto;">
-                                <div style="background: #ffebee; border-left: 4px solid #d32f2f; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: #c62828;">
+                                <div style="background: #ffebee; border-left: 4px solid var(--color-overdue); padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                                    <div style="font-weight: bold; margin-bottom: 10px; font-size: 1.1em; color: var(--color-overdue-dark);">
                                         ⚠️ This will delay ${affectedGates.length} Gate(s)
                                     </div>
                                     <div style="line-height: 1.6;">
@@ -8833,10 +9156,10 @@
                                 </div>
                                 
                                 <div style="background: #fff3e0; padding: 15px; border-radius: 8px; border-left: 4px solid #ff9800; margin-bottom: 20px;">
-                                    <strong style="color: #e65100;">⚠️ Impact:</strong> Moving these Gates will affect the overall project timeline and may impact stakeholder commitments.
+                                    <strong style="color: var(--color-dep-successor);">⚠️ Impact:</strong> Moving these Gates will affect the overall project timeline and may impact stakeholder commitments.
                                 </div>
                                 
-                                <div style="font-weight: 600; margin-bottom: 15px; font-size: 1.05em; text-align: center; color: #c62828;">
+                                <div style="font-weight: 600; margin-bottom: 15px; font-size: 1.05em; text-align: center; color: var(--color-overdue-dark);">
                                     Are you sure you want to proceed?
                                 </div>
                                 
@@ -9090,6 +9413,9 @@
                     const allDiscs = [...new Set([...fromTable, ...existingDiscs])].sort();
                     sel.innerHTML = allDiscs.map(d => `<option value="${d.replace(/"/g,'&quot;')}">${d}</option>`).join('');
                 }
+                // Now that owner → department data is in, fill in the Dept. column/filter
+                populateDepartmentFilter();
+                applyFilters();
             } catch(e) { /* non-critical */ }
         }
 
@@ -9167,6 +9493,7 @@
             await loadGateSignOffs();        // Load gate sign-offs
             populateOwnerFilter();
             populatePhaseFilter();
+            populateDepartmentFilter();
             applyFilters();
             loadKnownOwners();
             
@@ -9216,10 +9543,10 @@
             </div>
             <div style="padding:16px 20px 0;">
                 <!-- Canvas preview -->
-                <div style="border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f9f9f9;margin-bottom:14px;">
+                <div style="border:1px solid var(--color-border);border-radius:6px;overflow:hidden;background:#f9f9f9;margin-bottom:14px;">
                     <canvas id="ganttPptCanvas" style="display:block;width:100%;"></canvas>
                 </div>
-                <p style="font-size:0.82em;color:#666;margin-bottom:14px;">
+                <p style="font-size:0.82em;color:var(--color-text-muted);margin-bottom:14px;">
                     Preview shows <strong id="pptTaskCount">—</strong> active tasks (Planned + In Process + On Hold + Review) across all phases.
                     The exported PPT is generated with crisp vector graphics.
                 </p>
@@ -9229,10 +9556,10 @@
                     <button onclick="downloadGanttPpt()" class="btn btn-primary" style="background:#1B4332;border-color:#1B4332;margin-bottom:10px;">
                         📑 Export &amp; Open in PowerPoint
                     </button>
-                    <div style="font-size:0.85em;color:#555;margin:8px 0 6px;">Or save to a specific folder:</div>
+                    <div style="font-size:0.85em;color:var(--color-text-muted);margin:8px 0 6px;">Or save to a specific folder:</div>
                     <div style="display:flex;gap:8px;align-items:center;">
                         <input type="text" id="pptSavePath" placeholder="e.g.  C:\Users\omalevsky\Documents\Project Reports"
-                               style="flex:1;padding:7px 10px;border:1px solid #ccc;border-radius:5px;font-size:0.88em;">
+                               style="flex:1;padding:7px 10px;border:1px solid var(--color-border);border-radius:5px;font-size:0.88em;">
                         <button onclick="saveGanttPptToPath()" class="btn btn-primary" style="white-space:nowrap;">
                             📂 Save to Folder
                         </button>
@@ -9278,7 +9605,7 @@
                 if (s && (!minD || s < minD)) minD = s;
                 if (e && (!maxD || e > maxD)) maxD = e;
             });
-            if (!minD) { ctx.fillStyle = '#999'; ctx.fillText('No dated tasks', 40, 40); return; }
+            if (!minD) { ctx.fillStyle = 'var(--color-text-muted)'; ctx.fillText('No dated tasks', 40, 40); return; }
 
             // Snap to month boundaries
             const projStart = new Date(minD.getFullYear(), minD.getMonth(), 1);
@@ -9607,7 +9934,7 @@
     <div class="modal" id="gateSignOffModal">
         <div class="modal-content" style="max-width:500px;">
             <div class="modal-header">🔏 Gate Sign-Off: <span id="gateSignOffName"></span></div>
-            <div id="gateBlockedWarning" style="display:none;background:#ffebee;border:1px solid #ef9a9a;border-radius:6px;padding:12px;margin-bottom:16px;color:#b71c1c;font-size:0.9em;"></div>
+            <div id="gateBlockedWarning" style="display:none;background:#ffebee;border:1px solid #ef9a9a;border-radius:6px;padding:12px;margin-bottom:16px;color:var(--color-overdue-dark);font-size:0.9em;"></div>
             <div class="form-group">
                 <label>Sign-Off Date *</label>
                 <input type="date" id="gateSignOffDate">
@@ -9626,16 +9953,16 @@
             <div class="form-group" id="reworkDueDateGroup" style="display:none;">
                 <label>Rework Due Date *</label>
                 <input type="date" id="gateReworkDueDate">
-                <div style="font-size:0.8em;color:#888;margin-top:4px;">⚠ This date does not move the overall schedule</div>
+                <div style="font-size:0.8em;color:var(--color-text-muted);margin-top:4px;">⚠ This date does not move the overall schedule</div>
             </div>
             <div id="openReworkTasksInfo" style="display:none;margin-top:12px;padding:10px;background:#fff3e0;border-radius:6px;border-left:4px solid #ff9800;">
-                <div style="font-size:0.85em;font-weight:600;color:#e65100;margin-bottom:6px;">⚠ Open Rework Cause Tasks:</div>
+                <div style="font-size:0.85em;font-weight:600;color:var(--color-dep-successor);margin-bottom:6px;">⚠ Open Rework Cause Tasks:</div>
                 <div id="openReworkTasksList" style="font-size:0.82em;line-height:1.7;"></div>
             </div>
-            <div style="display:flex;gap:10px;margin-top:20px;padding-top:15px;border-top:1px solid #eee;align-items:center;">
+            <div style="display:flex;gap:10px;margin-top:20px;padding-top:15px;border-top:1px solid var(--color-border);align-items:center;">
                 <button class="btn" onclick="saveGateSignOff()">💾 Save Sign-Off</button>
                 <button class="btn btn-secondary" onclick="closeGateSignOff()">Cancel</button>
-                <button id="removeSignOffBtn" style="display:none;margin-left:auto;padding:8px 16px;background:#f44336;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.85em;" onclick="removeGateSignOff()">🗑 Remove</button>
+                <button id="removeSignOffBtn" style="display:none;margin-left:auto;padding:8px 16px;background:var(--color-overdue);color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.85em;" onclick="removeGateSignOff()">🗑 Remove</button>
             </div>
         </div>
     </div>

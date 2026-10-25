@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ project_name }} - Schematic Schedule</title>
     <style>
+        {% include "_tokens.html" %}
         * {
             margin: 0;
             padding: 0;
@@ -12,9 +13,9 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #ffffff;
-            color: #1f3254;
+            font-family: var(--font-family-base);
+            background: var(--color-bg);
+            color: var(--color-text);
             min-height: 100vh;
             padding: 16px 18px 18px;
         }
@@ -36,27 +37,27 @@
         .title-block h1 {
             font-size: 2rem;
             line-height: 1.1;
-            color: #20365d;
+            color: var(--color-text);
             margin-bottom: 6px;
         }
 
         .title-block p {
-            color: #6b7280;
+            color: var(--color-text-muted);
             font-size: 0.95rem;
         }
 
         .status-pill {
             min-width: 220px;
             padding: 14px 18px;
-            border-radius: 6px;
-            background: #2faa60;
+            border-radius: var(--radius-sm);
+            background: var(--color-accent);
             color: #ffffff;
             text-align: center;
             font-size: 0.92rem;
             font-weight: 800;
             letter-spacing: 0.04em;
             text-transform: uppercase;
-            box-shadow: 0 8px 18px rgba(47, 170, 96, 0.18);
+            box-shadow: var(--shadow-md);
         }
 
         .actions {
@@ -91,7 +92,7 @@
         }
 
         .action-btn.secondary {
-            background: #20365d;
+            background: var(--color-accent);
             color: #ffffff;
         }
 
@@ -116,17 +117,17 @@
         }
 
         .note-chip.warning {
-            background: #fff6e7;
+            background: var(--status-planned-bg);
             border-color: #ffd691;
-            color: #9a6300;
+            color: var(--status-planned-fg);
         }
 
         .chart-card {
             position: relative;
             border-radius: 14px;
-            background: #ffffff;
+            background: var(--color-surface);
             box-shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
-            border: 1px solid #edf2f8;
+            border: 1px solid var(--color-border);
             padding: 24px 18px 18px 0;
             overflow: hidden;
             min-height: calc(100vh - 170px);
@@ -138,7 +139,7 @@
             margin-left: 250px;
             margin-right: 22px;
             height: 34px;
-            color: #20365d;
+            color: var(--color-text);
             font-size: 1.05rem;
             font-weight: 800;
         }
@@ -147,7 +148,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-bottom: 1px solid #edf2f8;
+            border-bottom: 1px solid var(--color-border);
         }
 
         .schematic-grid {
@@ -186,7 +187,7 @@
 
         .lane-label {
             padding: 0 22px 0 0;
-            color: #1f3254;
+            color: var(--color-text);
             font-size: 0.98rem;
             font-weight: 700;
             line-height: 1.25;
@@ -238,7 +239,7 @@
         }
 
         .lane-segment.completed {
-            background: #41ad66;
+            background: var(--status-completed-fg);
             color: #ffffff;
             display: flex;
             align-items: center;
@@ -289,12 +290,12 @@
             font-size: 0.83rem;
             font-weight: 800;
             line-height: 1.2;
-            color: #1f3254;
+            color: var(--color-text);
         }
 
         .lane-callout-date {
             margin-top: 3px;
-            color: #73839a;
+            color: var(--color-text-muted);
             font-size: 0.72rem;
             font-style: italic;
             font-weight: 600;
@@ -334,13 +335,13 @@
             top: 0;
             transform: translateX(-50%);
             text-align: center;
-            color: #29b862;
+            color: var(--color-gate-passed);
         }
 
         .gate-label {
             font-size: 0.95rem;
             font-weight: 800;
-            color: #29b862;
+            color: var(--color-gate-passed);
             margin-bottom: 6px;
         }
 
@@ -358,7 +359,7 @@
             top: 0;
             width: 3px;
             height: 34px;
-            background: #29b862;
+            background: var(--color-gate-passed);
             border-radius: 2px;
         }
 
@@ -369,13 +370,13 @@
             top: 2px;
             width: 22px;
             height: 17px;
-            background: #29b862;
+            background: var(--color-gate-passed);
             border-radius: 2px 8px 8px 2px;
             clip-path: polygon(0 0, 100% 15%, 100% 85%, 72% 100%, 0 86%);
         }
 
         .gate-date {
-            color: #666666;
+            color: var(--color-text-muted);
             font-style: italic;
             font-size: 0.94rem;
             font-weight: 700;
@@ -385,7 +386,7 @@
         .empty-state {
             padding: 38px 24px 42px;
             text-align: center;
-            color: #6b7280;
+            color: var(--color-text-muted);
             font-size: 1rem;
         }
 

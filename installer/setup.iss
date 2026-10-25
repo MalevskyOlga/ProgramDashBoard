@@ -230,6 +230,7 @@ Source: "{#SrcRoot}\excel_exporter.py";    DestDir: "{app}"; Flags: ignoreversio
 Source: "{#SrcRoot}\ppt_exporter.py";       DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\portfolio_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\risk_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcRoot}\risk_excel_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\gantt_ppt_exporter.py"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\db_migrate.py";        DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcRoot}\tenancy.py";           DestDir: "{app}"; Flags: ignoreversion
