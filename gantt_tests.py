@@ -89,7 +89,7 @@ if tasks:
 
     # Check status values
     statuses = {t["status"] for t in tasks}
-    valid_statuses = {"Planned","In Process","Completed"}
+    valid_statuses = {"Planned","In Process","Completed","On Hold","Review","Cancelled"}
     invalid = statuses - valid_statuses
     if invalid:
         warn("All task statuses are valid", f"unexpected values: {invalid}")

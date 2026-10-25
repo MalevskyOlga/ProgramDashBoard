@@ -46,7 +46,12 @@ STATUS_COLORS = {
     'Completed': 'A0AEC0',
     'In Process': '10B981',
     'Planned':    'F59E0B',
+    'On Hold':    '9C27B0',
+    'Review':     '2196F3',
+    'Cancelled':  '607D8B',
 }
+# Statuses still shown as active work on the exported Gantt (Completed/Cancelled are closed out)
+ACTIVE_STATUSES = ('Planned', 'In Process', 'On Hold', 'Review')
 CRITICAL_COLOR  = 'EF4444'
 MILESTONE_COLOR = '6366F1'
 PHASE_BG        = '1F3A5F'
@@ -107,7 +112,7 @@ class GanttPptExporter:
                      title_prefix='', filename_override=None):
         try:
             # Filter to active tasks only
-            tasks = [t for t in tasks if str(t.get('status', '')).strip() in ('Planned', 'In Process')]
+            tasks = [t for t in tasks if str(t.get('status', '')).strip() in ACTIVE_STATUSES]
             today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
             # ── Organise tasks by phase ──────────────────────────────────────
@@ -190,7 +195,8 @@ class GanttPptExporter:
 
             # ── Legend row (inside header, bottom) ──────────────────────────
             legend = [('Completed', 'A0AEC0'), ('In Process', '10B981'),
-                      ('Planned', 'F59E0B'), ('Critical', 'EF4444'), ('Milestone ◆', '6366F1')]
+                      ('Planned', 'F59E0B'), ('On Hold', '9C27B0'), ('Review', '2196F3'),
+                      ('Critical', 'EF4444'), ('Milestone ◆', '6366F1')]
             lx = self.SW - self.MR
             ly = self.HDR_H - 0.19
             for lname, lcol in reversed(legend):
@@ -486,7 +492,7 @@ class GanttPptExporter:
             if tid in lf and (lf[tid] - t_end).days <= float_threshold_days:
                 critical_ids.add(tid)
             # Near-term: due within near_term_days from today — active tasks only
-            active = str(t.get('status', '')).strip() in ('Planned', 'In Process')
+            active = str(t.get('status', '')).strip() in ACTIVE_STATUSES
             days_out = (t_end - today).days
             if active and -7 <= days_out <= near_term_days:
                 critical_ids.add(tid)
@@ -501,12 +507,12 @@ class GanttPptExporter:
         critical_ids = self._compute_critical_ids(tasks, deps)
         print(f'  CPM: {len(critical_ids)} critical-path tasks out of {len(tasks)}')
 
-        # Keep Planned / In Process tasks that are critical; always keep milestones on CP
+        # Keep active tasks that are critical; always keep milestones on CP
         cp_tasks = [
             dict(t, critical=1)           # copy + force red bar
             for t in tasks
             if t['id'] in critical_ids
-            and (str(t.get('status', '')).strip() in ('Planned', 'In Process')
+            and (str(t.get('status', '')).strip() in ACTIVE_STATUSES
                  or t.get('milestone'))
         ]
 

@@ -884,8 +884,10 @@ class DatabaseManager:
 
     # Shared WHERE-clause fragment: a project is excluded from cross-project overview
     # endpoints once it's archived via the Pipeline "Mark Complete" action, or once every
-    # one of its tasks is individually marked Completed. `project_alias` must be the SQL
-    # alias/table name bound to the `projects` row (needs `.id` and `.name` columns).
+    # one of its tasks is individually marked Completed or Cancelled (Cancelled is treated
+    # as closed-out, same as Completed, for "is this project still open" purposes).
+    # `project_alias` must be the SQL alias/table name bound to the `projects` row
+    # (needs `.id` and `.name` columns).
     def _completed_project_exclusion_sql(self, project_alias):
         return f'''
               AND LOWER(TRIM({project_alias}.name)) NOT IN
@@ -895,7 +897,7 @@ class DatabaseManager:
                   AND NOT EXISTS (
                       SELECT 1 FROM tasks _opent
                       WHERE _opent.project_id = {project_alias}.id
-                        AND LOWER(COALESCE(_opent.status, '')) != 'completed'
+                        AND LOWER(COALESCE(_opent.status, '')) NOT IN ('completed', 'cancelled')
                   )
               )
         '''
@@ -1054,10 +1056,13 @@ class DatabaseManager:
             status_value = (row['status'] or '').strip()
             normalized_status = normalize_status(status_value)
             is_completed = status_value.lower() == 'completed'
-            is_active_today = (start_date <= today <= end_date) and not is_completed
+            # Cancelled is closed-out just like Completed for "is this still open work" purposes
+            # (active-today, overdue), but only a literal Completed task can be "closed late".
+            is_closed = normalized_status in ('completed', 'cancelled')
+            is_active_today = (start_date <= today <= end_date) and not is_closed
             closed_date_value = (row['date_closed'] or '').strip()
             closed_date = datetime.strptime(closed_date_value[:10], '%Y-%m-%d').date() if closed_date_value else None
-            is_open_delayed = (not is_completed) and end_date < today
+            is_open_delayed = (not is_closed) and end_date < today
             is_closed_delayed = is_completed and closed_date is not None and closed_date > end_date
             is_delayed = is_open_delayed or is_closed_delayed
             delay_reason = 'Open overdue' if is_open_delayed else ('Closed late' if is_closed_delayed else None)
@@ -1090,6 +1095,8 @@ class DatabaseManager:
                 'tailed_out_count': 0,
                 'planned_working_days': 0,
                 'in_process_working_days': 0,
+                'on_hold_working_days': 0,
+                'review_working_days': 0,
                 'project_names': set(),
                 'date_points': [],
                 'pm_date_points': [],
@@ -1103,9 +1110,11 @@ class DatabaseManager:
             owner_entry['tailed_out_count'] += 1 if task_item['tailed_out'] else 0
             owner_entry['planned_working_days'] += working_days if normalized_status == 'planned' else 0
             owner_entry['in_process_working_days'] += working_days if normalized_status == 'in process' else 0
+            owner_entry['on_hold_working_days'] += working_days if normalized_status == 'on hold' else 0
+            owner_entry['review_working_days'] += working_days if normalized_status == 'review' else 0
             owner_entry['project_names'].add(row['project_name'])
-            # Only count active/future tasks for concurrent load (exclude completed)
-            if normalized_status in ('planned', 'in process'):
+            # Only count active/future tasks for concurrent load (exclude completed/cancelled)
+            if normalized_status in ('planned', 'in process', 'on hold', 'review'):
                 owner_entry['date_points'].append((start_date, 1))
                 owner_entry['date_points'].append((end_date, -1))
             owner_entry['tasks'].append(task_item)
@@ -1118,9 +1127,9 @@ class DatabaseManager:
         cursor2.execute('''
             SELECT p.name AS proj_name,
                    TRIM(p.manager) AS manager,
-                   SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks,
-                   MIN(CASE WHEN t.status IN ('In Process','Planned') THEN t.start_date ELSE NULL END) AS proj_start,
-                   MAX(CASE WHEN t.status IN ('In Process','Planned') THEN t.end_date ELSE NULL END) AS proj_end
+                   SUM(CASE WHEN t.status IN ('In Process','Planned','On Hold','Review') THEN 1 ELSE 0 END) AS active_tasks,
+                   MIN(CASE WHEN t.status IN ('In Process','Planned','On Hold','Review') THEN t.start_date ELSE NULL END) AS proj_start,
+                   MAX(CASE WHEN t.status IN ('In Process','Planned','On Hold','Review') THEN t.end_date ELSE NULL END) AS proj_end
             FROM projects p
             LEFT JOIN tasks t ON t.project_id = p.id
             WHERE TRIM(COALESCE(p.manager,'')) != ''
@@ -1185,6 +1194,8 @@ class DatabaseManager:
                     'tailed_out_count': 0,
                     'planned_working_days': 0,
                     'in_process_working_days': 0,
+                    'on_hold_working_days': 0,
+                    'review_working_days': 0,
                     'project_names': set(),
                     'date_points': [],
                     'pm_date_points': [],
@@ -1272,6 +1283,8 @@ class DatabaseManager:
                 'tailed_out_count': owner_entry['tailed_out_count'],
                 'planned_working_days': owner_entry['planned_working_days'],
                 'in_process_working_days': owner_entry['in_process_working_days'],
+                'on_hold_working_days': owner_entry['on_hold_working_days'],
+                'review_working_days': owner_entry['review_working_days'],
                 'project_count': len(owner_entry['project_names']),
                 'project_names': sorted(owner_entry['project_names']),
                 'peak_parallel_tasks': concurrent_load,
@@ -1406,7 +1419,8 @@ class DatabaseManager:
             closed_date = parse_date((row['date_closed'] or '').strip())
             status_value = (row['status'] or '').strip()
             is_completed = status_value.lower() == 'completed'
-            is_open_delayed = bool(end_date and (not is_completed) and end_date < today)
+            is_closed = status_value.lower() in ('completed', 'cancelled')
+            is_open_delayed = bool(end_date and (not is_closed) and end_date < today)
             is_closed_delayed = bool(end_date and is_completed and closed_date and closed_date > end_date)
             duration_days = 0
             if start_date and end_date:

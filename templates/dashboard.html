@@ -643,6 +643,9 @@
         .status-completed { background: #d4edda; color: #155724; }
         .status-in-process { background: #d1ecf1; color: #0c5460; }
         .status-planned { background: #f8d7da; color: #721c24; }
+        .status-on-hold { background: #e1bee7; color: #4a148c; }
+        .status-review { background: #bbdefb; color: #0d47a1; }
+        .status-cancelled { background: #cfd8dc; color: #37474f; text-decoration: line-through; }
 
         /* Status Edit Dropdown */
         .status-edit-container {
@@ -684,6 +687,21 @@
         .status-option.completed {
             background: #d4edda;
             color: #155724;
+        }
+
+        .status-option.on-hold {
+            background: #e1bee7;
+            color: #4a148c;
+        }
+
+        .status-option.review {
+            background: #bbdefb;
+            color: #0d47a1;
+        }
+
+        .status-option.cancelled {
+            background: #cfd8dc;
+            color: #37474f;
         }
 
         /* Timeline */
@@ -828,6 +846,20 @@
 
         .gantt-bar.planned {
             background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+        }
+
+        .gantt-bar.on-hold {
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+        }
+
+        .gantt-bar.review {
+            background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);
+        }
+
+        .gantt-bar.cancelled {
+            background: linear-gradient(135deg, #607d8b 0%, #455a64 100%);
+            text-decoration: line-through;
+            opacity: 0.75;
         }
 
         .float-bar {
@@ -1853,10 +1885,22 @@
             <span>Planned</span>
         </label>
         <label class="checkbox-label">
+            <input type="checkbox" class="status-filter-checkbox" value="On Hold" checked onchange="applyFilters()">
+            <span>On Hold</span>
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" class="status-filter-checkbox" value="Review" checked onchange="applyFilters()">
+            <span>Review</span>
+        </label>
+        <label class="checkbox-label">
             <input type="checkbox" class="status-filter-checkbox" value="Completed" onchange="applyFilters()">
             <span>Completed</span>
         </label>
-        
+        <label class="checkbox-label">
+            <input type="checkbox" class="status-filter-checkbox" value="Cancelled" onchange="applyFilters()">
+            <span>Cancelled</span>
+        </label>
+
         <input type="checkbox" id="filterCritical" onchange="onFilterCriticalChange(this)" style="display:none">
         <label class="checkbox-label">
             <input type="checkbox" id="filterOverdue" onchange="applyFilters()">
@@ -1959,6 +2003,18 @@
             <span>Planned</span>
         </div>
         <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);"></div>
+            <span>On Hold</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);"></div>
+            <span>Review</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: linear-gradient(135deg, #607d8b 0%, #455a64 100%);"></div>
+            <span>Cancelled</span>
+        </div>
+        <div class="legend-item">
             <div class="legend-color" style="width: 20px; height: 20px; transform: rotate(45deg); background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);"></div>
             <span>Milestone</span>
         </div>
@@ -2025,7 +2081,10 @@
                     <select id="taskStatus" required>
                         <option value="Planned">Planned</option>
                         <option value="In Process">In Process</option>
+                        <option value="On Hold">On Hold</option>
+                        <option value="Review">Review</option>
                         <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
                     </select>
                 </div>
 
@@ -3033,8 +3092,8 @@
             const warnings = [];
             
             tasks.forEach(task => {
-                if (task.milestone || task.status === 'Completed' || task.tailed_out) {
-                    return; // Skip milestone, completed, and tailed-out tasks
+                if (task.milestone || task.status === 'Completed' || task.status === 'Cancelled' || task.tailed_out) {
+                    return; // Skip milestone, completed, cancelled, and tailed-out tasks
                 }
                 
                 // Get the Gate deadline for this task's phase
@@ -3786,8 +3845,8 @@
                 const pred = tasks.find(t => t.id === dep.predecessor_id);
                 const succ = tasks.find(t => t.id === dep.successor_id);
                 if (!pred || !succ) return;
-                if (succ.status === 'Completed') return;
-                if (pred.status === 'Completed') return;
+                if (succ.status === 'Completed' || succ.status === 'Cancelled') return;
+                if (pred.status === 'Completed' || pred.status === 'Cancelled') return;
                 const predDue   = pred.due     ? new Date(pred.due)     : null;
                 const succStart = succ.entered  ? new Date(succ.entered) : null;
                 const isOverdue = predDue && predDue < today;
@@ -3811,7 +3870,7 @@
                 const name = t ? t.name : 'Unknown';
                 const reason = blockingPredMap.get(pid);
                 let cls;
-                if (t && t.status === 'Completed') cls = 'pred-link pred-link-done';
+                if (t && (t.status === 'Completed' || t.status === 'Cancelled')) cls = 'pred-link pred-link-done';
                 else if (reason) cls = 'pred-link pred-link-blocking';
                 else cls = 'pred-link';
                 const tooltip = reason === 'overdue'
@@ -3826,7 +3885,7 @@
                 const t = tasks.find(t => t.id === sid);
                 const num = t ? t.rowNum : '?';
                 const name = t ? t.name : 'Unknown';
-                const cls = (t && t.status === 'Completed') ? 'pred-link succ-link succ-link-done' : 'pred-link succ-link';
+                const cls = (t && (t.status === 'Completed' || t.status === 'Cancelled')) ? 'pred-link succ-link succ-link-done' : 'pred-link succ-link';
                 return `<span class="${cls}" onclick="scrollToTask(${sid})" title="→ ${escapeHtml(name)}">${num}</span>`;
             });
 
@@ -4206,7 +4265,7 @@
         }
 
         function isOverdue(dueDate, status) {
-            if (status === 'Completed') return false;
+            if (status === 'Completed' || status === 'Cancelled') return false;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const due = parseDate(dueDate);
@@ -4464,7 +4523,9 @@
         // Returns { pct, overdue, exceedsGate, total, daysToGate, color, label }
         function computeGateHealth(phaseName, phaseTasks) {
             const today = new Date(); today.setHours(0,0,0,0);
-            const nonMilestone = phaseTasks.filter(t => !t.milestone && !t.tailed_out);
+            // Cancelled tasks are out of scope for gate health - they neither count toward
+            // completion nor drag the percentage down.
+            const nonMilestone = phaseTasks.filter(t => !t.milestone && !t.tailed_out && t.status !== 'Cancelled');
             const total = nonMilestone.length;
             if (total === 0) return null;
 
@@ -4880,7 +4941,7 @@
                     const prevGateName = gateName.replace(/\d+/, gateNum - 1);
                     const prevSignOff = gateSignOffs[prevGateName];
                     if (prevSignOff && prevSignOff.status === 'Passed with Rework') {
-                        const openRework = tasks.filter(t => t.is_rework_cause && t.status !== 'Completed');
+                        const openRework = tasks.filter(t => t.is_rework_cause && t.status !== 'Completed' && t.status !== 'Cancelled');
                         if (openRework.length > 0) {
                             warningDiv.innerHTML = `🔒 <strong>Blocked:</strong> ${prevGateName} was passed with rework.
                                 The following rework tasks must be completed before signing off ${gateName}:<br>
@@ -4923,7 +4984,7 @@
             document.getElementById('removeSignOffBtn').style.display = existing ? 'block' : 'none';
 
             // Show open rework-cause tasks
-            const openReworkTasks = tasks.filter(t => t.is_rework_cause && t.status !== 'Completed');
+            const openReworkTasks = tasks.filter(t => t.is_rework_cause && t.status !== 'Completed' && t.status !== 'Cancelled');
             const reworkInfo = document.getElementById('openReworkTasksInfo');
             if (openReworkTasks.length > 0) {
                 reworkInfo.style.display = 'block';
@@ -5642,7 +5703,7 @@
                                 valueB = parseDate(b.due) || new Date(0);
                                 break;
                             case 'status':
-                                const statusOrder = { 'Completed': 1, 'In Process': 2, 'Planned': 3 };
+                                const statusOrder = { 'Completed': 1, 'In Process': 2, 'Planned': 3, 'On Hold': 4, 'Review': 5, 'Cancelled': 6 };
                                 valueA = statusOrder[a.status] || 99;
                                 valueB = statusOrder[b.status] || 99;
                                 break;
@@ -5866,10 +5927,10 @@
                         const signOffLabel = gatePassedAfterRework ? '🔏 Done' : gatePassedRework ? '🔏 Rework' : gatePassed ? '🔏 Passed' : '🔏 Sign';
                         const reworkActive = task.is_rework_cause ? 'active' : '';
                         const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
-                        const gateReworkBtn = task.status !== 'Completed' ? `<button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>` : '';
+                        const gateReworkBtn = (task.status !== 'Completed' && task.status !== 'Cancelled') ? `<button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>` : '';
                         actionsHTML = IS_VIEWER ? `<button class="gate-signoff-btn ${signOffClass}" title="Gate sign-off" style="pointer-events:none;opacity:0.6;">${signOffLabel}</button>` : `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="gate-signoff-btn ${signOffClass}" onclick="openGateSignOff(${task.id})" title="Gate sign-off">${signOffLabel}</button>${gateReworkBtn}`;
                     } else {
-                        const canRework = (task.critical || task.milestone || (task.name && task.name.toLowerCase().includes('gate'))) && task.status !== 'Completed';
+                        const canRework = (task.critical || task.milestone || (task.name && task.name.toLowerCase().includes('gate'))) && task.status !== 'Completed' && task.status !== 'Cancelled';
                         const reworkActive = task.is_rework_cause ? 'active' : '';
                         const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
                         const reworkBtn = canRework ? `<button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>` : '';
@@ -5964,7 +6025,7 @@
 
                     // Float bar: semi-transparent buffer from task end → gate deadline
                     let floatBarHTML = '';
-                    if (!task.milestone && !task.tailed_out && task.status !== 'Completed' && task.due) {
+                    if (!task.milestone && !task.tailed_out && task.status !== 'Completed' && task.status !== 'Cancelled' && task.due) {
                         const gate = tasks.find(t => t.milestone && t.phase === task.phase && t.name && t.name.toLowerCase().includes('gate') && t.due);
                         if (gate) {
                             const floatDays = Math.round((new Date(gate.due) - new Date(task.due)) / 86400000);
@@ -6229,7 +6290,10 @@
                     dropdown.innerHTML = `
                         <div class="status-option planned" data-status="Planned">PLANNED</div>
                         <div class="status-option in-process" data-status="In Process">IN PROCESS</div>
+                        <div class="status-option on-hold" data-status="On Hold">ON HOLD</div>
+                        <div class="status-option review" data-status="Review">REVIEW</div>
                         <div class="status-option completed" data-status="Completed">COMPLETED</div>
+                        <div class="status-option cancelled" data-status="Cancelled">CANCELLED</div>
                     `;
 
                     // Add click handlers for status options
@@ -7155,7 +7219,7 @@
                     bar.classList.add('dep-self');
                 } else if (predIds.has(bid)) {
                     const t = tasks.find(t => t.id === bid);
-                    bar.classList.add(t && t.status === 'Completed' ? 'dep-predecessor-done' : 'dep-predecessor');
+                    bar.classList.add(t && (t.status === 'Completed' || t.status === 'Cancelled') ? 'dep-predecessor-done' : 'dep-predecessor');
                 } else if (succIds.has(bid)) {
                     bar.classList.add('dep-successor');
                 } else {
@@ -7168,7 +7232,7 @@
                     row.classList.add('dep-self');
                 } else if (predIds.has(rid)) {
                     const t = tasks.find(t => t.id === rid);
-                    row.classList.add(t && t.status === 'Completed' ? 'dep-predecessor-done' : 'dep-predecessor');
+                    row.classList.add(t && (t.status === 'Completed' || t.status === 'Cancelled') ? 'dep-predecessor-done' : 'dep-predecessor');
                 } else if (succIds.has(rid)) {
                     row.classList.add('dep-successor');
                 } else {
@@ -7199,9 +7263,9 @@
             function taskRow(t) {
                 if (!t) return '';
                 const statusCls = t.status ? t.status.toLowerCase().replace(' ', '-') : '';
-                const overdue = t.due && t.status !== 'Completed' && new Date(t.due) < new Date() ? ' style="color:#e53935;font-weight:600;"' : '';
+                const overdue = t.due && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due) < new Date() ? ' style="color:#e53935;font-weight:600;"' : '';
                 return `<div class="dep-panel-row" onclick="scrollToTask(${t.id})">
-                    <span class="pred-link" style="min-width:22px;text-align:center;${t.status === 'Completed' ? 'background:#f0f0f0;color:#999;border-color:#ccc;' : ''}">${t.rowNum || '?'}</span>
+                    <span class="pred-link" style="min-width:22px;text-align:center;${(t.status === 'Completed' || t.status === 'Cancelled') ? 'background:#f0f0f0;color:#999;border-color:#ccc;' : ''}">${t.rowNum || '?'}</span>
                     <span class="dep-panel-name" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
                     <span class="status-badge status-${statusCls}" style="font-size:0.72em;padding:1px 6px;">${t.status}</span>
                     <span class="dep-panel-date"${overdue}>${formatDateShort(t.due) || '—'}</span>
@@ -7362,8 +7426,8 @@
                 orphanEl.innerHTML = '<div style="padding:20px;text-align:center;color:#43a047;font-weight:600;">✅ No orphan tasks — all tasks are linked!</div>';
             } else {
                 orphanEl.innerHTML = orphans.map(t => {
-                    const statusCls = t.status ? t.status.toLowerCase().replace(' ','- ') : '';
-                    const overdue = t.due && t.status !== 'Completed' && new Date(t.due) < today;
+                    const statusCls = t.status ? t.status.toLowerCase().replace(' ','-') : '';
+                    const overdue = t.due && t.status !== 'Completed' && t.status !== 'Cancelled' && new Date(t.due) < today;
                     return `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;margin-bottom:4px;background:#fff;border:1px solid #eee;font-size:0.82em;">
                         <span class="pred-link" style="pointer-events:none;min-width:22px;text-align:center;">${t.rowNum}</span>
                         <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>
@@ -7437,6 +7501,7 @@
             // 6. Node color by status
             function nodeColor(t) {
                 if (t.status === 'Completed') return { fill:'#e8f5e9', stroke:'#43a047', text:'#1b5e20' };
+                if (t.status === 'Cancelled') return { fill:'#eceff1', stroke:'#607d8b', text:'#455a64' };
                 if (t.status === 'In Process') {
                     const blocking = _atRiskMap.has(t.id) || (succMap[t.id]||[]).some(sid => (_atRiskMap.get(sid)||[]).some(p => p.id === t.id));
                     return blocking
@@ -8750,7 +8815,7 @@
                     <canvas id="ganttPptCanvas" style="display:block;width:100%;"></canvas>
                 </div>
                 <p style="font-size:0.82em;color:#666;margin-bottom:14px;">
-                    Preview shows <strong id="pptTaskCount">—</strong> active tasks (Planned + In Process) across all phases.
+                    Preview shows <strong id="pptTaskCount">—</strong> active tasks (Planned + In Process + On Hold + Review) across all phases.
                     The exported PPT is generated with crisp vector graphics.
                 </p>
                 <!-- Actions -->
@@ -8796,8 +8861,8 @@
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, CW, CH);
 
-            // Only Planned + In Process
-            const allTasks = tasks.filter(t => t.status === 'In Process' || t.status === 'Planned');
+            // Active tasks: Planned, In Process, On Hold, Review (Completed/Cancelled excluded, like done/closed work)
+            const allTasks = tasks.filter(t => ['In Process', 'Planned', 'On Hold', 'Review'].includes(t.status));
             document.getElementById('pptTaskCount').textContent = allTasks.length;
 
             // Date range across ALL tasks (so timeline spans full project)
@@ -8878,7 +8943,7 @@
             ctx.font = `${Math.round(HDR_H * 0.30)}px Segoe UI,sans-serif`;
             ctx.fillStyle = '#A8D5B5';
             ctx.textAlign = 'right';
-            ctx.fillText(`Planned + In Process  |  ${todayStr}`, CW - 8, HDR_H * 0.5);
+            ctx.fillText(`Planned + In Process + On Hold + Review  |  ${todayStr}`, CW - 8, HDR_H * 0.5);
             ctx.textAlign = 'left';
 
             // ── Timeline header ──────────────────────────────────────────────
@@ -8939,7 +9004,7 @@
             ctx.stroke();
 
             // ── Task rows — chronological, split by today ─────────────────────
-            const STATUS_COLORS = { 'In Process':'#10B981', 'Planned':'#F59E0B' };
+            const STATUS_COLORS = { 'In Process':'#10B981', 'Planned':'#F59E0B', 'On Hold':'#9C27B0', 'Review':'#2196F3' };
             let cy = HDR_H + TL_H + 2;
             let rowAlt = false;
 

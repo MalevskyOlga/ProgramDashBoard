@@ -2907,7 +2907,8 @@
         }
 
         function renderLoadBar(owner, maxDays) {
-            const days = (owner.planned_working_days || 0) + (owner.in_process_working_days || 0);
+            const days = (owner.planned_working_days || 0) + (owner.in_process_working_days || 0) +
+                (owner.on_hold_working_days || 0) + (owner.review_working_days || 0);
             const pct = maxDays > 0 ? Math.min(100, Math.round((days / maxDays) * 100)) : 0;
             const label = getResourceLoadLabel(owner);
             const barColor = label === 'High' ? '#ff6b6b' : label === 'Medium' ? '#ffa94d' : '#69db7c';
@@ -2989,7 +2990,11 @@
                     const c = cellColor(count, d.owner_count);
                     const isNow = months[i] === today_month;
                     const ip = d.in_process[i], pl = d.planned[i];
-                    const tip = count ? `${ip} In Process + ${pl} Planned` : '';
+                    const oh = (d.on_hold || [])[i] || 0, rv = (d.review || [])[i] || 0;
+                    const tipParts = [`${ip} In Process`, `${pl} Planned`];
+                    if (oh) tipParts.push(`${oh} On Hold`);
+                    if (rv) tipParts.push(`${rv} Review`);
+                    const tip = count ? tipParts.join(' + ') : '';
                     return `<td title="${tip}" style="
                         text-align:center;padding:5px 4px;font-size:0.82em;font-weight:600;
                         background:${c.bg};color:${c.text};
@@ -3058,7 +3063,7 @@
             return `
             <div style="padding:4px 0;">
                 <div style="font-size:0.75em;color:#6b7fa3;margin-bottom:12px;">
-                    Resource load by discipline — In Process + Planned tasks · cell color = tasks per owner ratio
+                    Resource load by discipline — In Process + Planned + On Hold + Review tasks · cell color = tasks per owner ratio
                 </div>
                 ${summaryHtml}
                 <div style="font-size:0.8em;color:#7ec8ff;font-weight:600;margin-bottom:8px;">📅 Monthly Load Heatmap</div>
@@ -3164,7 +3169,7 @@
             const monthSet = new Set();
             owners.forEach(owner => owner.tasks.forEach(task => {
                 if (!task.start_date || !task.end_date) return;
-                if ((task.status || '').toLowerCase() === 'completed') return;
+                if (['completed', 'cancelled'].includes((task.status || '').toLowerCase())) return;
                 const s = new Date(task.start_date);
                 const e = new Date(task.end_date);
                 let d = new Date(s.getFullYear(), s.getMonth(), 1);
@@ -3184,7 +3189,7 @@
                     const mEnd   = new Date(yr, mo, 0); // last day of month
                     const count = owner.tasks.reduce((sum, t) => {
                         if (!t.start_date || !t.end_date) return sum;
-                        if ((t.status || '').toLowerCase() === 'completed') return sum;
+                        if (['completed', 'cancelled'].includes((t.status || '').toLowerCase())) return sum;
                         if (new Date(t.start_date) <= mEnd && new Date(t.end_date) >= mStart) {
                             return sum + (t.pm_weight || 1);
                         }
@@ -3453,7 +3458,8 @@
 
             // Max working days across all owners for bar scaling
             const maxDays = Math.max(1, ...payload.owners.map(o =>
-                (o.planned_working_days || 0) + (o.in_process_working_days || 0)));
+                (o.planned_working_days || 0) + (o.in_process_working_days || 0) +
+                (o.on_hold_working_days || 0) + (o.review_working_days || 0)));
 
             const visibleRows = visibleOwners.map((owner) => `
                 <tr>
@@ -3610,7 +3616,7 @@
                     .map(t => ({ ...t, owner: owner.owner }))
                     .sort((a, b) => (a.start_date || '').localeCompare(b.start_date || '') || a.project_name.localeCompare(b.project_name));
 
-                const statusColor = s => ({ 'completed': '#9cf79a', 'in process': '#7ec8ff', 'planned': '#ffd18d' }[(s||'').toLowerCase()] || '#cdd9e5');
+                const statusColor = s => ({ 'completed': '#9cf79a', 'in process': '#7ec8ff', 'planned': '#ffd18d', 'on hold': '#ce93d8', 'review': '#90caf9', 'cancelled': '#b0bec5' }[(s||'').toLowerCase()] || '#cdd9e5');
                 const delayFlag = t => t.is_delayed ? `<span style="color:#ff6b6b;font-size:0.8em;margin-left:4px;">⚠ delayed</span>` : '';
 
                 const rows = tasks.map(t => `
@@ -3811,7 +3817,7 @@
                 const totalMs = (maxDate - minDate) || 1;
                 const todayPct = Math.max(0, Math.min(100, (today - minDate) / totalMs * 100));
 
-                const barColor = s => ({ 'completed': '#4caf7d', 'in process': '#4a9eff', 'planned': '#ffa94d' }[(s||'').toLowerCase()] || '#8899aa');
+                const barColor = s => ({ 'completed': '#4caf7d', 'in process': '#4a9eff', 'planned': '#ffa94d', 'on hold': '#9c27b0', 'review': '#2196f3', 'cancelled': '#607d8b' }[(s||'').toLowerCase()] || '#8899aa');
                 const toPct = d => d ? Math.max(0, Math.min(100, (new Date(d) - minDate) / totalMs * 100)) : null;
 
                 // Build ONE table with owner header rows interspersed — ensures perfect column alignment
@@ -3860,6 +3866,7 @@
                         &nbsp;·&nbsp; timeline: ${minDate.toLocaleDateString()} – ${maxDate.toLocaleDateString()}
                         &nbsp;·&nbsp; <span style="color:#ff4757;">│</span> = today
                         &nbsp;·&nbsp; <span style="color:#4a9eff;">■</span> In Process &nbsp;<span style="color:#ffa94d;">■</span> Planned
+                        &nbsp;<span style="color:#9c27b0;">■</span> On Hold &nbsp;<span style="color:#2196f3;">■</span> Review
                     </div>
                     <table style="width:100%;border-collapse:collapse;font-size:0.83em;">
                         <colgroup>
@@ -4100,17 +4107,30 @@
         }
 
         function renderScheduledOwnerProjectSections(tasks) {
+            // Active statuses: still-pending work. Completed/Cancelled are excluded, same
+            // as a project that's fully wrapped up.
+            const ACTIVE_STATUS_KEYS = { 'planned': 'planned', 'in process': 'in_process', 'on hold': 'on_hold', 'review': 'review' };
             const relevantTasks = tasks.filter((task) => {
                 const normalizedStatus = (task.status || '').trim().toLowerCase();
-                return normalizedStatus === 'planned' || normalizedStatus === 'in process';
+                return Object.prototype.hasOwnProperty.call(ACTIVE_STATUS_KEYS, normalizedStatus);
             });
 
             if (!relevantTasks.length) {
                 return {
-                    html: `<div class="resource-detail-empty">No Planned or In Process tasks found.</div>`,
+                    html: `<div class="resource-detail-empty">No Planned, In Process, On Hold, or Review tasks found.</div>`,
                     tableIds: []
                 };
             }
+
+            const emptyBuckets = () => ({ planned: 0, in_process: 0, on_hold: 0, review: 0 });
+            const emptyWdBuckets = () => ({ planned: 0, in_process: 0, on_hold: 0, review: 0 });
+            const sumBuckets = (b) => b.planned + b.in_process + b.on_hold + b.review;
+            const bucketSubline = (counts) => {
+                const parts = [`Planned ${counts.planned}`, `In Process ${counts.in_process}`];
+                if (counts.on_hold) parts.push(`On Hold ${counts.on_hold}`);
+                if (counts.review) parts.push(`Review ${counts.review}`);
+                return parts.join(' · ');
+            };
 
             const ownerProjectMap = new Map();
             relevantTasks.forEach((task) => {
@@ -4119,23 +4139,14 @@
                     owner: task.owner,
                     project_name: task.project_name,
                     task_count: 0,
-                    planned_working_days: 0,
-                    in_process_working_days: 0,
-                    planned_task_count: 0,
-                    in_process_task_count: 0
+                    working_days: emptyWdBuckets(),
+                    task_counts: emptyBuckets()
                 };
 
                 existing.task_count += 1;
-
-                if ((task.status || '').trim().toLowerCase() === 'planned') {
-                    existing.planned_task_count += 1;
-                    existing.planned_working_days += Number(task.working_days || 0);
-                }
-
-                if ((task.status || '').trim().toLowerCase() === 'in process') {
-                    existing.in_process_task_count += 1;
-                    existing.in_process_working_days += Number(task.working_days || 0);
-                }
+                const bucket = ACTIVE_STATUS_KEYS[(task.status || '').trim().toLowerCase()];
+                existing.task_counts[bucket] += 1;
+                existing.working_days[bucket] += Number(task.working_days || 0);
 
                 ownerProjectMap.set(mapKey, existing);
             });
@@ -4143,7 +4154,7 @@
             const ownerProjects = Array.from(ownerProjectMap.values())
                 .map((entry) => ({
                     ...entry,
-                    total_working_days: entry.planned_working_days + entry.in_process_working_days
+                    total_working_days: sumBuckets(entry.working_days)
                 }));
 
             const projectNames = Array.from(new Set(ownerProjects.map((entry) => entry.project_name)))
@@ -4158,18 +4169,16 @@
                 const existing = ownerMap.get(entry.owner) || {
                     owner: entry.owner,
                     total_task_count: 0,
-                    total_planned_task_count: 0,
-                    total_in_process_task_count: 0,
-                    total_planned_working_days: 0,
-                    total_in_process_working_days: 0,
+                    total_task_counts: emptyBuckets(),
+                    total_working_days: emptyWdBuckets(),
                     projects: new Map()
                 };
 
                 existing.total_task_count += entry.task_count;
-                existing.total_planned_task_count += entry.planned_task_count;
-                existing.total_in_process_task_count += entry.in_process_task_count;
-                existing.total_planned_working_days += entry.planned_working_days;
-                existing.total_in_process_working_days += entry.in_process_working_days;
+                ['planned', 'in_process', 'on_hold', 'review'].forEach((k) => {
+                    existing.total_task_counts[k] += entry.task_counts[k];
+                    existing.total_working_days[k] += entry.working_days[k];
+                });
                 existing.projects.set(entry.project_name, entry);
                 ownerMap.set(entry.owner, existing);
             });
@@ -4177,7 +4186,7 @@
             const ownerRows = Array.from(ownerMap.values())
                 .map((owner) => ({
                     ...owner,
-                    total_working_days: owner.total_planned_working_days + owner.total_in_process_working_days
+                    grand_total_working_days: sumBuckets(owner.total_working_days)
                 }));
 
             const taskQuantityRows = ownerRows
@@ -4196,7 +4205,7 @@
                         return `
                             <td class="resource-matrix-cell">
                                 <div class="resource-matrix-primary">${project.task_count}</div>
-                                <div class="resource-matrix-subline">Planned ${project.planned_task_count} · In Process ${project.in_process_task_count}</div>
+                                <div class="resource-matrix-subline">${bucketSubline(project.task_counts)}</div>
                             </td>
                         `;
                     }).join('');
@@ -4207,7 +4216,7 @@
                             ${projectCells}
                             <td class="resource-matrix-cell">
                                 <div class="resource-matrix-primary">${owner.total_task_count}</div>
-                                <div class="resource-matrix-subline">Planned ${owner.total_planned_task_count} · In Process ${owner.total_in_process_task_count}</div>
+                                <div class="resource-matrix-subline">${bucketSubline(owner.total_task_counts)}</div>
                             </td>
                         </tr>
                     `;
@@ -4216,20 +4225,20 @@
             const workingDayRows = ownerRows
                 .slice()
                 .sort((left, right) =>
-                    right.total_working_days - left.total_working_days
+                    right.grand_total_working_days - left.grand_total_working_days
                     || left.owner.localeCompare(right.owner)
                 )
                 .map((owner) => {
                     const projectCells = projectNames.map((projectName) => {
                         const project = owner.projects.get(projectName);
-                        if (!project || (!project.planned_working_days && !project.in_process_working_days)) {
+                        if (!project || !sumBuckets(project.working_days)) {
                             return `<td class="resource-matrix-cell resource-matrix-zero">0</td>`;
                         }
 
                         return `
                             <td class="resource-matrix-cell">
-                                <div class="resource-matrix-primary">${project.total_working_days}</div>
-                                <div class="resource-matrix-subline">Planned ${project.planned_working_days} · In Process ${project.in_process_working_days}</div>
+                                <div class="resource-matrix-primary">${sumBuckets(project.working_days)}</div>
+                                <div class="resource-matrix-subline">${bucketSubline(project.working_days)}</div>
                             </td>
                         `;
                     }).join('');
@@ -4239,8 +4248,8 @@
                             <td class="resource-table-owner">${escapeHtml(owner.owner)}</td>
                             ${projectCells}
                             <td class="resource-matrix-cell">
-                                <div class="resource-matrix-primary">${owner.total_working_days}</div>
-                                <div class="resource-matrix-subline">Planned ${owner.total_planned_working_days} · In Process ${owner.total_in_process_working_days}</div>
+                                <div class="resource-matrix-primary">${owner.grand_total_working_days}</div>
+                                <div class="resource-matrix-subline">${bucketSubline(owner.total_working_days)}</div>
                             </td>
                         </tr>
                     `;
@@ -4260,7 +4269,7 @@
                 workingDayHtml: `
                     <div class="resource-detail-panel" style="margin-bottom: 14px;">
                         <h3>Overall working days per owner per project</h3>
-                        <p>Owners are shown in rows, with all projects across the columns. Each cell shows total working days, plus <strong>Planned</strong> and <strong>In Process</strong> splits.</p>
+                        <p>Owners are shown in rows, with all projects across the columns. Each cell shows total working days, plus <strong>Planned</strong>, <strong>In Process</strong>, <strong>On Hold</strong>, and <strong>Review</strong> splits.</p>
                         ${renderSimpleResourceTable(
                             ['Owner', ...projectNames, 'Total WD'],
                             workingDayRows

@@ -1921,12 +1921,15 @@ def api_discipline_resource_load():
     # Excludes projects archived via the Pipeline "Mark Complete" action. A project whose
     # tasks are ALL Completed is already excluded above by the status IN (...) filter.
     not_archived = "AND LOWER(TRIM(p.name)) NOT IN (SELECT LOWER(TRIM(name)) FROM archived_projects)"
+    # Active statuses: still-pending work. Completed/Cancelled are excluded, same as a
+    # project that's fully wrapped up.
+    active_statuses = "'In Process','Planned','On Hold','Review'"
     if project_name_filter:
         tasks = t_conn.execute(f"""
             SELECT TRIM(t.owner), t.start_date, t.end_date, t.status
             FROM tasks t
             JOIN projects p ON t.project_id = p.id
-            WHERE t.status IN ('In Process','Planned')
+            WHERE t.status IN ({active_statuses})
               AND t.start_date IS NOT NULL AND t.start_date != ''
               AND t.end_date   IS NOT NULL AND t.end_date   != ''
               AND t.end_date >= ?
@@ -1938,13 +1941,21 @@ def api_discipline_resource_load():
             SELECT TRIM(t.owner), t.start_date, t.end_date, t.status
             FROM tasks t
             JOIN projects p ON t.project_id = p.id
-            WHERE t.status IN ('In Process','Planned')
+            WHERE t.status IN ({active_statuses})
               AND t.start_date IS NOT NULL AND t.start_date != ''
               AND t.end_date   IS NOT NULL AND t.end_date   != ''
               AND t.end_date >= ?
               {not_archived}
         """, (cutoff_date,)).fetchall()
     t_conn.close()
+
+    def _empty_disc_buckets():
+        return {
+            'In Process': [0] * len(months),
+            'Planned': [0] * len(months),
+            'On Hold': [0] * len(months),
+            'Review': [0] * len(months),
+        }
 
     # Compute monthly task counts per discipline
     disc_monthly = {}
@@ -1958,8 +1969,8 @@ def api_discipline_resource_load():
         except Exception:
             continue
         if disc not in disc_monthly:
-            disc_monthly[disc] = {'In Process': [0]*len(months), 'Planned': [0]*len(months)}
-        bucket = 'In Process' if status == 'In Process' else 'Planned'
+            disc_monthly[disc] = _empty_disc_buckets()
+        bucket = status if status in ('In Process', 'On Hold', 'Review') else 'Planned'
         for i, ms in enumerate(months):
             last_day = calendar.monthrange(ms.year, ms.month)[1]
             me = _date(ms.year, ms.month, last_day)
@@ -1970,11 +1981,11 @@ def api_discipline_resource_load():
     if not project_name_filter:
         pm_conn = sqlite3.connect(str(db_path))
         pm_conn.row_factory = sqlite3.Row
-        pm_proj_rows = pm_conn.execute("""
+        pm_proj_rows = pm_conn.execute(f"""
             SELECT TRIM(p.manager) AS manager,
-                   MIN(CASE WHEN t.status IN ('In Process','Planned') THEN t.start_date ELSE NULL END) AS proj_start,
-                   MAX(CASE WHEN t.status IN ('In Process','Planned') THEN t.end_date   ELSE NULL END) AS proj_end,
-                   SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks,
+                   MIN(CASE WHEN t.status IN ({active_statuses}) THEN t.start_date ELSE NULL END) AS proj_start,
+                   MAX(CASE WHEN t.status IN ({active_statuses}) THEN t.end_date   ELSE NULL END) AS proj_end,
+                   SUM(CASE WHEN t.status IN ({active_statuses}) THEN 1 ELSE 0 END) AS active_tasks,
                    SUM(CASE WHEN t.status = 'In Process' THEN 1 ELSE 0 END) AS inprocess_tasks
             FROM projects p
             LEFT JOIN tasks t ON t.project_id = p.id
@@ -2001,7 +2012,7 @@ def api_discipline_resource_load():
             except Exception:
                 continue
             if disc not in disc_monthly:
-                disc_monthly[disc] = {'In Process': [0]*len(months), 'Planned': [0]*len(months)}
+                disc_monthly[disc] = _empty_disc_buckets()
             has_inprocess = (pr['inprocess_tasks'] or 0) > 0
             for i, ms in enumerate(months):
                 last_day = calendar.monthrange(ms.year, ms.month)[1]
@@ -2014,7 +2025,9 @@ def api_discipline_resource_load():
     for disc in sorted(disc_monthly):
         ip = disc_monthly[disc]['In Process']
         pl = disc_monthly[disc]['Planned']
-        combined = [ip[i] + pl[i] for i in range(len(months))]
+        oh = disc_monthly[disc]['On Hold']
+        rv = disc_monthly[disc]['Review']
+        combined = [ip[i] + pl[i] + oh[i] + rv[i] for i in range(len(months))]
         peak = max(combined) if combined else 0
         peak_idx = combined.index(peak) if peak else 0
         owner_count = disc_owners.get(disc, 1)
@@ -2023,6 +2036,8 @@ def api_discipline_resource_load():
             'owner_count': owner_count,
             'in_process': ip,
             'planned': pl,
+            'on_hold': oh,
+            'review': rv,
             'combined': combined,
             'peak_count': peak,
             'peak_month': months[peak_idx].strftime('%Y-%m'),
