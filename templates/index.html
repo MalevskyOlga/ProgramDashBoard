@@ -1974,6 +1974,8 @@
         .pbadge-npd  { background: #dbeafe; color: #1e40af; }
         .pbadge-cert { background: #fef3c7; color: #92400e; }
         .pbadge-obs  { background: #fee2e2; color: #991b1b; }
+        .pbadge-ewr  { background: #ede9fe; color: #5b21b6; }
+        .pbadge-applications { background: #ccfbf1; color: #0f766e; }
         .pbadge-na   { background: #f1f5f9; color: #64748b; }
         /* Dropdown selects inside priority table */
         .priority-table select {
@@ -1987,6 +1989,8 @@
         .priority-table select.pbadge-npd  { background: #dbeafe; color: #1e40af; font-weight: 600; }
         .priority-table select.pbadge-cert { background: #fef3c7; color: #92400e; font-weight: 600; }
         .priority-table select.pbadge-obs  { background: #fee2e2; color: #991b1b; font-weight: 600; }
+        .priority-table select.pbadge-ewr  { background: #ede9fe; color: #5b21b6; font-weight: 600; }
+        .priority-table select.pbadge-applications { background: #ccfbf1; color: #0f766e; font-weight: 600; }
         .priority-table select.pbadge-na   { background: #f1f5f9; color: #64748b; font-weight: 600; }
         /* Min-widths so dropdown values aren't clipped */
         .priority-table td:nth-child(4) { min-width: 68px; }
@@ -4833,6 +4837,8 @@
                 case 'npd':  return 'pbadge-npd';
                 case 'cert': return 'pbadge-cert';
                 case 'obs':  return 'pbadge-obs';
+                case 'ewr':  return 'pbadge-ewr';
+                case 'applications': return 'pbadge-applications';
                 default:     return 'pbadge-na';
             }
         }
@@ -4916,7 +4922,7 @@
                 <td class="priority-col-priority" contenteditable="true" data-field="priority" data-original="${p.priority}">${p.priority}</td>
                 <td class="priority-col-name"><span class="priority-editable-name" contenteditable="true" data-field="name" data-original="${escapeHtml(p.name || '')}">${escapeHtml(p.name || '')}</span>${linkArea}</td>
                 <td contenteditable="true" data-field="leader" data-original="${escapeHtml(p.leader || '')}">${escapeHtml(p.leader || '')}</td>
-                <td>${_sel(['','NPD','N/A','Cert','OBS'], p.process_type||'', 'process_type', `priority-select priority-badge ${bc}`)}</td>
+                <td>${_sel(['','NPD','N/A','Cert','OBS','EWR','Applications'], p.process_type||'', 'process_type', `priority-select priority-badge ${bc}`)}</td>
                 <td>${_sel(['','N/A','Gate 1','Gate 2','Gate 3','Gate 4','Gate 5','Gate C/D'], p.next_gate||'', 'next_gate', 'priority-select')}</td>
                 <td contenteditable="true" data-field="launch_date" data-original="${escapeHtml(p.launch_date || '')}">${escapeHtml(p.launch_date || '')}</td>
                 <td>${_sel(['','Growth','Maintain','Discontinue'], p.objective||'', 'objective', 'priority-select')}</td>

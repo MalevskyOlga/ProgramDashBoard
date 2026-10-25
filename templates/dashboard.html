@@ -713,6 +713,14 @@
             flex-shrink: 0;
         }
 
+        .timeline-fiscal {
+            display: block;
+            font-weight: 500;
+            font-size: 0.78em;
+            color: #777;
+            margin-top: 2px;
+        }
+
         .timeline-month.today {
             background: #fff3cd;
             border-left: 2px solid #ffc107;
@@ -2006,11 +2014,6 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Team Members</label>
-                    <input type="text" id="taskTeam" placeholder="e.g., Dave, Zach, Emil">
-                </div>
-
-                <div class="form-group">
                     <label>Gate *</label>
                     <input type="text" id="taskPhase" list="taskPhaseOptions" required
                            placeholder="Select or type a phase…" autocomplete="off">
@@ -2915,7 +2918,6 @@
                         id: task.id,
                         name: task.name,
                         owner: task.owner,
-                        team: task.owner, // Use owner as team for compatibility
                         entered: task.start_date,
                         status: task.status,
                         due: task.end_date,
@@ -4400,8 +4402,7 @@
                     if (searchText) {
                         const matchesSearch = 
                             task.name.toLowerCase().includes(searchText) ||
-                            task.owner.toLowerCase().includes(searchText) ||
-                            (task.team && task.team.toLowerCase().includes(searchText));
+                            task.owner.toLowerCase().includes(searchText);
                         if (!matchesSearch) return false;
                     }
                     
@@ -4489,6 +4490,21 @@
             }
 
             return { pct, overdue, exceeds, total, daysToGate, color, label };
+        }
+
+        // Emerson fiscal calendar: FY starts in October (P1 = Oct) and is named for the
+        // calendar year it ends in (Oct 2025–Sep 2026 = FY26).
+        function fiscalPeriod(date) {
+            return ((date.getMonth() + 3) % 12) + 1;
+        }
+        function fiscalYear(date) {
+            return date.getMonth() >= 9 ? date.getFullYear() + 1 : date.getFullYear();
+        }
+        function fiscalQuarter(date) {
+            return Math.ceil(fiscalPeriod(date) / 3);
+        }
+        function fyLabel(fullYear) {
+            return `FY${String(fullYear).slice(-2)}`;
         }
 
         // Calendar-aware pixel offset: computes how many pixels from the gantt origin
@@ -5715,6 +5731,7 @@
                     periods.push({
                         date: new Date(current),
                         label: current.toLocaleString('default', { month: 'short', year: 'numeric' }),
+                        fiscalLabel: `P${fiscalPeriod(current)} · ${fyLabel(fiscalYear(current))}`,
                         isToday: isCurrentPeriod
                     });
                     current.setMonth(current.getMonth() + 1);
@@ -5730,6 +5747,7 @@
                     periods.push({
                         date: new Date(current),
                         label: `${quarters[q]} ${current.getFullYear()}`,
+                        fiscalLabel: `FQ${fiscalQuarter(current)} · ${fyLabel(fiscalYear(current))}`,
                         isToday: isCurrentPeriod
                     });
                     current.setMonth(current.getMonth() + 3);
@@ -5742,9 +5760,12 @@
 
                 for (let year = startYear; year <= endYear; year++) {
                     const isCurrentPeriod = year === today.getFullYear();
+                    const fyStart = fiscalYear(new Date(year, 0, 1));
+                    const fyEnd = fiscalYear(new Date(year, 11, 31));
                     periods.push({
                         date: new Date(year, 0, 1),
                         label: `${year}`,
+                        fiscalLabel: fyStart === fyEnd ? fyLabel(fyStart) : `${fyLabel(fyStart)}–${fyLabel(fyEnd)}`,
                         isToday: isCurrentPeriod
                     });
                 }
@@ -5763,7 +5784,7 @@
             // Render timeline header
             const timelineHeader = document.getElementById('timelineHeader');
             timelineHeader.innerHTML = periods.map(p => `
-                <div class="timeline-month ${p.isToday ? 'today' : ''}" style="min-width: ${columnWidth}px;">${p.label}</div>
+                <div class="timeline-month ${p.isToday ? 'today' : ''}" style="min-width: ${columnWidth}px;">${p.label}<span class="timeline-fiscal">${p.fiscalLabel}</span></div>
             `).join('');
             
             // Set minimum width for timeline header to match total timeline width
@@ -6263,7 +6284,6 @@
             tooltip.querySelector('.tooltip-title').textContent = task.name;
             tooltip.querySelector('.tooltip-content').innerHTML = `
                 <strong>Owner:</strong> ${task.owner}<br>
-                <strong>Team:</strong> ${task.team || 'N/A'}<br>
                 <strong>Gate:</strong> ${task.phase}<br>
                 <strong>Status:</strong> ${task.status}<br>
                 <strong>Start:</strong> ${formatDateDisplay(task.entered)}<br>
@@ -6787,7 +6807,6 @@
             document.getElementById('modalTitle').textContent = 'Edit Task';
             document.getElementById('taskName').value = task.name;
             document.getElementById('taskOwner').value = task.owner;
-            document.getElementById('taskTeam').value = task.team || '';
             populateTaskPhaseOptions();
             document.getElementById('taskPhase').value = task.phase;
             document.getElementById('taskStatus').value = task.status;
@@ -6857,7 +6876,6 @@
             const taskData = {
                 name: document.getElementById('taskName').value,
                 owner: document.getElementById('taskOwner').value,
-                team: document.getElementById('taskTeam').value,
                 phase: document.getElementById('taskPhase').value,
                 status: document.getElementById('taskStatus').value,
                 entered: document.getElementById('taskEntered').value,
