@@ -74,7 +74,16 @@
                 <tr>
                     <td>{{ u.username }}</td>
                     <td class="muted">{{ u.email or '—' }}</td>
-                    <td><span class="pill role">{{ u.role }}</span></td>
+                    <td>
+                        {% if u.id != current_user.id and u.role in ('user', 'viewer') %}
+                        <select name="role" form="role-form-{{ u.id }}">
+                            <option value="user" {{ 'selected' if u.role=='user' }}>user</option>
+                            <option value="viewer" {{ 'selected' if u.role=='viewer' }}>viewer (read-only)</option>
+                        </select>
+                        {% else %}
+                        <span class="pill role">{{ u.role }}</span>
+                        {% endif %}
+                    </td>
                     <td>
                         {% if u.is_active %}
                             <span class="pill on">active</span>
@@ -83,6 +92,11 @@
                         {% endif %}
                     </td>
                     <td>
+                        {% if u.id != current_user.id and u.role in ('user', 'viewer') %}
+                        <form class="inline" id="role-form-{{ u.id }}" method="post"
+                              action="{{ url_for('division_admin_update_role', user_id=u.id) }}"></form>
+                        <button class="ghost" type="submit" form="role-form-{{ u.id }}">Update role</button>
+                        {% endif %}
                         <form class="inline" method="post"
                               action="{{ url_for('division_admin_reset_user', user_id=u.id) }}">
                             <button class="ghost" type="submit">Issue reset code</button>

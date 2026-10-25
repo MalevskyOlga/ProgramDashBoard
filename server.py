@@ -110,7 +110,8 @@ def require_login():
                            'admin_create_user', 'admin_update_user', 'admin_toggle_user',
                            'admin_reset_user', 'admin_switch_division',
                            'manage_users', 'division_admin_create_user',
-                           'division_admin_toggle_user', 'division_admin_reset_user'}
+                           'division_admin_toggle_user', 'division_admin_reset_user',
+                           'division_admin_update_role'}
     if request.endpoint in _no_division_needed:
         return None
     # Resolve the actual division DB. None means: no division selected, OR the session's
@@ -380,6 +381,9 @@ def admin_update_user(user_id):
     if division_id:
         division_id = int(division_id)
     email = request.form.get('email')
+    if role and role != 'superadmin' and not division_id:
+        flash('Pick a division before assigning that role.', 'error')
+        return redirect(url_for('admin_home'))
     tenancy.update_user(user_id, email=email, role=role,
                         division_id=(None if role == 'superadmin' else division_id))
     flash('User updated.', 'success')
@@ -489,6 +493,33 @@ def division_admin_reset_user(user_id):
     flash(f'Reset code for "{user["username"]}": {code} '
           f'(valid {config.RESET_TOKEN_TTL_MINUTES} min). Give this to the user to enter on the reset page.',
           'success')
+    return redirect(url_for('manage_users'))
+
+
+@app.route('/manage-users/users/<int:user_id>/role', methods=['POST'])
+@division_admin_required
+def division_admin_update_role(user_id):
+    """Let a division admin move one of their own users between 'user' and 'viewer'.
+
+    Deliberately cannot touch division_admin/superadmin accounts or grant those roles —
+    that would let a division admin escalate privileges within their own division."""
+    division = _get_current_division()
+    user = tenancy.get_user_by_id(user_id)
+    if not division or not user or user.get('division_id') != division['id']:
+        flash('User not found in your division.', 'error')
+        return redirect(url_for('manage_users'))
+    if user['id'] == session.get('user_id'):
+        flash('You cannot change your own role.', 'error')
+        return redirect(url_for('manage_users'))
+    if user['role'] not in ('user', 'viewer'):
+        flash('That account\'s role can only be changed by a superadmin.', 'error')
+        return redirect(url_for('manage_users'))
+    new_role = request.form.get('role')
+    if new_role not in ('user', 'viewer'):
+        flash('Invalid role.', 'error')
+        return redirect(url_for('manage_users'))
+    tenancy.update_user(user_id, role=new_role, division_id=division['id'])
+    flash(f'"{user["username"]}" is now {new_role}.', 'success')
     return redirect(url_for('manage_users'))
 
 
@@ -1873,8 +1904,25 @@ def api_discipline_resource_load():
     # Load active tasks — optionally filtered to one project
     db_path = config.DATABASE_PATH
     t_conn = sqlite3.connect(str(db_path))
+    t_conn.execute('''
+        CREATE TABLE IF NOT EXISTS archived_projects (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            name           TEXT NOT NULL DEFAULT '',
+            completed_date TEXT NOT NULL DEFAULT '',
+            priority       INTEGER DEFAULT 0,
+            leader         TEXT DEFAULT '',
+            process_type   TEXT DEFAULT '',
+            next_gate      TEXT DEFAULT '',
+            launch_date    TEXT DEFAULT '',
+            objective      TEXT DEFAULT '',
+            segment        TEXT DEFAULT ''
+        )
+    ''')
+    # Excludes projects archived via the Pipeline "Mark Complete" action. A project whose
+    # tasks are ALL Completed is already excluded above by the status IN (...) filter.
+    not_archived = "AND LOWER(TRIM(p.name)) NOT IN (SELECT LOWER(TRIM(name)) FROM archived_projects)"
     if project_name_filter:
-        tasks = t_conn.execute("""
+        tasks = t_conn.execute(f"""
             SELECT TRIM(t.owner), t.start_date, t.end_date, t.status
             FROM tasks t
             JOIN projects p ON t.project_id = p.id
@@ -1883,15 +1931,18 @@ def api_discipline_resource_load():
               AND t.end_date   IS NOT NULL AND t.end_date   != ''
               AND t.end_date >= ?
               AND p.name = ?
+              {not_archived}
         """, (cutoff_date, project_name_filter)).fetchall()
     else:
-        tasks = t_conn.execute("""
-            SELECT TRIM(owner), start_date, end_date, status
-            FROM tasks
-            WHERE status IN ('In Process','Planned')
-              AND start_date IS NOT NULL AND start_date != ''
-              AND end_date   IS NOT NULL AND end_date   != ''
-              AND end_date >= ?
+        tasks = t_conn.execute(f"""
+            SELECT TRIM(t.owner), t.start_date, t.end_date, t.status
+            FROM tasks t
+            JOIN projects p ON t.project_id = p.id
+            WHERE t.status IN ('In Process','Planned')
+              AND t.start_date IS NOT NULL AND t.start_date != ''
+              AND t.end_date   IS NOT NULL AND t.end_date   != ''
+              AND t.end_date >= ?
+              {not_archived}
         """, (cutoff_date,)).fetchall()
     t_conn.close()
 

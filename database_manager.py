@@ -862,10 +862,49 @@ class DatabaseManager:
         
         return dict(baseline) if baseline else None
 
+    def _ensure_archived_projects_table(self, cursor):
+        """Lazily create archived_projects if the Pipeline feature hasn't touched this DB yet.
+
+        Schema must stay compatible with server.py's _ensure_priority_tables(), which also
+        creates this table — both only need it to exist, so IF NOT EXISTS makes either safe."""
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS archived_projects (
+                id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                name           TEXT NOT NULL DEFAULT '',
+                completed_date TEXT NOT NULL DEFAULT '',
+                priority       INTEGER DEFAULT 0,
+                leader         TEXT DEFAULT '',
+                process_type   TEXT DEFAULT '',
+                next_gate      TEXT DEFAULT '',
+                launch_date    TEXT DEFAULT '',
+                objective      TEXT DEFAULT '',
+                segment        TEXT DEFAULT ''
+            )
+        ''')
+
+    # Shared WHERE-clause fragment: a project is excluded from cross-project overview
+    # endpoints once it's archived via the Pipeline "Mark Complete" action, or once every
+    # one of its tasks is individually marked Completed. `project_alias` must be the SQL
+    # alias/table name bound to the `projects` row (needs `.id` and `.name` columns).
+    def _completed_project_exclusion_sql(self, project_alias):
+        return f'''
+              AND LOWER(TRIM({project_alias}.name)) NOT IN
+                  (SELECT LOWER(TRIM(name)) FROM archived_projects)
+              AND NOT (
+                  EXISTS (SELECT 1 FROM tasks _allt WHERE _allt.project_id = {project_alias}.id)
+                  AND NOT EXISTS (
+                      SELECT 1 FROM tasks _opent
+                      WHERE _opent.project_id = {project_alias}.id
+                        AND LOWER(COALESCE(_opent.status, '')) != 'completed'
+                  )
+              )
+        '''
+
     def get_overall_gate_timeline(self):
         """Get a unified gate timeline across all projects"""
         conn = self.get_connection()
         cursor = conn.cursor()
+        self._ensure_archived_projects_table(cursor)
 
         cursor.execute('''
             WITH gate_tasks AS (
@@ -891,6 +930,7 @@ class DatabaseManager:
                    AND gso.gate_name = t.name
                 WHERE LOWER(t.name) LIKE '%gate%'
                   AND p.is_deleted = 0
+                  ''' + self._completed_project_exclusion_sql('p') + '''
             )
             SELECT
                 project_name,
@@ -943,6 +983,7 @@ class DatabaseManager:
         """Get a unified owner workload view across all projects"""
         conn = self.get_connection()
         cursor = conn.cursor()
+        self._ensure_archived_projects_table(cursor)
 
         from datetime import date as _date_cls
         today_dt = datetime.now().date()
@@ -973,6 +1014,7 @@ class DatabaseManager:
               AND t.start_date IS NOT NULL
               AND t.end_date IS NOT NULL
               AND t.end_date >= ?
+              ''' + self._completed_project_exclusion_sql('p') + '''
             ORDER BY t.owner, t.start_date, p.name, t.name
         ''', (cutoff_date,))
 
@@ -1071,7 +1113,9 @@ class DatabaseManager:
 
         # Build managed-projects map: manager_name -> list of active projects they own
         conn2 = self.get_connection()
-        proj_rows = conn2.execute('''
+        cursor2 = conn2.cursor()
+        self._ensure_archived_projects_table(cursor2)
+        cursor2.execute('''
             SELECT p.name AS proj_name,
                    TRIM(p.manager) AS manager,
                    SUM(CASE WHEN t.status IN ('In Process','Planned') THEN 1 ELSE 0 END) AS active_tasks,
@@ -1080,8 +1124,10 @@ class DatabaseManager:
             FROM projects p
             LEFT JOIN tasks t ON t.project_id = p.id
             WHERE TRIM(COALESCE(p.manager,'')) != ''
+              ''' + self._completed_project_exclusion_sql('p') + '''
             GROUP BY p.id, p.name, p.manager
-        ''').fetchall()
+        ''')
+        proj_rows = cursor2.fetchall()
         conn2.close()
 
         manager_projects = {}
@@ -1264,6 +1310,7 @@ class DatabaseManager:
         """Get a Gate-5-focused management chain projected from detailed gantts"""
         conn = self.get_connection()
         cursor = conn.cursor()
+        self._ensure_archived_projects_table(cursor)
 
         cursor.execute('''
             WITH predecessor_counts AS (
@@ -1299,6 +1346,7 @@ class DatabaseManager:
             LEFT JOIN successor_counts sc
                 ON sc.task_id = t.id
             WHERE t.end_date IS NOT NULL
+              ''' + self._completed_project_exclusion_sql('p') + '''
             ORDER BY p.name, t.end_date, t.row_order, t.id
         ''')
         rows = [dict(row) for row in cursor.fetchall()]

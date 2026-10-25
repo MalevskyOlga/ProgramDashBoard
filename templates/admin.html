@@ -102,11 +102,38 @@
                     <tr>
                         <td>{{ u.username }}</td>
                         <td class="muted">{{ u.email or '—' }}</td>
-                        <td><span class="pill role">{{ u.role }}</span></td>
-                        <td>{{ u.division_name or ('— (all)' if u.role == 'superadmin' else '—') }}</td>
+                        <td>
+                            {% if u.id != current_user.id %}
+                            <select name="role" form="role-form-{{ u.id }}">
+                                <option value="user" {{ 'selected' if u.role=='user' }}>user</option>
+                                <option value="viewer" {{ 'selected' if u.role=='viewer' }}>viewer (read-only)</option>
+                                <option value="division_admin" {{ 'selected' if u.role=='division_admin' }}>division_admin</option>
+                                <option value="superadmin" {{ 'selected' if u.role=='superadmin' }}>superadmin</option>
+                            </select>
+                            {% else %}
+                            <span class="pill role">{{ u.role }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if u.id != current_user.id %}
+                            <select name="division_id" form="role-form-{{ u.id }}">
+                                <option value="">— (superadmin)</option>
+                                {% for d in divisions if d.is_active %}
+                                <option value="{{ d.id }}" {{ 'selected' if u.division_id==d.id }}>{{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            {{ u.division_name or ('— (all)' if u.role == 'superadmin' else '—') }}
+                            {% endif %}
+                        </td>
                         <td>{% if u.is_active %}<span class="pill on">active</span>
                             {% else %}<span class="pill off">inactive</span>{% endif %}</td>
                         <td>
+                            {% if u.id != current_user.id %}
+                            <form class="inline" id="role-form-{{ u.id }}" method="post"
+                                  action="{{ url_for('admin_update_user', user_id=u.id) }}"></form>
+                            <button class="ghost" type="submit" form="role-form-{{ u.id }}">Update role</button>
+                            {% endif %}
                             <form class="inline" method="post"
                                   action="{{ url_for('admin_reset_user', user_id=u.id) }}">
                                 <button class="ghost" type="submit">Issue reset code</button>
