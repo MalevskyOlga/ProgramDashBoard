@@ -472,19 +472,93 @@ class DatabaseManager:
         
         return dict(row) if row else None
     
+    def get_subtasks(self, parent_id):
+        """Get all direct sub-tasks of a task (one level deep)."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM tasks WHERE parent_id = ?', (parent_id,))
+        rows = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return rows
+
+    def _validate_task_hierarchy(self, cursor, task_id, project_id, parent_id, start_date, end_date):
+        """Hard-block validation for the macro-task/sub-task containment rule (one level
+        deep only). Raises ValueError with a user-facing message on any violation.
+        `task_id` is None when validating a brand-new task that doesn't have an id yet."""
+        if parent_id:
+            if task_id is not None and parent_id == task_id:
+                raise ValueError('A task cannot be its own parent.')
+            cursor.execute(
+                'SELECT id, project_id, parent_id, name, start_date, end_date FROM tasks WHERE id = ?',
+                (parent_id,)
+            )
+            parent = cursor.fetchone()
+            if not parent:
+                raise ValueError('Parent task not found.')
+            if parent['project_id'] != project_id:
+                raise ValueError('Parent task must be in the same project.')
+            if parent['parent_id']:
+                raise ValueError(
+                    'Cannot assign a sub-task as a parent — only one level of nesting is supported.'
+                )
+            if task_id is not None:
+                cursor.execute('SELECT COUNT(*) AS c FROM tasks WHERE parent_id = ?', (task_id,))
+                if cursor.fetchone()['c'] > 0:
+                    raise ValueError(
+                        'This task already has sub-tasks of its own and cannot become a '
+                        'sub-task itself (one level of nesting only).'
+                    )
+            if start_date and end_date and parent['start_date'] and parent['end_date']:
+                if start_date < parent['start_date'] or end_date > parent['end_date']:
+                    raise ValueError(
+                        f"Sub-task dates ({start_date} to {end_date}) must fall within parent "
+                        f"task \"{parent['name']}\"'s date range "
+                        f"({parent['start_date']} to {parent['end_date']})."
+                    )
+
+        # Parent-side: if this task already has children, its own (possibly new) dates must
+        # still contain every existing child's span.
+        if task_id is not None and start_date and end_date:
+            cursor.execute(
+                'SELECT name, start_date, end_date FROM tasks WHERE parent_id = ?', (task_id,)
+            )
+            children = cursor.fetchall()
+            offenders = [
+                c['name'] for c in children
+                if (c['start_date'] and c['start_date'] < start_date)
+                or (c['end_date'] and c['end_date'] > end_date)
+            ]
+            if offenders:
+                names = ', '.join(f'"{n}"' for n in offenders[:3])
+                more = f' and {len(offenders) - 3} more' if len(offenders) > 3 else ''
+                raise ValueError(
+                    f'New dates would exclude its own sub-task(s): {names}{more}. '
+                    'Adjust the sub-task(s) first.'
+                )
+
     def create_task(self, task_data):
         """Create a new task"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
+        try:
+            parent_id = task_data.get('parent_id') or None
+            self._validate_task_hierarchy(
+                cursor, None, task_data['project_id'], parent_id,
+                task_data.get('start_date'), task_data.get('end_date')
+            )
+        except ValueError:
+            conn.close()
+            raise
+
         now = datetime.now().isoformat()
-        
+
         cursor.execute('''
             INSERT INTO tasks (
                 project_id, reference_id, name, phase, owner,
                 start_date, end_date, status, date_closed, result,
-                critical, milestone, tailed_out, row_order, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                critical, milestone, tailed_out, row_order, parent_id, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             task_data['project_id'],
             task_data.get('reference_id', ''),
@@ -500,63 +574,94 @@ class DatabaseManager:
             task_data.get('milestone', 0),
             task_data.get('tailed_out', 0),
             task_data.get('row_order', 999),
+            parent_id,
             now,
             now
         ))
-        
+
         task_id = cursor.lastrowid
         conn.commit()
         conn.close()
-        
+
         return task_id
-    
+
     def update_task(self, task_id, task_data):
         """Update an existing task"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
+        if 'parent_id' in task_data or 'start_date' in task_data or 'end_date' in task_data:
+            cursor.execute(
+                'SELECT project_id, parent_id, start_date, end_date FROM tasks WHERE id = ?',
+                (task_id,)
+            )
+            current = cursor.fetchone()
+            if current:
+                effective_parent_id = (
+                    task_data.get('parent_id') if 'parent_id' in task_data else current['parent_id']
+                ) or None
+                effective_start = task_data.get('start_date', current['start_date'])
+                effective_end = task_data.get('end_date', current['end_date'])
+                try:
+                    self._validate_task_hierarchy(
+                        cursor, task_id, current['project_id'], effective_parent_id,
+                        effective_start, effective_end
+                    )
+                except ValueError:
+                    conn.close()
+                    raise
+
         now = datetime.now().isoformat()
-        
+
         # Build dynamic UPDATE query based on provided fields
         update_fields = []
         update_values = []
-        
-        allowed_fields = ['reference_id', 'name', 'phase', 'owner', 'start_date', 
+
+        allowed_fields = ['reference_id', 'name', 'phase', 'owner', 'start_date',
                          'end_date', 'status', 'date_closed', 'result', 'row_order',
                          'critical', 'milestone', 'tailed_out', 'is_rework_cause',
-                         'rework_original_due', 'cloned_from_phase']
-        
+                         'rework_original_due', 'cloned_from_phase', 'parent_id']
+
         for field in allowed_fields:
             if field in task_data:
                 update_fields.append(f'{field} = ?')
                 update_values.append(task_data[field])
-        
+
         if not update_fields:
             conn.close()
             return False
-        
+
         update_fields.append('updated_at = ?')
         update_values.append(now)
         update_values.append(task_id)
-        
+
         query = f"UPDATE tasks SET {', '.join(update_fields)} WHERE id = ?"
-        
+
         cursor.execute(query, update_values)
-        
+
         success = cursor.rowcount > 0
         conn.commit()
         conn.close()
-        
+
         return success
-    
+
     def delete_task(self, task_id):
-        """Delete a task"""
+        """Delete a task. Sub-tasks (one level deep) are deleted along with their parent."""
         conn = self.get_connection()
         cursor = conn.cursor()
 
+        cursor.execute('SELECT id FROM tasks WHERE parent_id = ?', (task_id,))
+        child_ids = [row['id'] for row in cursor.fetchall()]
+
         # FK cascade is not enabled at the connection level, so remove children explicitly
-        cursor.execute('DELETE FROM task_comments WHERE task_id = ?', (task_id,))
-        cursor.execute('DELETE FROM task_attachments WHERE task_id = ?', (task_id,))
+        for tid in child_ids + [task_id]:
+            cursor.execute('DELETE FROM task_comments WHERE task_id = ?', (tid,))
+            cursor.execute('DELETE FROM task_attachments WHERE task_id = ?', (tid,))
+        if child_ids:
+            cursor.execute(
+                'DELETE FROM tasks WHERE id IN (%s)' % ','.join('?' * len(child_ids)),
+                child_ids
+            )
         cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
 
         success = cursor.rowcount > 0
@@ -1013,6 +1118,7 @@ class DatabaseManager:
                 ON p.id = t.project_id
             WHERE COALESCE(TRIM(t.owner), '') <> ''
               AND COALESCE(t.milestone, 0) = 0
+              AND NOT EXISTS (SELECT 1 FROM tasks _c WHERE _c.parent_id = t.id)
               AND t.start_date IS NOT NULL
               AND t.end_date IS NOT NULL
               AND t.end_date >= ?
@@ -1350,7 +1456,8 @@ class DatabaseManager:
                 t.milestone,
                 COALESCE(t.tailed_out, 0) AS tailed_out,
                 COALESCE(pc.predecessor_count, 0) AS predecessor_count,
-                COALESCE(sc.successor_count, 0) AS successor_count
+                COALESCE(sc.successor_count, 0) AS successor_count,
+                EXISTS (SELECT 1 FROM tasks _c WHERE _c.parent_id = t.id) AS has_children
             FROM tasks t
             JOIN projects p
                 ON p.id = t.project_id
@@ -1441,6 +1548,7 @@ class DatabaseManager:
                 'tailed_out': bool(row['tailed_out']),
                 'predecessor_count': int(row['predecessor_count'] or 0),
                 'successor_count': int(row['successor_count'] or 0),
+                'has_children': bool(row['has_children']),
                 'gate_number': None,
                 'is_delayed': is_open_delayed or is_closed_delayed,
                 'delay_reason': 'Open overdue' if is_open_delayed else ('Closed late' if is_closed_delayed else None),
@@ -1550,6 +1658,7 @@ class DatabaseManager:
                     task for task in project_tasks
                     if task['task_id'] != gate_task['task_id']
                     and not is_gate_task(task)
+                    and not task.get('has_children')  # never pick a macro/container task as the driver
                     and task.get('gate_number') == gate_task.get('gate_number')
                     and parse_date(task['end_date'])
                     and parse_date(task['end_date']) <= gate_date

@@ -61,6 +61,8 @@ class ExcelParser:
                 due_date = row[6].value  # Column G (End Date)
                 date_closed = row[7].value  # Column H
                 result = row[8].value  # Column I
+                # Column J (Parent Reference ID) — older templates/short rows won't have it
+                parent_ref = row[9].value if len(row) > 9 else None
                 
                 # Skip empty rows
                 if not description:
@@ -97,7 +99,10 @@ class ExcelParser:
                     'date_closed': closed_date_str,
                     'result': str(result or '').strip(),
                     'milestone': 1 if is_gate_milestone else 0,
-                    'row_order': row_order
+                    'row_order': row_order,
+                    # Ephemeral — not a DB column. Resolved to a real parent_id by the
+                    # two-pass import in server.py, then popped before create_task().
+                    '_parent_ref': str(parent_ref or '').strip()
                 }
                 
                 tasks.append(task)

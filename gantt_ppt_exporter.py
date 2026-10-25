@@ -42,6 +42,31 @@ def _truncate(text, max_chars):
     return t if len(t) <= max_chars else t[:max_chars - 1] + '…'
 
 
+def _order_by_hierarchy(task_list):
+    """Reorder so every top-level task is immediately followed by its own sub-tasks
+    (one level deep), preserving relative order within each group. Mirrors
+    orderTasksByHierarchy() in templates/dashboard.html."""
+    children_of = {}
+    for t in task_list:
+        pid = t.get('parent_id')
+        if pid:
+            children_of.setdefault(pid, []).append(t)
+    ordered, seen = [], set()
+    for t in task_list:
+        if t.get('parent_id'):
+            continue
+        ordered.append(t)
+        seen.add(t['id'])
+        for c in children_of.get(t['id'], []):
+            ordered.append(c)
+            seen.add(c['id'])
+    for t in task_list:  # orphan safety net (parent filtered out or inactive)
+        if t.get('parent_id') and t['id'] not in seen:
+            ordered.append(t)
+            seen.add(t['id'])
+    return ordered
+
+
 STATUS_COLORS = {
     'Completed': 'A0AEC0',
     'In Process': '10B981',
@@ -171,6 +196,9 @@ class GanttPptExporter:
 
             for ph in phases_order:
                 phase_map[ph].sort(key=lambda t: _parse_date(t.get('start_date')) or proj_start)
+                # Keep each sub-task directly after its parent so the printed order stays
+                # nested (sub-tasks share their parent's phase, so this runs per-phase).
+                phase_map[ph] = _order_by_hierarchy(phase_map[ph])
 
             # ── Row height (dynamic) ────────────────────────────────────────
             n_tasks  = len(tasks)
@@ -331,10 +359,14 @@ class GanttPptExporter:
                 ty = cur_y + 0.005
                 tb_h = row_h - 0.01
 
-                # Full task name — word-wrap within column, no truncation
+                # Full task name — word-wrap within column, no truncation. Sub-tasks are
+                # indented slightly so the macro/sub-task nesting is still visible on the
+                # printed slide (rows stay a uniform height — no spanning summary bar).
+                is_sub = bool(task.get('parent_id'))
+                indent = 0.14 if is_sub else 0.0
                 _add_text(slide, str(task.get('name', '') or ''),
-                          self.ML + 0.04, ty,
-                          self.NAME_W - 0.22, tb_h,
+                          self.ML + 0.04 + indent, ty,
+                          self.NAME_W - 0.22 - indent, tb_h,
                           fs, bold=is_ms, color='111827', wrap=True)
 
                 # Owner: first word only, hard cap 9 chars

@@ -1109,6 +1109,50 @@
         .task-row.tailed-out { opacity: 0.6; }
         .task-row.tailed-out .task-name { text-decoration: line-through; color: #999; }
 
+        /* Sub-tasks (one level deep): indented under their parent */
+        .task-row.subtask {
+            background: #fafbfc;
+        }
+        .task-row.subtask:hover {
+            background: #eef6ef;
+        }
+        .task-row.subtask .task-name {
+            padding-left: 4px;
+            color: #444;
+        }
+        .subtask-caret {
+            display: inline-block;
+            width: 14px;
+            cursor: pointer;
+            color: #2c5f2d;
+            font-size: 0.9em;
+            user-select: none;
+            margin-right: 2px;
+        }
+        .subtask-caret:hover { color: #1b3d1c; }
+        .subtask-indent {
+            display: inline-block;
+            width: 18px;
+            border-left: 2px solid #c5d6c6;
+            margin: 0 6px 0 4px;
+            height: 1em;
+            vertical-align: middle;
+        }
+        .timeline-task-row.subtask {
+            background: rgba(0, 0, 0, 0.015);
+        }
+        .add-sub-btn {
+            background: #eef6ef;
+            border: 1px solid #a5d6a7;
+            color: #2c5f2d;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.92em;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .add-sub-btn:hover { background: #d4e9d6; }
+
         /* Rework cause task highlight */
         .task-row.rework-cause {
             background: #fff8e1 !important;
@@ -1328,6 +1372,54 @@
         .comment-add-box button:hover { background: #e0a000; }
 
         /* Per-task attachments popup (green accent to distinguish from comments) */
+        .reparent-picker-popup {
+            position: absolute;
+            z-index: 10000;
+            background: #fff;
+            border: 2px solid #2c5f2d;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+            width: 360px;
+            max-width: 90vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .reparent-picker-popup .rp-header {
+            background: #2c5f2d;
+            color: #fff;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.92em;
+        }
+        .reparent-picker-popup .rp-header button {
+            background: none; border: none; color: #fff; cursor: pointer; font-size: 1.1em;
+        }
+        .reparent-picker-popup .rp-list {
+            max-height: 260px;
+            overflow-y: auto;
+            padding: 6px;
+        }
+        .reparent-picker-popup .rp-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 0.85em;
+            border-radius: 4px;
+        }
+        .reparent-picker-popup .rp-option:hover { background: #eef6ef; }
+        .reparent-picker-popup .rp-footer {
+            padding: 8px 10px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
         .attachments-popup {
             position: absolute;
             z-index: 10000;
@@ -2946,6 +3038,7 @@
         const API_BASE = '/api/project/' + encodeURIComponent(PROJECT_NAME);
         
         let currentEditId = null;
+        let pendingSubtaskParentId = null; // set while the add modal is in "sub-task" mode
         let editingCell = null;
         let currentZoom = 'month';
         let currentGanttView = 'detailed'; // 'detailed' or 'highlevel'
@@ -2960,6 +3053,211 @@
             'year': 600,
             'fit': null  // calculated dynamically to fill available width
         };
+
+        // ─── Macro tasks / sub-tasks (one level deep) ───────────────────────────────
+        // Set of parent task ids whose sub-tasks are collapsed (hidden) in the Gantt.
+        const collapsedParents = new Set();
+
+        // Reorder a task array so every top-level task is immediately followed by its
+        // own sub-tasks, preserving the original relative order within each group.
+        function orderTasksByHierarchy(list) {
+            const childrenOf = new Map();
+            list.forEach(t => {
+                if (t.parent_id) {
+                    if (!childrenOf.has(t.parent_id)) childrenOf.set(t.parent_id, []);
+                    childrenOf.get(t.parent_id).push(t);
+                }
+            });
+            const ordered = [];
+            const placed = new Set();
+            list.forEach(t => {
+                if (t.parent_id) return; // children are placed under their parent below
+                ordered.push(t); placed.add(t.id);
+                (childrenOf.get(t.id) || []).forEach(c => { ordered.push(c); placed.add(c.id); });
+            });
+            // Safety net: append any orphaned sub-tasks (parent missing/filtered) so none are lost
+            list.forEach(t => { if (t.parent_id && !placed.has(t.id)) { ordered.push(t); placed.add(t.id); } });
+            return ordered;
+        }
+
+        function hasSubtasks(taskId) {
+            return tasks.some(t => t.parent_id === taskId);
+        }
+
+        function toggleSubtasks(taskId) {
+            if (collapsedParents.has(taskId)) collapsedParents.delete(taskId);
+            else collapsedParents.add(taskId);
+            applyFilters();
+        }
+
+        // Bidirectional client-side mirror of the server-side hard-block rule (instant
+        // feedback only — the real backstop is database_manager.py's
+        // _validate_task_hierarchy). Returns an error message if applying {entered, due}
+        // to `task` (optionally re-parented to `prospectiveParentId`) would violate
+        // containment, else null.
+        function subtaskCapError(task, { entered, due }, prospectiveParentId = undefined) {
+            const parentId = prospectiveParentId !== undefined ? prospectiveParentId : task.parent_id;
+            if (parentId) {
+                const parent = tasks.find(t => t.id === parentId);
+                if (parent) {
+                    if (entered && parent.entered && new Date(entered) < new Date(parent.entered)) {
+                        return `Sub-task cannot start before its parent task "${parent.name}" (${formatDateShort(parent.entered)}).`;
+                    }
+                    if (due && parent.due && new Date(due) > new Date(parent.due)) {
+                        return `Sub-task cannot end after its parent task "${parent.name}" (${formatDateShort(parent.due)}).`;
+                    }
+                }
+            }
+            if (task.id != null) {
+                const children = tasks.filter(t => t.parent_id === task.id);
+                const offenders = children.filter(c =>
+                    (c.entered && entered && new Date(c.entered) < new Date(entered)) ||
+                    (c.due && due && new Date(c.due) > new Date(due)));
+                if (offenders.length) {
+                    const names = offenders.slice(0, 3).map(c => `"${c.name}"`).join(', ');
+                    const more = offenders.length > 3 ? ` and ${offenders.length - 3} more` : '';
+                    return `New dates would exclude its own sub-task(s): ${names}${more}. Adjust the sub-task(s) first.`;
+                }
+            }
+            return null;
+        }
+
+        // Open the Add-Task modal pre-configured to create a sub-task of `parentId`:
+        // phase is inherited and locked, owner/start are prefilled, and the due-date
+        // picker is capped at the parent's end date.
+        function openAddSubtask(parentId) {
+            const parent = tasks.find(t => t.id === parentId);
+            if (!parent) return;
+            openAddTaskModal();
+            pendingSubtaskParentId = parentId;
+            document.getElementById('modalTitle').textContent = `Add Sub-task to "${parent.name}"`;
+            const phaseInput = document.getElementById('taskPhase');
+            if (phaseInput) { phaseInput.value = parent.phase || ''; phaseInput.disabled = true; }
+            if (parent.owner) document.getElementById('taskOwner').value = parent.owner;
+            if (parent.entered) document.getElementById('taskEntered').value = formatDate(parent.entered);
+            const dueInput = document.getElementById('taskDue');
+            if (dueInput && parent.due) dueInput.max = formatDate(parent.due);
+        }
+
+        function _dismissReparentPicker(e) {
+            const m = document.getElementById('reparent-picker-popup');
+            if (m && !m.contains(e.target)) {
+                m.remove();
+                document.removeEventListener('click', _dismissReparentPicker);
+            }
+        }
+
+        // Standalone picker (phase-grouped, single-select) for assigning an existing task
+        // to a macro task, or moving it to a different one. Candidates are top-level,
+        // non-gate tasks only (one level of nesting is enforced server-side too).
+        function openReparentPicker(taskId) {
+            document.getElementById('reparent-picker-popup')?.remove();
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            const candidates = tasks.filter(t =>
+                t.id !== taskId &&
+                !t.parent_id &&
+                !(t.milestone && t.name && t.name.toLowerCase().includes('gate'))
+            );
+
+            const byPhase = {};
+            candidates.forEach(t => {
+                const phase = t.phase || 'No Phase';
+                if (!byPhase[phase]) byPhase[phase] = [];
+                byPhase[phase].push(t);
+            });
+
+            const optionsHTML = Object.keys(byPhase).sort().map(phase => {
+                const rows = byPhase[phase].map(t => `
+                    <label class="rp-option">
+                        <input type="radio" name="rp-parent" value="${t.id}" ${task.parent_id === t.id ? 'checked' : ''}>
+                        <span>${escapeHtml(t.name)} <span style="color:#999;">(${formatDateShort(t.entered)} → ${formatDateShort(t.due)})</span></span>
+                    </label>`).join('');
+                return `<div style="font-weight:600;font-size:0.78em;color:#2c5f2d;padding:4px 6px;">${escapeHtml(phase)}</div>${rows}`;
+            }).join('') || '<div style="padding:10px;color:#999;text-align:center;">No eligible macro tasks in this project</div>';
+
+            const popup = document.createElement('div');
+            popup.id = 'reparent-picker-popup';
+            popup.className = 'reparent-picker-popup';
+            popup.innerHTML = `
+                <div class="rp-header">
+                    <span>Assign "${escapeHtml(task.name)}" to…</span>
+                    <button onclick="document.getElementById('reparent-picker-popup').remove();document.removeEventListener('click', _dismissReparentPicker);">✕</button>
+                </div>
+                <div class="rp-list">${optionsHTML}</div>
+                <div class="rp-footer">
+                    <button class="btn-secondary" onclick="document.getElementById('reparent-picker-popup').remove();document.removeEventListener('click', _dismissReparentPicker);">Cancel</button>
+                    <button class="btn-primary" onclick="_confirmReparent(${taskId})">Assign</button>
+                </div>
+            `;
+            document.body.appendChild(popup);
+
+            const pos = _ctxPos || { pageX: window.scrollX + window.innerWidth / 2, pageY: window.scrollY + 100 };
+            const maxLeft = window.scrollX + window.innerWidth - 380;
+            popup.style.top = pos.pageY + 'px';
+            popup.style.left = Math.max(10, Math.min(pos.pageX, maxLeft)) + 'px';
+
+            setTimeout(() => document.addEventListener('click', _dismissReparentPicker), 10);
+        }
+
+        async function _confirmReparent(taskId) {
+            const selected = document.querySelector('input[name="rp-parent"]:checked');
+            if (!selected) {
+                showNotification('⚠️ Pick a macro task first', 'error');
+                return;
+            }
+            const newParentId = parseInt(selected.value, 10);
+            const task = tasks.find(t => t.id === taskId);
+            const capErr = subtaskCapError(task, { entered: task.entered, due: task.due }, newParentId);
+            if (capErr) {
+                showNotification('⚠️ ' + capErr, 'error');
+                return;
+            }
+            try {
+                const resp = await fetch(`/api/task/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parent_id: newParentId })
+                });
+                if (!resp.ok) {
+                    const e = await resp.json().catch(() => ({}));
+                    throw new Error(e.error || 'Failed to assign task');
+                }
+                task.parent_id = newParentId;
+                document.getElementById('reparent-picker-popup')?.remove();
+                document.removeEventListener('click', _dismissReparentPicker);
+                tasks = orderTasksByHierarchy(tasks);
+                tasks.forEach((t, i) => { t.rowNum = i + 1; });
+                applyFilters();
+                showNotification('✓ Task assigned to macro task', 'success');
+            } catch (error) {
+                showNotification('⚠️ ' + error.message, 'error');
+            }
+        }
+
+        async function unparentTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            try {
+                const resp = await fetch(`/api/task/${taskId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ parent_id: null })
+                });
+                if (!resp.ok) {
+                    const e = await resp.json().catch(() => ({}));
+                    throw new Error(e.error || 'Failed to promote task');
+                }
+                task.parent_id = null;
+                tasks = orderTasksByHierarchy(tasks);
+                tasks.forEach((t, i) => { t.rowNum = i + 1; });
+                applyFilters();
+                showNotification('✓ Task promoted to top-level', 'success');
+            } catch (error) {
+                showNotification('⚠️ ' + error.message, 'error');
+            }
+        }
 
         // Load tasks from API on startup
         async function loadFromAPI() {
@@ -2992,12 +3290,11 @@
                         cloned_from_phase: task.cloned_from_phase || null,
                         open_comment_count: task.open_comment_count || 0,
                         attachment_count: task.attachment_count || 0,
+                        parent_id: task.parent_id || null,
                         manualUncritical: getManualUncritical().has(task.id)
                     };
                 });
                 
-                // Assign stable sequential row numbers once at load time (survives filters/sorts)
-                tasks.forEach((t, i) => { t.rowNum = i + 1; });
 
                 // Log Gate milestone tasks for debugging
                 console.log('📊 Total tasks loaded:', tasks.length);
@@ -3028,6 +3325,9 @@
                 updateTailedOutBtn();
                 
                 sortTasksChronologically();
+                // Assign stable sequential row numbers after hierarchy ordering (so a
+                // sub-task's row number always follows its parent's).
+                tasks.forEach((t, i) => { t.rowNum = i + 1; });
                 console.log('✓ Tasks loaded from API');
                 console.log('✓ Loaded', tasks.length, 'tasks');
 
@@ -3755,7 +4055,12 @@
                     tailed_out: task.tailed_out ? 1 : 0,
                     row_order: task.row_order || 999
                 };
-                
+                // Only send parent_id when explicitly present, so partial updates never
+                // accidentally orphan/reparent a task that wasn't meant to change.
+                if (task.parent_id !== undefined) {
+                    taskData.parent_id = task.parent_id || null;
+                }
+
                 let response;
                 if (isNew) {
                     response = await fetch(`${API_BASE}/task`, {
@@ -3776,9 +4081,11 @@
                 }
                 
                 if (!response.ok) {
-                    throw new Error('Failed to save task');
+                    let msg = 'Failed to save task';
+                    try { const e = await response.json(); if (e && e.error) msg = e.error; } catch (_) {}
+                    throw new Error(msg);
                 }
-                
+
                 const result = await response.json();
                 updateSaveIndicator('✓ Saved', 'success');
                 
@@ -3817,6 +4124,10 @@
                 const dateB = new Date(b.entered);
                 return dateA - dateB;
             });
+            // Re-group so each top-level task is immediately followed by its sub-tasks,
+            // preserving the chronological order just established. Reassigns `tasks` to a
+            // new array reference, so anything reading `tasks` after this call sees it.
+            tasks = orderTasksByHierarchy(tasks);
         }
 
         function updateSaveIndicator(text, type) {
@@ -4468,6 +4779,12 @@
                     return true;
                 });
             }
+
+            // Keep sub-tasks attached to their parent: if a sub-task passes the filter,
+            // make sure its parent is shown too, so the row it's nested under still exists.
+            const includeIds = new Set(filtered.map(t => t.id));
+            tasks.forEach(t => { if (t.parent_id && includeIds.has(t.id)) includeIds.add(t.parent_id); });
+            filtered = tasks.filter(t => includeIds.has(t.id));
 
             renderGanttChart(filtered);
             updateStats();
@@ -5342,12 +5659,27 @@
         function showTaskContextMenu(taskId, evt) {
             document.getElementById('task-context-menu')?.remove();
             _ctxPos = { pageX: evt.pageX, pageY: evt.pageY };
+            const t = tasks.find(x => x.id === taskId);
+            const isGateTask = t && t.milestone && t.name && t.name.toLowerCase().includes('gate');
+            const isSubtask = !!(t && t.parent_id);
+            const isContainer = hasSubtasks(taskId);
+            let hierarchyItems = '';
+            if (!IS_VIEWER && !isSubtask && !isGateTask) {
+                hierarchyItems += `<button onclick="_ctxOpen('addsub', ${taskId})">🧩 Add Sub-task</button>`;
+            }
+            if (!IS_VIEWER && !isContainer && !isGateTask) {
+                hierarchyItems += isSubtask
+                    ? `<button onclick="_ctxOpen('reparent', ${taskId})">↔ Move to Different Macro Task…</button>
+                       <button onclick="_ctxOpen('unparent', ${taskId})">⬆ Promote to Top-Level</button>`
+                    : `<button onclick="_ctxOpen('reparent', ${taskId})">📌 Assign to Macro Task…</button>`;
+            }
             const menu = document.createElement('div');
             menu.id = 'task-context-menu';
             menu.className = 'task-context-menu';
             menu.innerHTML = `
                 <button onclick="_ctxOpen('comments', ${taskId})">💬 Comments</button>
-                <button onclick="_ctxOpen('attachments', ${taskId})">📎 Attachments</button>`;
+                <button onclick="_ctxOpen('attachments', ${taskId})">📎 Attachments</button>
+                ${hierarchyItems}`;
             document.body.appendChild(menu);
             const maxLeft = window.scrollX + window.innerWidth - 170;
             menu.style.top = evt.pageY + 'px';
@@ -5359,7 +5691,10 @@
             document.removeEventListener('click', _dismissTaskContextMenu);
             const pos = _ctxPos;   // open the popup near where the menu appeared
             if (which === 'comments') openCommentLog(taskId, pos);
-            else openAttachmentsPopup(taskId, pos);
+            else if (which === 'attachments') openAttachmentsPopup(taskId, pos);
+            else if (which === 'addsub') openAddSubtask(taskId);
+            else if (which === 'reparent') openReparentPicker(taskId);
+            else if (which === 'unparent') unparentTask(taskId);
         }
 
         // ---- Per-task attachments -------------------------------------------
@@ -5729,6 +6064,12 @@
                 });
             });
 
+            // Keep sub-tasks directly under their parent within each phase (sub-tasks
+            // share their parent's phase). This runs after sorting so siblings stay sorted.
+            Object.keys(phases).forEach(phase => {
+                phases[phase] = orderTasksByHierarchy(phases[phase]);
+            });
+
             // Order phase groups by the canonical preset order (General task → Gate 1–5 →
             // Military Gate 2/2.5/3/4/5 → Discontinued Gate A/B/C), then any custom phases
             // alphabetically. Empty groups sink to the end.
@@ -5888,6 +6229,13 @@
                 // Tasks
                 phaseTasks.forEach(task => {
                     const rowNum = task.rowNum;
+                    // Sub-task handling: hide collapsed children (skips both row and bar together)
+                    const isSub = !!task.parent_id;
+                    const isParent = !isSub && hasSubtasks(task.id);
+                    if (isSub && collapsedParents.has(task.parent_id)) return;
+                    const caretHTML = isParent
+                        ? `<span class="subtask-caret" onclick="event.stopPropagation();toggleSubtasks(${task.id})" title="Show/hide sub-tasks">${collapsedParents.has(task.id) ? '▸' : '▾'}</span>`
+                        : (isSub ? '<span class="subtask-indent"></span>' : '');
                     const isTaskOverdue = isOverdue(task.due, task.status);
                     const isGate = task.milestone && task.name && task.name.toLowerCase().includes('gate');
                     const signOff = isGate ? (gateSignOffs[task.phase || task.name] || null) : null;
@@ -5895,7 +6243,7 @@
                     const gatePassedAfterRework = signOff && signOff.status === 'Passed' && !!signOff.rework_sign_off_date;
                     const gatePassed = signOff && signOff.status === 'Passed' && !gatePassedAfterRework;
 
-                    const rowClass = `task-row ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${task.critical ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
+                    const rowClass = `task-row ${isSub ? 'subtask' : ''} ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${task.critical ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
 
                     const statusClass = task.status.toLowerCase().replace(' ', '-');
                     const statusLabel = task.status === 'In Process' ? 'In Process' : task.status;
@@ -5920,6 +6268,10 @@
                     const attachBadge = (task.attachment_count > 0)
                         ? `<span class="attach-badge" data-att-task-id="${task.id}" title="${task.attachment_count} attachment${task.attachment_count !== 1 ? 's' : ''} — click to open" onclick="event.stopPropagation();openAttachmentsPopup(${task.id})">📎 ${task.attachment_count}</span>`
                         : '';
+                    // "Add sub-task" button on top-level, non-gate tasks only (one level deep)
+                    const addSubBtn = (!IS_VIEWER && !isSub && !isGate)
+                        ? `<button class="add-sub-btn" onclick="openAddSubtask(${task.id})" title="Add sub-task">➕ Sub</button>`
+                        : '';
 
                     let actionsHTML;
                     if (isGate) {
@@ -5934,14 +6286,14 @@
                         const reworkActive = task.is_rework_cause ? 'active' : '';
                         const reworkTitle = task.is_rework_cause ? 'Remove rework cause mark' : 'Mark as cause for rework';
                         const reworkBtn = canRework ? `<button class="rework-cause-btn ${reworkActive}" onclick="toggleReworkCause(${task.id}, ${task.is_rework_cause ? 0 : 1})" title="${reworkTitle}">⚠</button>` : '';
-                        actionsHTML = IS_VIEWER ? `<button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>` : `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>${reworkBtn}`;
+                        actionsHTML = IS_VIEWER ? `<button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>` : `<button class="edit-task-btn" onclick="editTask(${task.id})">✏️</button><button class="dep-btn" onclick="showDependencies(${task.id})" title="Show predecessors &amp; successors">🔗</button>${reworkBtn}${addSubBtn}`;
                     }
 
                     const showReworkPill = (gatePassedRework || gatePassedAfterRework) && signOff && signOff.rework_due_date;
                     taskHTML += `
                         <div class="${rowClass}" data-task-id="${task.id}">
                             <div>${rowNum}</div>
-                            <div class="task-name" title="${task.name}">${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge}${commentBadge}${attachBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
+                            <div class="task-name" title="${task.name}">${caretHTML}${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge}${commentBadge}${attachBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
                             <div>${task.owner}</div>
                             <div class="date-cell start-date editable" data-task-id="${task.id}" data-date-type="start" data-date-value="${task.entered}">${formatDateShort(task.entered)}</div>
                             <div class="duration-cell">${(task.entered && task.due) ? Math.max(1, Math.round((new Date(task.due) - new Date(task.entered)) / 86400000) + 1) : '—'}</div>
@@ -6042,7 +6394,7 @@
                     }
 
                     timelineHTML += `
-                        <div class="timeline-task-row ${task.critical ? 'critical' : ''}">
+                        <div class="timeline-task-row ${isSub ? 'subtask' : ''} ${task.critical ? 'critical' : ''}">
                             <div class="${barClass}"
                                  style="left: ${startOffset}px; width: ${barWidth};"
                                  data-task-id="${task.id}"
@@ -6210,11 +6562,25 @@
                     cancelDateEdit();
                     return;
                 }
+                // Macro-task/sub-task containment (hard block; server is the real backstop)
+                const startCapErr = subtaskCapError(task, { entered: newDate, due: task.due });
+                if (startCapErr) {
+                    showNotification('⚠️ ' + startCapErr, 'error');
+                    cancelDateEdit();
+                    return;
+                }
                 task.entered = newDate;
             } else {
                 // Check if new end date is before start date
                 if (task.entered && new Date(newDate) < new Date(task.entered)) {
                     showNotification('⚠️ End date cannot be before start date', 'error');
+                    cancelDateEdit();
+                    return;
+                }
+                // Macro-task/sub-task containment (hard block; server is the real backstop)
+                const endCapErr = subtaskCapError(task, { entered: task.entered, due: newDate });
+                if (endCapErr) {
+                    showNotification('⚠️ ' + endCapErr, 'error');
                     cancelDateEdit();
                     return;
                 }
@@ -6845,9 +7211,13 @@
 
         function openAddTaskModal() {
             currentEditId = null;
+            pendingSubtaskParentId = null;
             document.getElementById('modalTitle').textContent = 'Add New Task';
             document.getElementById('taskForm').reset();
             populateTaskPhaseOptions();
+            // Clear any sub-task-mode locks left over from a previous open
+            const _ph = document.getElementById('taskPhase'); if (_ph) _ph.disabled = false;
+            const _du = document.getElementById('taskDue'); if (_du) _du.removeAttribute('max');
             document.getElementById('deleteTaskBtn').style.display = 'none';
             document.getElementById('taskDuration').value = '';
 
@@ -6868,10 +7238,19 @@
             if (!task) return;
 
             currentEditId = id;
+            pendingSubtaskParentId = null;
             document.getElementById('modalTitle').textContent = 'Edit Task';
             document.getElementById('taskName').value = task.name;
             document.getElementById('taskOwner').value = task.owner;
             populateTaskPhaseOptions();
+            // Clear any sub-task-mode locks; constrain due date if editing a sub-task
+            const _ph = document.getElementById('taskPhase'); if (_ph) _ph.disabled = false;
+            const _du = document.getElementById('taskDue');
+            if (_du) {
+                const _parent = task.parent_id ? tasks.find(t => t.id === task.parent_id) : null;
+                if (_parent && _parent.due) _du.max = formatDate(_parent.due);
+                else _du.removeAttribute('max');
+            }
             document.getElementById('taskPhase').value = task.phase;
             document.getElementById('taskStatus').value = task.status;
             document.getElementById('taskEntered').value = formatDate(task.entered);
@@ -6930,6 +7309,9 @@
         function closeTaskModal() {
             document.getElementById('taskModal').classList.remove('active');
             currentEditId = null;
+            pendingSubtaskParentId = null;
+            const ph = document.getElementById('taskPhase'); if (ph) ph.disabled = false;
+            const du = document.getElementById('taskDue'); if (du) du.removeAttribute('max');
         }
 
 
@@ -6954,7 +7336,17 @@
                 showNotification('⚠️ End date cannot be before start date', 'error');
                 return;
             }
-            
+
+            // Macro-task/sub-task containment (hard block; server is the real backstop)
+            const capTarget = currentEditId !== null
+                ? tasks.find(t => t.id === currentEditId)
+                : { id: null, parent_id: pendingSubtaskParentId || null };
+            const capErr = capTarget ? subtaskCapError(capTarget, { entered: taskData.entered, due: taskData.due }) : null;
+            if (capErr) {
+                showNotification('⚠️ ' + capErr, 'error');
+                return;
+            }
+
             // For NEW tasks: check single-gate deadline (existing dialog)
             // For EDITS with date change: comprehensive preview handled in checkAndShowCascadePreview below
             const gateCheck = currentEditId === null ? await checkGateDeadlineExceeded(taskData) : { exceeds: false };
@@ -7076,13 +7468,20 @@
                         }
                     }
                 } else {
-                    // Add new task
+                    // Add new task (possibly a sub-task)
+                    taskData.parent_id = pendingSubtaskParentId || null;
                     const savedTask = await saveToAPI(taskData, true);
-                    
+
                     // Add to local array with server-assigned ID
-                    tasks.push({ ...taskData, id: savedTask.id });
+                    tasks.push({ ...taskData, id: savedTask.id, parent_id: taskData.parent_id });
+                    // For a sub-task, re-establish hierarchy order + row numbers so it nests
+                    // directly under its parent immediately (matches the load-time ordering).
+                    if (taskData.parent_id) {
+                        tasks = orderTasksByHierarchy(tasks);
+                        tasks.forEach((t, i) => { t.rowNum = i + 1; });
+                    }
                     showNotification('✓ Task added successfully!', 'success');
-                    
+
                     // Sync dependencies for new task
                     const selectedPredIds = getSelectedDepPredecessors();
                     const savedTaskId = savedTask.id;
@@ -7161,7 +7560,7 @@
 
                 closeTaskModal();
             } catch (error) {
-                showNotification('⚠️ Failed to save task', 'error');
+                showNotification('⚠️ ' + (error && error.message ? error.message : 'Failed to save task'), 'error');
             }
         }
 
@@ -8480,11 +8879,17 @@
             const task = tasks.find(t => t.id === id);
             if (!task) return;
 
-            if (confirm(`Are you sure you want to delete task "${task.name}"?`)) {
+            // Deleting a macro task also removes its sub-tasks (cascade on the server).
+            const childCount = tasks.filter(t => t.parent_id === id).length;
+            const prompt = childCount > 0
+                ? `Delete task "${task.name}" and its ${childCount} sub-task${childCount !== 1 ? 's' : ''}? This cannot be undone.`
+                : `Are you sure you want to delete task "${task.name}"?`;
+
+            if (confirm(prompt)) {
                 const success = await deleteTaskAPI(id);
-                
+
                 if (success) {
-                    tasks = tasks.filter(t => t.id !== id);
+                    tasks = tasks.filter(t => t.id !== id && t.parent_id !== id);
                     populateOwnerFilter();
                     applyFilters();
                     showNotification('✓ Task deleted successfully!', 'success');

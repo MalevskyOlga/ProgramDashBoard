@@ -649,7 +649,10 @@ def api_update_task(task_id):
     if not data:
         return jsonify({'error': 'No data provided'}), 400
 
-    success = db_manager.update_task(task_id, data)
+    try:
+        success = db_manager.update_task(task_id, data)
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 409
 
     if success:
         task = db_manager.get_task_by_id(task_id)
@@ -662,22 +665,25 @@ def api_update_task(task_id):
 def api_create_task(project_name):
     """API endpoint to create a new task"""
     data = request.json
-    
+
     # Validate required fields
     required_fields = ['name', 'phase', 'owner', 'start_date', 'end_date', 'status']
     for field in required_fields:
         if field not in data:
             return jsonify({'error': f'Missing required field: {field}'}), 400
-    
+
     # Get project ID
     project = db_manager.get_project_by_name(project_name)
     if not project:
         return jsonify({'error': 'Project not found'}), 404
-    
+
     data['project_id'] = project['id']
 
-    task_id = db_manager.create_task(data)
-    
+    try:
+        task_id = db_manager.create_task(data)
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 409
+
     if task_id:
         task = db_manager.get_task_by_id(task_id)
         return jsonify({'message': 'Task created successfully', 'task': task}), 201
@@ -688,9 +694,14 @@ def api_create_task(project_name):
 @app.route('/api/task/<int:task_id>', methods=['DELETE'])
 def api_delete_task(task_id):
     """API endpoint to delete a task"""
-    # Remove any attachment files from disk before deleting DB rows (FK cascade is off)
+    # Remove any attachment files from disk before deleting DB rows (FK cascade is off).
+    # A parent task's sub-tasks are cascade-deleted server-side too, so their uploaded
+    # files must be cleaned up here as well, or they'd be orphaned on disk.
     division_key = tenancy.current_division_key()
+    child_ids = [c['id'] for c in db_manager.get_subtasks(task_id)]
     file_atts = db_manager.get_file_attachments_for_task(task_id)
+    for cid in child_ids:
+        file_atts += db_manager.get_file_attachments_for_task(cid)
     success = db_manager.delete_task(task_id)
     if success:
         for att in file_atts:
@@ -935,15 +946,54 @@ def api_upload_excel():
         if deleted_count > 0:
             print(f"  ✓ Removed {deleted_count} old tasks")
         
-        # Import all tasks
+        # Import all tasks. Two-pass so a "Parent Reference ID" column (J) can link rows
+        # to a macro task within this same sheet: pass 1 creates every row flat and
+        # records reference_id -> new task id; pass 2 resolves each row's parent_ref.
+        # A blank, ambiguous (duplicate), or unresolvable reference degrades that one row
+        # to top-level with a warning, rather than aborting the whole import.
+        ref_counts = {}
+        for t in tasks:
+            rid = (t.get('reference_id') or '').strip()
+            if rid:
+                ref_counts[rid] = ref_counts.get(rid, 0) + 1
+
         imported_count = 0
+        created = []
         for task in tasks:
+            parent_ref = task.pop('_parent_ref', '')
             task['project_id'] = project_id
             task_id = db_manager.create_task(task)
             if task_id:
                 imported_count += 1
-        
+                created.append((task_id, (task.get('reference_id') or '').strip(), parent_ref))
+
+        ref_to_id = {rid: tid for tid, rid, _ in created if rid and ref_counts.get(rid, 0) == 1}
+
+        parent_link_warnings = []
+        for task_id, rid, parent_ref in created:
+            if not parent_ref:
+                continue
+            if ref_counts.get(parent_ref, 0) > 1:
+                parent_link_warnings.append(
+                    f"Row ref '{rid or task_id}': parent reference '{parent_ref}' is "
+                    f"ambiguous ({ref_counts[parent_ref]} rows) — imported as top-level."
+                )
+                continue
+            parent_task_id = ref_to_id.get(parent_ref)
+            if not parent_task_id:
+                parent_link_warnings.append(
+                    f"Row ref '{rid or task_id}': parent reference '{parent_ref}' not "
+                    f"found in this sheet — imported as top-level."
+                )
+                continue
+            try:
+                db_manager.update_task(task_id, {'parent_id': parent_task_id})
+            except ValueError as ve:
+                parent_link_warnings.append(f"Row ref '{rid or task_id}': {ve} — imported as top-level.")
+
         print(f"  ✓ Imported {imported_count} tasks for project '{project_info['name']}'")
+        if parent_link_warnings:
+            print(f"  ⚠ {len(parent_link_warnings)} parent-link warning(s): {parent_link_warnings}")
         
         # Auto-detect dependencies by date matching (Finish-to-Start, delta <= 2 days)
         # If 0 <= task_B.start_date - task_A.end_date <= 2 days, they are dependent
@@ -1029,6 +1079,7 @@ def api_upload_excel():
             'dependencies_detected': dep_count,
             'filename': filename,
             'unmatched_owners': unmatched,
+            'parent_link_warnings': parent_link_warnings,
         }), 200
             
     except Exception as e:

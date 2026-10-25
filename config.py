@@ -70,7 +70,8 @@ EXCEL_COLUMNS = {
     'status': 'F',
     'end_date': 'G',
     'date_closed': 'H',
-    'result': 'I'
+    'result': 'I',
+    'parent_ref': 'J',   # this row's parent task's Reference ID (blank = top-level)
 }
 
 # Ensure directories exist

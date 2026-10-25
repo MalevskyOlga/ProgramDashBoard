@@ -42,6 +42,7 @@ class ExcelExporter:
             ws.column_dimensions['G'].width = 12
             ws.column_dimensions['H'].width = 12
             ws.column_dimensions['I'].width = 30
+            ws.column_dimensions['J'].width = 14
             
             # Header styles
             header_font = Font(bold=True, size=12)
@@ -74,19 +75,34 @@ class ExcelExporter:
                 'Status',
                 'Due Date',
                 'Date Closed',
-                'Final Result/Outcome'
+                'Final Result/Outcome',
+                'Parent Reference ID (Macro Task)'
             ]
-            
+
             for col_num, header in enumerate(headers, start=1):
                 cell = ws.cell(row=10, column=col_num)
                 cell.value = header
                 cell.font = header_font_white
                 cell.fill = header_fill
                 cell.alignment = Alignment(horizontal='center', vertical='center')
-            
+
+            # A parent task needs a stable Reference ID for column J to point to, even if
+            # the user never filled one in — synthesize one so the link always round-trips.
+            parent_ids = {t['parent_id'] for t in tasks if t.get('parent_id')}
+            ref_overrides = {
+                t['id']: f"T{t['id']}"
+                for t in tasks
+                if t['id'] in parent_ids and not (t.get('reference_id') or '').strip()
+            }
+
+            def ref_for(t):
+                return ref_overrides.get(t['id']) or (t.get('reference_id') or '')
+
+            id_to_ref = {t['id']: ref_for(t) for t in tasks}
+
             # Write tasks (starting from row 11)
             for idx, task in enumerate(tasks, start=11):
-                ws.cell(row=idx, column=1, value=task['reference_id'])
+                ws.cell(row=idx, column=1, value=ref_for(task))
                 ws.cell(row=idx, column=2, value=task['name'])
                 ws.cell(row=idx, column=3, value=task['phase'])
                 ws.cell(row=idx, column=4, value=task['owner'])
@@ -95,6 +111,7 @@ class ExcelExporter:
                 ws.cell(row=idx, column=7, value=task['end_date'])
                 ws.cell(row=idx, column=8, value=task['date_closed'])
                 ws.cell(row=idx, column=9, value=task['result'])
+                ws.cell(row=idx, column=10, value=id_to_ref.get(task.get('parent_id'), '') if task.get('parent_id') else '')
             
             # Generate filename with timestamp (dd-mm-yy_hhmm format)
             timestamp = datetime.now().strftime('%d-%m-%y_%H%M')

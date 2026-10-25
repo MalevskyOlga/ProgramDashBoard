@@ -43,6 +43,7 @@ from aggregate_repository import (
     upsert_resource_teams_bulk,
 )
 from database_manager import DatabaseManager
+from db_migrate import run_migrations
 from excel_parser import ExcelParser
 
 
@@ -82,6 +83,7 @@ def create_app() -> Flask:
     initialize_portfolio_database()
     db_manager = DatabaseManager(config.DATABASE_PATH)
     db_manager.initialize_database()
+    run_migrations(str(config.DATABASE_PATH))
 
     @app.route("/")
     def index():
@@ -165,7 +167,10 @@ def create_app() -> Flask:
         if not data:
             return _json_error("No data provided", 400)
 
-        success = db_manager.update_task(task_id, data)
+        try:
+            success = db_manager.update_task(task_id, data)
+        except ValueError as ve:
+            return _json_error(str(ve), 409)
         if not success:
             return _json_error("Failed to update task", 500)
 
@@ -188,7 +193,10 @@ def create_app() -> Flask:
             return _json_error("Project not found", 404)
 
         data["project_id"] = project["id"]
-        task_id = db_manager.create_task(data)
+        try:
+            task_id = db_manager.create_task(data)
+        except ValueError as ve:
+            return _json_error(str(ve), 409)
         if not task_id:
             return _json_error("Failed to create task", 500)
 
@@ -239,11 +247,50 @@ def create_app() -> Flask:
 
             db_manager.delete_tasks_by_project(project_id)
 
+            # Two-pass so a "Parent Reference ID" column (J) can link rows to a macro
+            # task within this same sheet: pass 1 creates every row flat and records
+            # reference_id -> new task id; pass 2 resolves each row's parent_ref. A
+            # blank, ambiguous (duplicate), or unresolvable reference degrades that one
+            # row to top-level with a warning, rather than aborting the whole import.
+            ref_counts = {}
+            for t in tasks:
+                rid = (t.get("reference_id") or "").strip()
+                if rid:
+                    ref_counts[rid] = ref_counts.get(rid, 0) + 1
+
             imported_count = 0
+            created = []
             for task in tasks:
+                parent_ref = task.pop("_parent_ref", "")
                 task["project_id"] = project_id
-                if db_manager.create_task(task):
+                task_id = db_manager.create_task(task)
+                if task_id:
                     imported_count += 1
+                    created.append((task_id, (task.get("reference_id") or "").strip(), parent_ref))
+
+            ref_to_id = {rid: tid for tid, rid, _ in created if rid and ref_counts.get(rid, 0) == 1}
+
+            parent_link_warnings = []
+            for task_id, rid, parent_ref in created:
+                if not parent_ref:
+                    continue
+                if ref_counts.get(parent_ref, 0) > 1:
+                    parent_link_warnings.append(
+                        f"Row ref '{rid or task_id}': parent reference '{parent_ref}' is "
+                        f"ambiguous ({ref_counts[parent_ref]} rows) — imported as top-level."
+                    )
+                    continue
+                parent_task_id = ref_to_id.get(parent_ref)
+                if not parent_task_id:
+                    parent_link_warnings.append(
+                        f"Row ref '{rid or task_id}': parent reference '{parent_ref}' not "
+                        f"found in this sheet — imported as top-level."
+                    )
+                    continue
+                try:
+                    db_manager.update_task(task_id, {"parent_id": parent_task_id})
+                except ValueError as ve:
+                    parent_link_warnings.append(f"Row ref '{rid or task_id}': {ve} — imported as top-level.")
 
             from datetime import datetime as dt
 
@@ -294,6 +341,7 @@ def create_app() -> Flask:
                         "tasks_imported": imported_count,
                         "dependencies_detected": dep_count,
                         "filename": filename,
+                        "parent_link_warnings": parent_link_warnings,
                     }
                 ),
                 200,
