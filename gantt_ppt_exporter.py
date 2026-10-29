@@ -466,21 +466,37 @@ class GanttPptExporter:
         """
         Backward-pass CPM from the last gate milestone.
         Returns set of task IDs whose total float <= threshold.
-        """
-        task_by_id = {t['id']: t for t in tasks}
 
-        successors   = {t['id']: [] for t in tasks}
-        predecessors = {t['id']: [] for t in tasks}
+        Mirrors the client's computeCriticalPath()/isDisplayCritical() behavior
+        (templates/dashboard.html): the critical-path graph only has macro tasks
+        (no parent_id) as nodes — a dependency edge touching a sub-task collapses
+        onto that sub-task's parent — and a sub-task is never itself returned as
+        critical. Instead, a sub-task manually marked critical ('critical' truthy)
+        bubbles its parent macro task into the result set.
+        """
+        macro_tasks = [t for t in tasks if not t.get('parent_id')]
+        task_by_id = {t['id']: t for t in macro_tasks}
+
+        def node_of(task_id):
+            t = next((x for x in tasks if x['id'] == task_id), None)
+            return (t.get('parent_id') or task_id) if t else task_id
+
+        successors   = {t['id']: [] for t in macro_tasks}
+        predecessors = {t['id']: [] for t in macro_tasks}
         for d in deps:
-            p, s = d['predecessor_id'], d['successor_id']
+            p, s = node_of(d['predecessor_id']), node_of(d['successor_id'])
+            if p == s:
+                continue
             if p in successors and s in predecessors:
-                successors[p].append(s)
-                predecessors[s].append(p)
+                if s not in successors[p]:
+                    successors[p].append(s)
+                if p not in predecessors[s]:
+                    predecessors[s].append(p)
 
         # Multi-source CPM: seed ALL gate milestones as anchors
-        milestones = [t for t in tasks if t.get('milestone') and _parse_date(t.get('end_date'))]
+        milestones = [t for t in macro_tasks if t.get('milestone') and _parse_date(t.get('end_date'))]
         if not milestones:
-            milestones = [max(tasks,
+            milestones = [max(macro_tasks,
                               key=lambda t: _parse_date(t.get('end_date')) or datetime.min,
                               default=None)]
             milestones = [m for m in milestones if m]
@@ -515,7 +531,7 @@ class GanttPptExporter:
         # Condition 2: task is due within near_term_days of today (urgent regardless of gate chain)
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         critical_ids = set()
-        for t in tasks:
+        for t in macro_tasks:
             tid   = t['id']
             t_end = _parse_date(t.get('end_date'))
             if not t_end:
@@ -528,6 +544,12 @@ class GanttPptExporter:
             days_out = (t_end - today).days
             if active and -7 <= days_out <= near_term_days:
                 critical_ids.add(tid)
+
+        # Bubble up: a sub-task manually marked critical marks its parent macro task
+        # critical too, instead of ever appearing as critical on its own.
+        for t in tasks:
+            if t.get('parent_id') and t.get('critical'):
+                critical_ids.add(t['parent_id'])
 
         return critical_ids
 

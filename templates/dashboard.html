@@ -2304,6 +2304,7 @@
                         <input type="checkbox" id="taskCritical">
                         Critical Task (Critical Path)
                     </label>
+                    <span id="taskCriticalSubtaskHint" style="display:none;font-size:0.8em;color:var(--color-text-muted);">(marks the parent macro task as critical — this sub-task's row won't show red itself)</span>
                     <label>
                         <input type="checkbox" id="taskMilestone">
                         Milestone
@@ -3224,6 +3225,8 @@
             if (parent.entered) document.getElementById('taskEntered').value = formatDate(parent.entered);
             const dueInput = document.getElementById('taskDue');
             if (dueInput && parent.due) dueInput.max = formatDate(parent.due);
+            const _critHint = document.getElementById('taskCriticalSubtaskHint');
+            if (_critHint) _critHint.style.display = 'inline';
         }
 
         function _dismissReparentPicker(e) {
@@ -3311,7 +3314,9 @@
                     const e = await resp.json().catch(() => ({}));
                     throw new Error(e.error || 'Failed to assign task');
                 }
+                const result = await resp.json();
                 task.parent_id = newParentId;
+                applyParentSyncFromResponse(result);
                 document.getElementById('reparent-picker-popup')?.remove();
                 document.removeEventListener('click', _dismissReparentPicker);
                 tasks = orderTasksByHierarchy(tasks);
@@ -4125,6 +4130,23 @@
             }, 15000);
         }
 
+        // If the server corrected a macro parent's due date down to match its sub-tasks
+        // (see database_manager.py's _sync_macro_due_down — never pushes it later), merge
+        // that into local state and notify. No-op if the response carries no parent or
+        // nothing actually changed.
+        function applyParentSyncFromResponse(result) {
+            if (!result || !result.parent) return;
+            const parentIdx = tasks.findIndex(t => t.id === result.parent.id);
+            if (parentIdx === -1) return;
+            const localParent = tasks[parentIdx];
+            const newDue = result.parent.end_date;
+            if (newDue && localParent.due !== newDue) {
+                localParent.due = newDue;
+                showNotification(`📅 Macro task "${localParent.name}" due date moved to ${formatDateShort(newDue)} to match its sub-tasks`, 'info');
+                applyFilters();
+            }
+        }
+
         // Save task to API (create or update)
         async function saveToAPI(task, isNew = false) {
             try {
@@ -4177,7 +4199,8 @@
 
                 const result = await response.json();
                 updateSaveIndicator('✓ Saved', 'success');
-                
+                applyParentSyncFromResponse(result);
+
                 return result.task;
             } catch (error) {
                 console.error('Error saving to API:', error);
@@ -4679,7 +4702,7 @@
             const completed = tasks.filter(t => t.status === 'Completed').length;
             const inProcess = tasks.filter(t => t.status === 'In Process').length;
             const planned = tasks.filter(t => t.status === 'Planned').length;
-            const critical = tasks.filter(t => t.critical).length;
+            const critical = tasks.filter(t => isDisplayCritical(t)).length;
             const overdue = tasks.filter(t => isOverdue(t.due, t.status)).length;
             const milestone = tasks.filter(t => t.milestone).length;
 
@@ -4867,9 +4890,10 @@
 
             let filtered;
 
-            // High-level view: show only critical path + milestones
+            // High-level view: show only critical path + milestones (macro tasks only —
+            // isDisplayCritical() always returns false for sub-tasks)
             if (currentGanttView === 'highlevel') {
-                filtered = tasks.filter(task => task.critical || task.milestone);
+                filtered = tasks.filter(task => isDisplayCritical(task) || task.milestone);
             } else {
                 // Detailed view: apply all filters
                 filtered = tasks.filter(task => {
@@ -4890,12 +4914,13 @@
                     
                     // Special filters
                     if (filterCritical) {
-                        // If critical path was computed, use it; otherwise fall back to task.critical flag
-                        if (_criticalPathIds !== null) {
-                            if (!_criticalPathIds.has(task.id)) return false;
-                        } else {
-                            if (!task.critical) return false;
-                        }
+                        // Shows a task if it (or, for a macro task, one of its sub-tasks) displays as
+                        // critical, or if its raw id is in the auto-computed critical path/longest chain —
+                        // a manually-critical sub-task stays visible (nested under its parent) even though
+                        // it doesn't render red itself.
+                        const inAutoPath = _criticalPathIds !== null && _criticalPathIds.has(task.id);
+                        const ownOrBubbled = isDisplayCritical(task) || (task.parent_id && task.critical);
+                        if (!inAutoPath && !ownOrBubbled) return false;
                     }
                     if (filterOverdue && !isOverdue(task.due, task.status)) return false;
                     if (filterMilestone && !task.milestone) return false;
@@ -6380,7 +6405,7 @@
                     const gatePassedAfterRework = signOff && signOff.status === 'Passed' && !!signOff.rework_sign_off_date;
                     const gatePassed = signOff && signOff.status === 'Passed' && !gatePassedAfterRework;
 
-                    const rowClass = `task-row ${isSub ? 'subtask' : ''} ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${task.critical ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
+                    const rowClass = `task-row ${isSub ? 'subtask' : ''} ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${isDisplayCritical(task) ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
 
                     const statusClass = task.status.toLowerCase().replace(' ', '-');
                     const statusLabel = task.status === 'In Process' ? 'In Process' : task.status;
@@ -6404,6 +6429,17 @@
                         : '';
                     const attachBadge = (task.attachment_count > 0)
                         ? `<span class="attach-badge" data-att-task-id="${task.id}" title="${task.attachment_count} attachment${task.attachment_count !== 1 ? 's' : ''} — click to open" onclick="event.stopPropagation();openAttachmentsPopup(${task.id})">📎 ${task.attachment_count}</span>`
+                        : '';
+                    // Bubbled-from-child critical state gets its own tooltip, naming the actual
+                    // sub-task(s) responsible, so a red macro task reads differently from
+                    // "critical because of me" vs "critical because of sub-task X".
+                    const criticalSubtaskNames = !isSub ? getCriticalSubtaskNames(task) : [];
+                    const isBubbledCritical = !isSub && !task.critical && criticalSubtaskNames.length > 0;
+                    const criticalBadgeTitle = isBubbledCritical
+                        ? `Critical — via sub-task${criticalSubtaskNames.length > 1 ? 's' : ''}: ${escapeHtml(criticalSubtaskNames.join(', '))}`
+                        : 'Critical path';
+                    const criticalBadgeHTML = (isDisplayCritical(task) && !task.tailed_out)
+                        ? `<span title="${criticalBadgeTitle}">🔴</span>`
                         : '';
                     // "Add sub-task" button on top-level, non-gate tasks only (one level deep)
                     const addSubBtn = (!IS_VIEWER && !isSub && !isGate)
@@ -6430,7 +6466,7 @@
                     taskHTML += `
                         <div class="${rowClass}" data-task-id="${task.id}">
                             <div>${rowNum}</div>
-                            <div class="task-name" title="${task.name}">${caretHTML}${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${task.critical && !task.tailed_out ? '🔴' : ''}${clonedFromBadge}${commentBadge}${attachBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
+                            <div class="task-name" title="${task.name}">${caretHTML}${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${criticalBadgeHTML}${clonedFromBadge}${commentBadge}${attachBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
                             <div>${task.owner}</div>
                             <div class="dept-cell${getTaskDepartments(task).includes('Unassigned') ? ' dept-unassigned' : ''}" title="${escapeHtml(getTaskDepartmentLabel(task))}">${escapeHtml(getTaskDepartmentLabel(task))}</div>
                             <div class="date-cell start-date editable" data-task-id="${task.id}" data-date-type="start" data-date-value="${task.entered}">${formatDateShort(task.entered)}</div>
@@ -6478,12 +6514,12 @@
                         barClass += ' tailed-out';
                     } else if (task.milestone) {
                         barClass += ' milestone-bar';
-                        if (task.critical) barClass += ' critical';
+                        if (isDisplayCritical(task)) barClass += ' critical';
                         if (isGate && signOff) {
                             if (gatePassedRework) barClass += ' gate-rework-bar';
                             else if (gatePassed) barClass += ' gate-passed-bar';
                         }
-                    } else if (task.critical) {
+                    } else if (isDisplayCritical(task)) {
                         barClass += ' critical';
                     } else if (isTaskOverdue) {
                         barClass += ' overdue';
@@ -6532,7 +6568,7 @@
                     }
 
                     timelineHTML += `
-                        <div class="timeline-task-row ${isSub ? 'subtask' : ''} ${task.critical ? 'critical' : ''}">
+                        <div class="timeline-task-row ${isSub ? 'subtask' : ''} ${isDisplayCritical(task) ? 'critical' : ''}">
                             <div class="${barClass}"
                                  style="left: ${startOffset}px; width: ${barWidth};"
                                  data-task-id="${task.id}"
@@ -6851,6 +6887,8 @@
             if (!task) return;
 
             const tooltip = document.getElementById('tooltip');
+            const criticalSubtaskNames = getCriticalSubtaskNames(task);
+            const bubbled = !task.critical && criticalSubtaskNames.length > 0;
             tooltip.querySelector('.tooltip-title').textContent = task.name;
             tooltip.querySelector('.tooltip-content').innerHTML = `
                 <strong>Owner:</strong> ${task.owner}<br>
@@ -6859,7 +6897,7 @@
                 <strong>Start:</strong> ${formatDateDisplay(task.entered)}<br>
                 <strong>End:</strong> ${formatDateDisplay(task.due)}<br>
                 <strong>Duration:</strong> ${getDuration(task.entered, task.due)}
-                ${task.critical ? '<br><strong style="color: var(--color-critical);">🔴 CRITICAL PATH</strong>' : ''}
+                ${isDisplayCritical(task) ? `<br><strong style="color: var(--color-critical);">🔴 CRITICAL PATH${bubbled ? ` (via sub-task${criticalSubtaskNames.length > 1 ? 's' : ''}: ${escapeHtml(criticalSubtaskNames.join(', '))})` : ''}</strong>` : ''}
                 ${task.milestone ? '<br><strong style="color: #ffc107;">⭐ MILESTONE</strong>' : ''}
             `;
             tooltip.classList.add('show');
@@ -6973,25 +7011,58 @@
             applyFilters();
         }
 
+        // Critical-path visibility is macro-tasks-only: a sub-task's own `critical` flag
+        // (manual checkbox, or carried over from a prior auto-compute) never renders red on
+        // its own row — it bubbles up to mark its parent macro task critical instead. This is
+        // a pure display-time derivation; it never writes back into task.critical, so the
+        // underlying per-task flags (and the save/restore overlay logic) stay untouched.
+        function isDisplayCritical(task) {
+            if (task.parent_id) return false; // sub-tasks never show critical directly
+            if (task.critical) return true;
+            return tasks.some(c => c.parent_id === task.id && c.critical);
+        }
+
+        // Names of this macro task's sub-tasks that are themselves marked critical — i.e.
+        // which child(ren) are responsible for bubbling this task red. Empty for sub-tasks
+        // and for macro tasks that are critical on their own merit.
+        function getCriticalSubtaskNames(task) {
+            if (task.parent_id) return [];
+            return tasks.filter(c => c.parent_id === task.id && c.critical).map(c => c.name);
+        }
+
+        // Resolve any task id to the id of the node that represents it in the critical-path
+        // graph: a sub-task collapses onto its parent macro task (one level deep only), so a
+        // dependency edge that happens to run through a sub-task still chains correctly
+        // instead of silently vanishing once sub-tasks are excluded as standalone nodes.
+        function _criticalPathNodeId(taskId) {
+            const t = tasks.find(x => x.id === taskId);
+            return (t && t.parent_id) ? t.parent_id : taskId;
+        }
+
         function computeCriticalPath() {
             // CPM: backward pass from the latest gate milestone.
             // Float = LF[t] - t.due.  Tasks with float ≤ THRESHOLD are critical.
             // Only tasks reachable (via explicit dependency links) from Gate 5 are considered.
+            // Only macro tasks (no parent_id) participate — see isDisplayCritical() above.
             const endMilestone = tasks
                 .filter(t => t.milestone && t.name && t.name.toLowerCase().includes('gate'))
                 .sort((a, b) => new Date(b.due) - new Date(a.due))[0];
             if (!endMilestone) return new Set();
 
-            const eligible = tasks.filter(t => t.due && !t.tailed_out);
+            const eligible = tasks.filter(t => !t.parent_id && t.due && !t.tailed_out);
             const taskMap = new Map(eligible.map(t => [t.id, t]));
 
-            // Build predecessor / successor maps from explicit dependency links only
+            // Build predecessor / successor maps from explicit dependency links only.
+            // Edges that touch a sub-task are collapsed onto its parent macro task.
             const predMap = new Map(eligible.map(t => [t.id, []]));
             const succMap = new Map(eligible.map(t => [t.id, []]));
             dependencies.forEach(dep => {
-                if (predMap.has(dep.successor_id) && succMap.has(dep.predecessor_id)) {
-                    predMap.get(dep.successor_id).push(dep.predecessor_id);
-                    succMap.get(dep.predecessor_id).push(dep.successor_id);
+                const predNode = _criticalPathNodeId(dep.predecessor_id);
+                const succNode = _criticalPathNodeId(dep.successor_id);
+                if (predNode === succNode) return; // collapsed to a self-loop (e.g. two sub-tasks of the same parent)
+                if (predMap.has(succNode) && succMap.has(predNode)) {
+                    if (!predMap.get(succNode).includes(predNode)) predMap.get(succNode).push(predNode);
+                    if (!succMap.get(predNode).includes(succNode)) succMap.get(predNode).push(succNode);
                 }
             });
 
@@ -7086,9 +7157,13 @@
                 return;
             }
 
-            // Save original critical flags, then mark all critical path tasks red in memory
+            // Save original critical flags, then mark all critical path tasks red in memory.
+            // _criticalPathIds only ever contains macro-task ids (see computeCriticalPath), so
+            // sub-tasks are left untouched here — their own manual critical flags keep bubbling
+            // up to their parent via isDisplayCritical() instead of being overwritten.
             _savedCritical = tasks.map(t => ({ id: t.id, critical: t.critical }));
             tasks.forEach(t => {
+                if (t.parent_id) return;
                 t.critical = _criticalPathIds.has(t.id);
             });
 
@@ -7110,17 +7185,24 @@
                 .sort((a, b) => new Date(b.due) - new Date(a.due))[0];
             if (!endMilestone) return { chain: [], duration: 0 };
 
-            // Build predecessors map: taskId → [predecessor tasks]
+            // Build predecessors map: taskId → [predecessor tasks]. Only macro tasks are ever
+            // passed in as taskId; dependency edges that touch a sub-task are collapsed onto
+            // its parent macro task (see _criticalPathNodeId / isDisplayCritical).
             function getPreds(taskId) {
                 const task = tasks.find(t => t.id === taskId);
                 if (!task) return [];
-                let preds = dependencies
-                    .filter(d => d.successor_id === taskId)
-                    .map(d => tasks.find(t => t.id === d.predecessor_id))
+                const predIds = [...new Set(
+                    dependencies
+                        .filter(d => _criticalPathNodeId(d.successor_id) === taskId)
+                        .map(d => _criticalPathNodeId(d.predecessor_id))
+                        .filter(id => id !== taskId)
+                )];
+                let preds = predIds
+                    .map(id => tasks.find(t => t.id === id))
                     .filter(t => t && t.due && !t.tailed_out);
                 if (preds.length === 0 && task.milestone && task.name.toLowerCase().includes('gate')) {
                     preds = tasks.filter(t =>
-                        t.id !== taskId && !t.tailed_out && t.due &&
+                        t.id !== taskId && !t.parent_id && !t.tailed_out && t.due &&
                         t.phase === task.phase &&
                         !(t.milestone && t.name.toLowerCase().includes('gate'))
                     );
@@ -7189,9 +7271,10 @@
             // Remove tasks user explicitly marked as non-critical
             getManualUncritical().forEach(id => _longestChainIds.delete(id));
 
-            // Save and overlay critical flags
+            // Save and overlay critical flags. _longestChainIds only ever contains macro-task
+            // ids (getPreds/longestBack only traverse macro nodes), so sub-tasks are left alone.
             _savedCriticalLC = tasks.map(t => ({ id: t.id, critical: t.critical }));
-            tasks.forEach(t => { t.critical = _longestChainIds.has(t.id); });
+            tasks.forEach(t => { if (t.parent_id) return; t.critical = _longestChainIds.has(t.id); });
 
             document.getElementById('filterCritical').checked = true;
             if (btn) { btn.textContent = '✅ Longest Chain ON'; btn.classList.replace('btn-warning', 'btn-success'); }
@@ -7485,6 +7568,8 @@
             document.getElementById('taskEntered').value = formatDate(task.entered);
             document.getElementById('taskDue').value = formatDate(task.due);
             document.getElementById('taskCritical').checked = task.critical || false;
+            const _critHint = document.getElementById('taskCriticalSubtaskHint');
+            if (_critHint) _critHint.style.display = task.parent_id ? 'inline' : 'none';
             document.getElementById('taskMilestone').checked = task.milestone || false;
             document.getElementById('taskTailedOut').checked = task.tailed_out || false;
 
@@ -9373,12 +9458,9 @@
             event.target.value = '';
         }
 
-        // Close modal when clicking outside
-        document.getElementById('taskModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeTaskModal();
-            }
-        });
+        // Intentionally no click-outside-to-close here: the Add/Edit Task modal
+        // should only close via its own Cancel / Save Task / Delete Task buttons,
+        // not by an accidental click on the Gantt/backdrop behind it.
 
         // Close date edit when clicking outside
         document.addEventListener('click', function(e) {
@@ -9759,7 +9841,7 @@
                 rowAlt = !rowAlt;
 
                 const status   = task.status || 'Planned';
-                const isCrit   = !!task.critical;
+                const isCrit   = isDisplayCritical(task);
                 const isMs     = !!task.milestone;
                 const barColor = isCrit ? '#EF4444' : isMs ? '#6366F1' : (STATUS_COLORS[status] || '#F59E0B');
 

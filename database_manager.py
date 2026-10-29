@@ -536,6 +536,28 @@ class DatabaseManager:
                     'Adjust the sub-task(s) first.'
                 )
 
+    def _sync_macro_due_down(self, cursor, parent_id):
+        """A sub-task's due date can never exceed its macro parent's (enforced in
+        _validate_task_hierarchy). Once that's satisfied, pull the parent's own due
+        date DOWN to match its latest (max) sub-task due date whenever the parent is
+        currently set further out than its sub-tasks need — never the opposite
+        direction. Called after a sub-task's own save succeeds, same transaction."""
+        cursor.execute('SELECT end_date FROM tasks WHERE id = ?', (parent_id,))
+        parent = cursor.fetchone()
+        if not parent or not parent['end_date']:
+            return
+        cursor.execute(
+            "SELECT MAX(end_date) AS max_due FROM tasks "
+            "WHERE parent_id = ? AND end_date IS NOT NULL AND end_date != ''",
+            (parent_id,)
+        )
+        max_due = cursor.fetchone()['max_due']
+        if max_due and max_due < parent['end_date']:
+            cursor.execute(
+                'UPDATE tasks SET end_date = ?, updated_at = ? WHERE id = ?',
+                (max_due, datetime.now().isoformat(), parent_id)
+            )
+
     def create_task(self, task_data):
         """Create a new task"""
         conn = self.get_connection()
@@ -580,6 +602,10 @@ class DatabaseManager:
         ))
 
         task_id = cursor.lastrowid
+
+        if parent_id and task_data.get('end_date'):
+            self._sync_macro_due_down(cursor, parent_id)
+
         conn.commit()
         conn.close()
 
@@ -590,6 +616,7 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
 
+        effective_parent_id = None
         if 'parent_id' in task_data or 'start_date' in task_data or 'end_date' in task_data:
             cursor.execute(
                 'SELECT project_id, parent_id, start_date, end_date FROM tasks WHERE id = ?',
@@ -640,6 +667,10 @@ class DatabaseManager:
         cursor.execute(query, update_values)
 
         success = cursor.rowcount > 0
+
+        if success and ('end_date' in task_data or 'parent_id' in task_data) and effective_parent_id:
+            self._sync_macro_due_down(cursor, effective_parent_id)
+
         conn.commit()
         conn.close()
 
@@ -1165,7 +1196,10 @@ class DatabaseManager:
             # Cancelled is closed-out just like Completed for "is this still open work" purposes
             # (active-today, overdue), but only a literal Completed task can be "closed late".
             is_closed = normalized_status in ('completed', 'cancelled')
-            is_active_today = (start_date <= today <= end_date) and not is_closed
+            # On Hold tasks don't count toward "active workload" (resource load, busy badges,
+            # overload spotlight) even though they aren't finished — only a delay-tracking
+            # concern (is_open_delayed below) still looks at them.
+            is_active_today = (start_date <= today <= end_date) and not is_closed and normalized_status != 'on hold'
             closed_date_value = (row['date_closed'] or '').strip()
             closed_date = datetime.strptime(closed_date_value[:10], '%Y-%m-%d').date() if closed_date_value else None
             is_open_delayed = (not is_closed) and end_date < today
@@ -1201,7 +1235,6 @@ class DatabaseManager:
                 'tailed_out_count': 0,
                 'planned_working_days': 0,
                 'in_process_working_days': 0,
-                'on_hold_working_days': 0,
                 'review_working_days': 0,
                 'project_names': set(),
                 'date_points': [],
@@ -1216,11 +1249,10 @@ class DatabaseManager:
             owner_entry['tailed_out_count'] += 1 if task_item['tailed_out'] else 0
             owner_entry['planned_working_days'] += working_days if normalized_status == 'planned' else 0
             owner_entry['in_process_working_days'] += working_days if normalized_status == 'in process' else 0
-            owner_entry['on_hold_working_days'] += working_days if normalized_status == 'on hold' else 0
             owner_entry['review_working_days'] += working_days if normalized_status == 'review' else 0
             owner_entry['project_names'].add(row['project_name'])
-            # Only count active/future tasks for concurrent load (exclude completed/cancelled)
-            if normalized_status in ('planned', 'in process', 'on hold', 'review'):
+            # Only count active/future tasks for concurrent load (exclude completed/cancelled/on hold)
+            if normalized_status in ('planned', 'in process', 'review'):
                 owner_entry['date_points'].append((start_date, 1))
                 owner_entry['date_points'].append((end_date, -1))
             owner_entry['tasks'].append(task_item)
@@ -1233,9 +1265,9 @@ class DatabaseManager:
         cursor2.execute('''
             SELECT p.name AS proj_name,
                    TRIM(p.manager) AS manager,
-                   SUM(CASE WHEN t.status IN ('In Process','Planned','On Hold','Review') THEN 1 ELSE 0 END) AS active_tasks,
-                   MIN(CASE WHEN t.status IN ('In Process','Planned','On Hold','Review') THEN t.start_date ELSE NULL END) AS proj_start,
-                   MAX(CASE WHEN t.status IN ('In Process','Planned','On Hold','Review') THEN t.end_date ELSE NULL END) AS proj_end
+                   SUM(CASE WHEN t.status IN ('In Process','Planned','Review') THEN 1 ELSE 0 END) AS active_tasks,
+                   MIN(CASE WHEN t.status IN ('In Process','Planned','Review') THEN t.start_date ELSE NULL END) AS proj_start,
+                   MAX(CASE WHEN t.status IN ('In Process','Planned','Review') THEN t.end_date ELSE NULL END) AS proj_end
             FROM projects p
             LEFT JOIN tasks t ON t.project_id = p.id
             WHERE TRIM(COALESCE(p.manager,'')) != ''
@@ -1300,7 +1332,6 @@ class DatabaseManager:
                     'tailed_out_count': 0,
                     'planned_working_days': 0,
                     'in_process_working_days': 0,
-                    'on_hold_working_days': 0,
                     'review_working_days': 0,
                     'project_names': set(),
                     'date_points': [],
@@ -1389,7 +1420,6 @@ class DatabaseManager:
                 'tailed_out_count': owner_entry['tailed_out_count'],
                 'planned_working_days': owner_entry['planned_working_days'],
                 'in_process_working_days': owner_entry['in_process_working_days'],
-                'on_hold_working_days': owner_entry['on_hold_working_days'],
                 'review_working_days': owner_entry['review_working_days'],
                 'project_count': len(owner_entry['project_names']),
                 'project_names': sorted(owner_entry['project_names']),

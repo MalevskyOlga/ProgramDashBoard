@@ -2913,7 +2913,7 @@
 
         function renderLoadBar(owner, maxDays) {
             const days = (owner.planned_working_days || 0) + (owner.in_process_working_days || 0) +
-                (owner.on_hold_working_days || 0) + (owner.review_working_days || 0);
+                (owner.review_working_days || 0);
             const pct = maxDays > 0 ? Math.min(100, Math.round((days / maxDays) * 100)) : 0;
             const label = getResourceLoadLabel(owner);
             const barColor = label === 'High' ? 'var(--color-overdue-dark)' : label === 'Medium' ? 'var(--status-planned-fg)' : 'var(--status-completed-fg)';
@@ -2995,9 +2995,8 @@
                     const c = cellColor(count, d.owner_count);
                     const isNow = months[i] === today_month;
                     const ip = d.in_process[i], pl = d.planned[i];
-                    const oh = (d.on_hold || [])[i] || 0, rv = (d.review || [])[i] || 0;
+                    const rv = (d.review || [])[i] || 0;
                     const tipParts = [`${ip} In Process`, `${pl} Planned`];
-                    if (oh) tipParts.push(`${oh} On Hold`);
                     if (rv) tipParts.push(`${rv} Review`);
                     const tip = count ? tipParts.join(' + ') : '';
                     return `<td title="${tip}" style="
@@ -3068,7 +3067,7 @@
             return `
             <div style="padding:4px 0;">
                 <div style="font-size:0.75em;color:var(--color-text-muted);margin-bottom:12px;">
-                    Resource load by discipline — In Process + Planned + On Hold + Review tasks · cell color = tasks per owner ratio
+                    Resource load by discipline — In Process + Planned + Review tasks · cell color = tasks per owner ratio
                 </div>
                 ${summaryHtml}
                 <div style="font-size:0.8em;color:var(--color-accent);font-weight:600;margin-bottom:8px;">📅 Monthly Load Heatmap</div>
@@ -3464,7 +3463,7 @@
             // Max working days across all owners for bar scaling
             const maxDays = Math.max(1, ...payload.owners.map(o =>
                 (o.planned_working_days || 0) + (o.in_process_working_days || 0) +
-                (o.on_hold_working_days || 0) + (o.review_working_days || 0)));
+                (o.review_working_days || 0)));
 
             const visibleRows = visibleOwners.map((owner) => `
                 <tr>
@@ -3871,7 +3870,7 @@
                         &nbsp;·&nbsp; timeline: ${minDate.toLocaleDateString()} – ${maxDate.toLocaleDateString()}
                         &nbsp;·&nbsp; <span style="color:var(--color-overdue);">│</span> = today
                         &nbsp;·&nbsp; <span style="color:var(--status-inprocess-fg);">■</span> In Process &nbsp;<span style="color:var(--status-planned-fg);">■</span> Planned
-                        &nbsp;<span style="color:var(--status-onhold-fg);">■</span> On Hold &nbsp;<span style="color:var(--status-review-fg);">■</span> Review
+                        &nbsp;<span style="color:var(--status-review-fg);">■</span> Review
                     </div>
                     <table style="width:100%;border-collapse:collapse;font-size:0.83em;">
                         <colgroup>
@@ -4112,9 +4111,9 @@
         }
 
         function renderScheduledOwnerProjectSections(tasks) {
-            // Active statuses: still-pending work. Completed/Cancelled are excluded, same
-            // as a project that's fully wrapped up.
-            const ACTIVE_STATUS_KEYS = { 'planned': 'planned', 'in process': 'in_process', 'on hold': 'on_hold', 'review': 'review' };
+            // Active statuses: still-pending work. Completed/Cancelled/On Hold are excluded —
+            // On Hold doesn't count toward workload even though it isn't finished.
+            const ACTIVE_STATUS_KEYS = { 'planned': 'planned', 'in process': 'in_process', 'review': 'review' };
             const relevantTasks = tasks.filter((task) => {
                 const normalizedStatus = (task.status || '').trim().toLowerCase();
                 return Object.prototype.hasOwnProperty.call(ACTIVE_STATUS_KEYS, normalizedStatus);
@@ -4122,17 +4121,16 @@
 
             if (!relevantTasks.length) {
                 return {
-                    html: `<div class="resource-detail-empty">No Planned, In Process, On Hold, or Review tasks found.</div>`,
+                    html: `<div class="resource-detail-empty">No Planned, In Process, or Review tasks found.</div>`,
                     tableIds: []
                 };
             }
 
-            const emptyBuckets = () => ({ planned: 0, in_process: 0, on_hold: 0, review: 0 });
-            const emptyWdBuckets = () => ({ planned: 0, in_process: 0, on_hold: 0, review: 0 });
-            const sumBuckets = (b) => b.planned + b.in_process + b.on_hold + b.review;
+            const emptyBuckets = () => ({ planned: 0, in_process: 0, review: 0 });
+            const emptyWdBuckets = () => ({ planned: 0, in_process: 0, review: 0 });
+            const sumBuckets = (b) => b.planned + b.in_process + b.review;
             const bucketSubline = (counts) => {
                 const parts = [`Planned ${counts.planned}`, `In Process ${counts.in_process}`];
-                if (counts.on_hold) parts.push(`On Hold ${counts.on_hold}`);
                 if (counts.review) parts.push(`Review ${counts.review}`);
                 return parts.join(' · ');
             };
@@ -4180,7 +4178,7 @@
                 };
 
                 existing.total_task_count += entry.task_count;
-                ['planned', 'in_process', 'on_hold', 'review'].forEach((k) => {
+                ['planned', 'in_process', 'review'].forEach((k) => {
                     existing.total_task_counts[k] += entry.task_counts[k];
                     existing.total_working_days[k] += entry.working_days[k];
                 });
@@ -4274,7 +4272,7 @@
                 workingDayHtml: `
                     <div class="resource-detail-panel" style="margin-bottom: 14px;">
                         <h3>Overall working days per owner per project</h3>
-                        <p>Owners are shown in rows, with all projects across the columns. Each cell shows total working days, plus <strong>Planned</strong>, <strong>In Process</strong>, <strong>On Hold</strong>, and <strong>Review</strong> splits.</p>
+                        <p>Owners are shown in rows, with all projects across the columns. Each cell shows total working days, plus <strong>Planned</strong>, <strong>In Process</strong>, and <strong>Review</strong> splits.</p>
                         ${renderSimpleResourceTable(
                             ['Owner', ...projectNames, 'Total WD'],
                             workingDayRows
@@ -5566,9 +5564,15 @@
         async function completePriorityProject(id) {
             try {
                 const res = await fetch(`/api/priority-projects/${id}/complete`, { method: 'POST' });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                if (!res.ok) {
+                    const e = await res.json().catch(() => ({}));
+                    throw new Error(e.error || `HTTP ${res.status}`);
+                }
                 await loadPrioritySection();
-            } catch (err) { console.error('Complete failed:', err); }
+            } catch (err) {
+                console.error('Complete failed:', err);
+                alert(err.message);
+            }
         }
 
         async function restoreArchivedProject(archId) {

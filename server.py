@@ -657,7 +657,10 @@ def api_update_task(task_id):
 
     if success:
         task = db_manager.get_task_by_id(task_id)
-        return jsonify({'message': 'Task updated successfully', 'task': task})
+        response = {'message': 'Task updated successfully', 'task': task}
+        if task and task.get('parent_id'):
+            response['parent'] = db_manager.get_task_by_id(task['parent_id'])
+        return jsonify(response)
     else:
         return jsonify({'error': 'Failed to update task'}), 500
 
@@ -687,7 +690,10 @@ def api_create_task(project_name):
 
     if task_id:
         task = db_manager.get_task_by_id(task_id)
-        return jsonify({'message': 'Task created successfully', 'task': task}), 201
+        response = {'message': 'Task created successfully', 'task': task}
+        if task and task.get('parent_id'):
+            response['parent'] = db_manager.get_task_by_id(task['parent_id'])
+        return jsonify(response), 201
     else:
         return jsonify({'error': 'Failed to create task'}), 500
 
@@ -1182,10 +1188,18 @@ def api_export_gantt_ppt(project_name):
     data = request.get_json(silent=True) or {}
     save_path = data.get('save_path') or None
 
+    # critical_ids are macro-task ids only (the client's auto-computed critical path /
+    # longest chain — see computeCriticalPath()/computeLongestChain() in dashboard.html).
+    # Mirror isDisplayCritical() here: a sub-task's manual critical flag bubbles up to mark
+    # its parent macro task instead of ever rendering critical on the sub-task's own row.
     critical_ids = set(data.get('critical_ids') or [])
-    if critical_ids:
-        tasks = [dict(t, critical=(1 if t['id'] in critical_ids else t.get('critical', 0)))
-                 for t in tasks]
+    bubbled_parents = {t['parent_id'] for t in tasks if t.get('parent_id') and t.get('critical')}
+    effective_critical_ids = critical_ids | bubbled_parents
+    tasks = [
+        dict(t, critical=0) if t.get('parent_id')
+        else dict(t, critical=(1 if t['id'] in effective_critical_ids else t.get('critical', 0)))
+        for t in tasks
+    ]
 
     exporter = GanttPptExporter()
     ppt_path = exporter.export_gantt(project, tasks, config.EXCEL_OUTPUT_FOLDER, save_path)
@@ -1546,7 +1560,9 @@ def api_reorder_priority_projects():
 
 @app.route('/api/priority-projects/<int:proj_id>/complete', methods=['POST'])
 def api_complete_priority_project(proj_id):
-    """Move a project to the archive with today's date."""
+    """Move a project to the archive with today's date. Blocked if the project has a
+    linked Gantt with any task still open (not Completed/Cancelled, and not tailed-out —
+    tailed-out tasks are explicitly removed from scope, so they don't count as open)."""
     conn = None
     try:
         from datetime import date as _date_cls
@@ -1557,6 +1573,30 @@ def api_complete_priority_project(proj_id):
         if not row:
             return jsonify({'error': 'Project not found'}), 404
         d = dict(row)
+
+        # Resolve the linked Gantt the same way the pipeline list does: an explicit
+        # linked_dashboard wins (unless it's the '__none__' "explicitly unlinked" sentinel),
+        # otherwise fall back to a Gantt project whose name matches this project's name.
+        existing = {p['name'].strip().lower(): p['name'] for p in db_manager.get_all_projects()}
+        linked = d.get('linked_dashboard')
+        if linked == '__none__':
+            dashboard_name = None
+        elif linked and linked.strip().lower() in existing:
+            dashboard_name = linked
+        else:
+            dashboard_name = existing.get((d.get('name') or '').strip().lower())
+
+        if dashboard_name:
+            gantt_tasks = db_manager.get_tasks_by_project(dashboard_name)
+            open_tasks = [
+                t for t in gantt_tasks
+                if not t.get('tailed_out') and t.get('status') not in ('Completed', 'Cancelled')
+            ]
+            if open_tasks:
+                return jsonify({
+                    'error': "Can't be closed since still have open ACTION ITEMS"
+                }), 409
+
         conn.execute("""
             INSERT INTO archived_projects
                 (name, completed_date, priority, leader, process_type, next_gate, launch_date, objective, segment)
@@ -1973,9 +2013,9 @@ def api_discipline_resource_load():
     # Excludes projects archived via the Pipeline "Mark Complete" action. A project whose
     # tasks are ALL Completed is already excluded above by the status IN (...) filter.
     not_archived = "AND LOWER(TRIM(p.name)) NOT IN (SELECT LOWER(TRIM(name)) FROM archived_projects)"
-    # Active statuses: still-pending work. Completed/Cancelled are excluded, same as a
-    # project that's fully wrapped up.
-    active_statuses = "'In Process','Planned','On Hold','Review'"
+    # Active statuses: still-pending work. Completed/Cancelled/On Hold are excluded — On
+    # Hold doesn't count toward workload/resource load even though it isn't finished.
+    active_statuses = "'In Process','Planned','Review'"
     if project_name_filter:
         tasks = t_conn.execute(f"""
             SELECT TRIM(t.owner), t.start_date, t.end_date, t.status
@@ -2005,7 +2045,6 @@ def api_discipline_resource_load():
         return {
             'In Process': [0] * len(months),
             'Planned': [0] * len(months),
-            'On Hold': [0] * len(months),
             'Review': [0] * len(months),
         }
 
@@ -2022,7 +2061,7 @@ def api_discipline_resource_load():
             continue
         if disc not in disc_monthly:
             disc_monthly[disc] = _empty_disc_buckets()
-        bucket = status if status in ('In Process', 'On Hold', 'Review') else 'Planned'
+        bucket = status if status in ('In Process', 'Review') else 'Planned'
         for i, ms in enumerate(months):
             last_day = calendar.monthrange(ms.year, ms.month)[1]
             me = _date(ms.year, ms.month, last_day)
@@ -2077,9 +2116,8 @@ def api_discipline_resource_load():
     for disc in sorted(disc_monthly):
         ip = disc_monthly[disc]['In Process']
         pl = disc_monthly[disc]['Planned']
-        oh = disc_monthly[disc]['On Hold']
         rv = disc_monthly[disc]['Review']
-        combined = [ip[i] + pl[i] + oh[i] + rv[i] for i in range(len(months))]
+        combined = [ip[i] + pl[i] + rv[i] for i in range(len(months))]
         peak = max(combined) if combined else 0
         peak_idx = combined.index(peak) if peak else 0
         owner_count = disc_owners.get(disc, 1)
@@ -2088,7 +2126,6 @@ def api_discipline_resource_load():
             'owner_count': owner_count,
             'in_process': ip,
             'planned': pl,
-            'on_hold': oh,
             'review': rv,
             'combined': combined,
             'peak_count': peak,
