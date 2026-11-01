@@ -206,7 +206,7 @@ def export_risks_to_pptx(project_name, risks):
     """
     # Sort: open first, then by RPN descending
     def sort_key(r):
-        closed = 1 if (r.get('status') or '').lower() == 'closed' else 0
+        closed = 1 if (r.get('status') or '').lower() in ('completed', 'canceled') else 0
         return (closed, -_rpn(r.get('probability', 'Medium'), r.get('impact', 'Medium')))
 
     risks_sorted = sorted(risks, key=sort_key)

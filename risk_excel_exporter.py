@@ -7,9 +7,11 @@ _parse_risks_from_excel() reads back in, so an exported file:
   - doubles as a live, correctly-formatted example of the import template.
 
 Column layout (1-based) must stay in sync with _parse_risks_from_excel():
-  4=Category, 5=Risk Statement, 6=Prob, 7=Impact, 9=Schedule Impact (Weeks),
-  10=Risk Type, 12=Strategy, 13=Action Plan, 14=Owner, 15=Status,
-  16=Outcome, 17=Date Closed. Columns 1,2,3,8,11 are not read on import.
+  2=Risk ID (matches an existing risk for update instead of inserting a
+  duplicate — blank means "new risk"), 4=Category, 5=Risk Statement, 6=Prob,
+  7=Impact, 9=Schedule Impact (Weeks), 10=Risk Type, 12=Strategy, 13=Action
+  Plan, 14=Owner, 15=Status, 16=Outcome, 17=Date Closed. Columns 1,3,8,11 are
+  not read on import.
 """
 from io import BytesIO
 import openpyxl
@@ -25,7 +27,7 @@ LAST_VALIDATED_ROW = 500
 # (column, header label, width, imported-by-parser, dropdown choices or None)
 COLUMNS = [
     (1,  "#",                             10, False, None),
-    (2,  "Risk ID",                       10, False, None),
+    (2,  "Risk ID — don't edit",     10, True,  None),
     (3,  "Date Added",                    12, False, None),
     (4,  "Risk Category",                 16, True,  ["Technical", "Schedule", "Cost / Quality", "Supply Chain",
                                                         "Regulatory", "Marketing", "Design", "Other"]),
@@ -39,7 +41,7 @@ COLUMNS = [
     (12, "Risk Management Strategy",      16, True,  ["Mitigate", "Accept", "Transfer", "Avoid", "Watch"]),
     (13, "Action Plan",                   40, True,  None),
     (14, "Owner",                         16, True,  None),
-    (15, "Status",                        12, True,  ["Open", "Assigned", "In Process", "Mitigated", "Closed"]),
+    (15, "Status",                        12, True,  ["In Process", "Assigned", "Canceled", "Completed"]),
     (16, "Outcome",                       24, True,  None),
     (17, "Date Closed",                   12, True,  None),
 ]
@@ -79,10 +81,12 @@ def export_risks_to_excel(title, risks):
 
     ws.merge_cells("A2:Q2")
     ws["A2"] = ("Exported from the dashboard. NAVY columns are read back in on import; GREY columns "
-                "are for reference only. Edit freely and re-upload via Import Excel.")
+                "are for reference only. Edit freely and re-upload via Import Excel — rows that keep "
+                "their Risk ID are updated in place; clear the Risk ID (or add a new row) to create a "
+                "new risk instead of updating an existing one.")
     ws["A2"].font = subtitle_font
     ws["A2"].alignment = Alignment(wrap_text=True, vertical="top")
-    ws.row_dimensions[2].height = 32
+    ws.row_dimensions[2].height = 44
 
     ws.merge_cells("A3:Q3")
     ws["A3"] = "Sheet name must contain “Risk Input” (already correct — do not rename)."
@@ -126,7 +130,7 @@ def export_risks_to_excel(title, risks):
             12: r.get('strategy') or 'Mitigate',
             13: r.get('mitigation') or '',
             14: r.get('owner') or '',
-            15: r.get('status') or 'Open',
+            15: r.get('status') or 'In Process',
             16: r.get('outcome'),
             17: _date_only(r.get('date_closed')),
         }

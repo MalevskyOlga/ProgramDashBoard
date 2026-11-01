@@ -5922,8 +5922,17 @@ let _projectRiskCountsByName = {};
             if (!resp.ok) {
                 statusEl.textContent = `❌ ${data.error || 'Import failed'}`;
             } else {
-                statusEl.textContent = `✅ ${data.imported} risk${data.imported !== 1 ? 's' : ''} imported`;
+                const dupes = data.skipped_duplicates || [];
+                const parts = [];
+                if (data.inserted) parts.push(`${data.inserted} new`);
+                if (data.updated) parts.push(`${data.updated} updated`);
+                if (dupes.length) parts.push(`${dupes.length} duplicate${dupes.length !== 1 ? 's' : ''} skipped`);
+                statusEl.textContent = parts.length ? `✅ ${parts.join(', ')}` : '✅ No changes — already up to date';
                 await refreshRiskTable();
+                if (dupes.length) {
+                    const lines = dupes.map(d => `• "${d.title}" — ${d.reason}`).join('\n');
+                    alert(`Skipped ${dupes.length} duplicate risk${dupes.length !== 1 ? 's' : ''} (not imported):\n\n${lines}`);
+                }
             }
         } catch (e) {
             statusEl.textContent = '❌ Upload error';

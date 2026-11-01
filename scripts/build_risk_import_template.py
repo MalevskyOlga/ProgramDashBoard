@@ -4,10 +4,12 @@ Generates the standardized Risk Register import template (Risk_Import_Template.x
 This mirrors exactly what server.py's `_parse_risks_from_excel()` reads:
   - A sheet whose name contains "risk input" (case-insensitive)
   - Header row at row 4, data starting row 5
-  - 1-based columns: 4=Category, 5=Risk Statement, 6=Prob, 7=Impact,
-    9=Schedule Impact (Weeks), 10=Risk Type, 12=Strategy, 13=Action Plan,
+  - 1-based columns: 2=Risk ID (blank here since these are brand-new risks; when
+    re-importing an exported file, a filled-in Risk ID updates that existing risk
+    instead of creating a duplicate), 4=Category, 5=Risk Statement, 6=Prob,
+    7=Impact, 9=Schedule Impact (Weeks), 10=Risk Type, 12=Strategy, 13=Action Plan,
     14=Owner, 15=Status, 16=Outcome, 17=Date Closed
-  - Columns 1,2,3,8,11 are NOT read by the importer (kept for user reference only)
+  - Columns 1,3,8,11 are NOT read by the importer (kept for user reference only)
 
 Run once to (re)generate the template:
     python scripts/build_risk_import_template.py
@@ -22,7 +24,7 @@ OUT_PATH = "risk_import_template/Risk_Import_Template.xlsx"
 # Column layout (1-based). "imported" = read by _parse_risks_from_excel.
 COLUMNS = [
     (1,  "#",                         10, False, None),
-    (2,  "Risk ID",                   10, False, None),
+    (2,  "Risk ID — don't edit",  10, True,  None),
     (3,  "Date Added",                12, False, None),
     (4,  "Risk Category",             16, True,  ["Technical", "Schedule", "Cost / Quality", "Supply Chain",
                                                     "Regulatory", "Marketing", "Design", "Other"]),
@@ -36,7 +38,7 @@ COLUMNS = [
     (12, "Risk Management Strategy",  16, True,  ["Mitigate", "Accept", "Transfer", "Avoid", "Watch"]),
     (13, "Action Plan",               40, True,  None),
     (14, "Owner",                     16, True,  None),
-    (15, "Status",                    12, True,  ["Open", "Assigned", "In Process", "Mitigated", "Closed"]),
+    (15, "Status",                    12, True,  ["In Process", "Assigned", "Canceled", "Completed"]),
     (16, "Outcome",                   24, True,  None),
     (17, "Date Closed",               12, True,  None),
 ]
@@ -69,10 +71,12 @@ ws.merge_cells("A2:Q2")
 ws["A2"] = ("Columns shaded NAVY are imported by the system. Columns shaded GREY are for your own "
             "reference only and are ignored on import. Row 5 below is an example — delete it before "
             "uploading your real risks. Risk Statement (column E) is the only required field; a row "
-            "with no Risk Statement is skipped silently.")
+            "with no Risk Statement is skipped silently. Leave Risk ID (column B) blank for new risks — "
+            "it's only used when re-importing a file exported from the dashboard, to update an existing "
+            "risk instead of creating a duplicate.")
 ws["A2"].font = subtitle_font
 ws["A2"].alignment = Alignment(wrap_text=True, vertical="top")
-ws.row_dimensions[2].height = 48
+ws.row_dimensions[2].height = 60
 
 ws.merge_cells("A3:Q3")
 ws["A3"] = "Sheet name must contain “Risk Input” (this sheet is already named correctly — do not rename it)."

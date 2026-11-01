@@ -2480,9 +2480,10 @@ def api_create_pipeline_risk(pipeline_project_id):
 
 def _parse_risks_from_excel(file_bytes):
     """Parse risks from the standard Excel Risk Register template (Risk Input sheet).
-    Returns list of risk dicts ready for DB insertion.
-    Excel columns (1-based): 4=Category, 5=Risk Statement, 6=Prob, 7=Impact,
-    9=Sched Impact(wks), 10=Risk Type, 12=Strategy, 13=Action Plan,
+    Returns list of risk dicts ready for DB insertion/update.
+    Excel columns (1-based): 2=Risk ID (matches an existing risk for update instead of
+    inserting a duplicate — blank/unmatched means "new risk"), 4=Category, 5=Risk Statement,
+    6=Prob, 7=Impact, 9=Sched Impact(wks), 10=Risk Type, 12=Strategy, 13=Action Plan,
     14=Owner, 15=Status, 16=Outcome, 17=Date Closed. Data starts row 5.
     """
     wb = openpyxl.load_workbook(BytesIO(file_bytes), data_only=True)
@@ -2492,14 +2493,20 @@ def _parse_risks_from_excel(file_bytes):
     ws = wb[sheet_name]
 
     PROB_MAP   = {'low':'Low','medium':'Medium','high':'High','very high':'Very High'}
-    STATUS_MAP = {'not assigned':'Open','assigned':'Assigned','in process':'In Process',
-                  'closed':'Closed','mitigated':'Mitigated','open':'Open'}
+    # Real statuses, matching the Risk form's actual dropdown (index.html #riskStatus).
+    # The 'open'/'mitigated'/'closed'/'not assigned' aliases are kept so a file exported
+    # before this fix (when the exporter/importer used a different, incorrect vocabulary)
+    # can still be re-imported without losing its status.
+    STATUS_MAP = {'in process':'In Process','assigned':'Assigned','canceled':'Canceled',
+                  'cancelled':'Canceled','completed':'Completed',
+                  'open':'In Process','not assigned':'In Process',
+                  'mitigated':'Completed','closed':'Completed'}
 
     def _norm_prob(v):
         return PROB_MAP.get((v or '').strip().lower(), 'Medium')
 
     def _norm_status(v):
-        return STATUS_MAP.get((v or '').strip().lower(), 'Open')
+        return STATUS_MAP.get((v or '').strip().lower(), 'In Process')
 
     def _norm_date(v):
         if v is None:
@@ -2508,6 +2515,12 @@ def _parse_risks_from_excel(file_bytes):
             return v.date().isoformat()
         s = str(v).strip()[:10]
         return s if len(s) == 10 else None
+
+    def _norm_id(v):
+        try:
+            return int(v) if v not in (None, '') else None
+        except (TypeError, ValueError):
+            return None
 
     risks = []
     for row in ws.iter_rows(min_row=5, values_only=True):
@@ -2521,6 +2534,7 @@ def _parse_risks_from_excel(file_bytes):
             sched_weeks = None
 
         risks.append({
+            'id':                    _norm_id(row[1]),                   # col 2
             'title':                 title,
             'category':              str(row[3] or 'Other').strip(),   # col 4
             'probability':           _norm_prob(row[5]),                # col 6
@@ -2546,8 +2560,8 @@ def api_import_risks(project_name):
         risks = _parse_risks_from_excel(request.files['file'].read())
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-    count = db_manager.bulk_import_risks(project_name=project_name, risks=risks)
-    return jsonify({'imported': count})
+    result = db_manager.bulk_import_risks(project_name=project_name, risks=risks)
+    return jsonify(result)
 
 
 @app.route('/api/pipeline-project/<int:pipeline_project_id>/risks/import', methods=['POST'])
@@ -2558,8 +2572,8 @@ def api_import_pipeline_risks(pipeline_project_id):
         risks = _parse_risks_from_excel(request.files['file'].read())
     except Exception as e:
         return jsonify({'error': str(e)}), 400
-    count = db_manager.bulk_import_risks(pipeline_project_id=pipeline_project_id, risks=risks)
-    return jsonify({'imported': count})
+    result = db_manager.bulk_import_risks(pipeline_project_id=pipeline_project_id, risks=risks)
+    return jsonify(result)
 
 
 @app.route('/api/project/<path:project_name>/risks/export-ppt')

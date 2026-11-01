@@ -2024,7 +2024,7 @@ class DatabaseManager:
                 counts[pid] = {'open': 0, 'high': 0, 'medium': 0, 'total': 0}
             counts[pid]['total'] += 1
             st = (row['status'] or '').strip()
-            if st not in ('Closed',):
+            if st not in ('Completed', 'Canceled'):
                 counts[pid]['open'] += 1
                 rpn = self._rpn(row['probability'], row['impact'])
                 if rpn >= 16:
@@ -2050,7 +2050,7 @@ class DatabaseManager:
                 counts[pid] = {'open': 0, 'high': 0, 'medium': 0, 'total': 0}
             counts[pid]['total'] += 1
             st = (row['status'] or '').strip()
-            if st not in ('Closed',):
+            if st not in ('Completed', 'Canceled'):
                 counts[pid]['open'] += 1
                 rpn = self._rpn(row['probability'], row['impact'])
                 if rpn >= 16:
@@ -2060,9 +2060,23 @@ class DatabaseManager:
         return counts
 
     def bulk_import_risks(self, risks, project_name=None, pipeline_project_id=None):
-        """Insert a list of risk dicts. Returns count of inserted rows."""
+        """Insert or update a list of risk dicts, keyed by each row's 'id' (the Excel
+        file's Risk ID column — round-tripped from export so re-importing an exported
+        file syncs existing risks instead of duplicating every row). A risk whose id
+        doesn't match an existing row in THIS project/pipeline-project (blank, unknown,
+        or belonging to a different project) is inserted as new instead — an id is only
+        ever matched within its own scope, never across projects.
+
+        Among the rows being INSERTED as new (an id match is never treated as a
+        duplicate — it's an intentional update), any whose Risk Statement text
+        (case/whitespace-insensitive) matches either another new row earlier in the
+        same file, or a risk already sitting in this project/pipeline-project, is
+        logically a duplicate/overlap and is skipped (not inserted) rather than
+        creating a second copy.
+
+        Returns {'inserted': N, 'updated': M, 'skipped_duplicates': [{'title', 'reason'}]}."""
         if not risks:
-            return 0
+            return {'inserted': 0, 'updated': 0, 'skipped_duplicates': []}
         conn = self.get_connection()
         cursor = conn.cursor()
         project_id = None
@@ -2071,28 +2085,71 @@ class DatabaseManager:
             row = cursor.fetchone()
             if not row:
                 conn.close()
-                return 0
+                return {'inserted': 0, 'updated': 0, 'skipped_duplicates': []}
             project_id = row['id']
+
+        if project_id is not None:
+            cursor.execute('SELECT id, title FROM risks WHERE project_id = ?', (project_id,))
+        else:
+            cursor.execute('SELECT id, title FROM risks WHERE pipeline_project_id = ?', (pipeline_project_id,))
+        existing_rows = cursor.fetchall()
+        existing_ids = {row['id'] for row in existing_rows}
+        existing_titles = {(row['title'] or '').strip().lower() for row in existing_rows}
+
+        def _norm_title(t):
+            return (t or '').strip().lower()
+
         now = datetime.now().isoformat()
-        count = 0
+        inserted = 0
+        updated = 0
+        skipped_duplicates = []
+        seen_new_titles = set()
         for r in risks:
+            risk_id = r.get('id')
+            title = r.get('title') or ''
+            if risk_id is not None and risk_id in existing_ids:
+                cursor.execute('''
+                    UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?,
+                                     status=?, due_date=?, strategy=?, risk_type=?, schedule_impact_weeks=?,
+                                     outcome=?, date_closed=?, updated_at=?
+                    WHERE id=?
+                ''', (title, r.get('category','Other'),
+                      r.get('probability','Medium'), r.get('impact','Medium'),
+                      r.get('owner',''), r.get('mitigation',''),
+                      r.get('status','In Process'), r.get('due_date'),
+                      r.get('strategy','Mitigate'), r.get('risk_type','Type 1'),
+                      r.get('schedule_impact_weeks'), r.get('outcome'),
+                      r.get('date_closed'), now, risk_id))
+                updated += 1
+                continue
+
+            norm_title = _norm_title(title)
+            if norm_title and norm_title in existing_titles:
+                skipped_duplicates.append({'title': title, 'reason': 'Already exists in this project'})
+                continue
+            if norm_title and norm_title in seen_new_titles:
+                skipped_duplicates.append({'title': title, 'reason': 'Duplicate row within the uploaded file'})
+                continue
+
             cursor.execute('''
                 INSERT INTO risks (project_id, pipeline_project_id, title, category, probability, impact,
                                    owner, mitigation, status, due_date, strategy, risk_type,
                                    schedule_impact_weeks, outcome, date_closed, created_at, updated_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ''', (project_id, pipeline_project_id,
-                  r.get('title'), r.get('category','Other'),
+                  title, r.get('category','Other'),
                   r.get('probability','Medium'), r.get('impact','Medium'),
                   r.get('owner',''), r.get('mitigation',''),
-                  r.get('status','Open'), r.get('due_date'),
+                  r.get('status','In Process'), r.get('due_date'),
                   r.get('strategy','Mitigate'), r.get('risk_type','Type 1'),
                   r.get('schedule_impact_weeks'), r.get('outcome'),
                   r.get('date_closed'), now, now))
-            count += 1
+            inserted += 1
+            if norm_title:
+                seen_new_titles.add(norm_title)
         conn.commit()
         conn.close()
-        return count
+        return {'inserted': inserted, 'updated': updated, 'skipped_duplicates': skipped_duplicates}
 
     # Gate Sign-Off Management
 
