@@ -1221,11 +1221,15 @@
         /* Tree connector: a vertical trunk line stopping at mid-row (the "last
            child" corner case) plus a horizontal elbow stub pointing at the name.
            .subtask-has-next (not the last sibling) extends the trunk the full row
-           height so consecutive sub-tasks read as one continuous line. */
+           height so consecutive sub-tasks read as one continuous line.
+           left:70px must land inside the .subtask-indent gutter (row padding 12px +
+           40px # column + 8px gap + 2px name padding = 62px, +16px indent width = 78px)
+           and stop a couple px short of 78px so it never draws under the task name/
+           icons that start there — re-check this if grid-template-columns above changes. */
         .task-row.subtask::before {
             content: '';
             position: absolute;
-            left: 78px;
+            left: 70px;
             top: 0;
             width: 2px;
             height: 50%;
@@ -1237,9 +1241,9 @@
         .task-row.subtask::after {
             content: '';
             position: absolute;
-            left: 78px;
+            left: 70px;
             top: 50%;
-            width: 12px;
+            width: 10px;
             height: 2px;
             background: var(--subtask-indent-color);
         }
