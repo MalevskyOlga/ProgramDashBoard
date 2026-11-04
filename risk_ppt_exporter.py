@@ -8,7 +8,7 @@ from io import BytesIO
 from pptx import Presentation
 from pptx.util import Emu, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE as MSO
 from pptx.oxml.ns import qn
 
@@ -36,24 +36,29 @@ COL_MIT_L   = 8480000
 COL_MIT_W   = SLIDE_W - COL_MIT_L - MARGIN_R   # ≈5660400
 
 # ── Header bar ───────────────────────────────────────────────────────────────
-HDR_T = 460000
-HDR_H = 440000
+HDR_T = 420000
+HDR_H = 420000
 
-# ── Row layout ───────────────────────────────────────────────────────────────
-FIRST_ROW_T    = 920000
-ROW_H          = 1450000   # fixed row height
-ROWS_PER_SLIDE = 5
+# ── Row layout — flush under the header (no gap) and sized to fit more rows
+# per slide, so a slide reads as a dense, professional table rather than a
+# handful of rows floating in empty space ──────────────────────────────────
+FIRST_ROW_T    = HDR_T + HDR_H
+ROW_H          = 1000000
+ROWS_PER_SLIDE = 7
 
 # ── Badge ────────────────────────────────────────────────────────────────────
 BADGE_W = 900000
-BADGE_H = 310000
+BADGE_H = 300000
 
-# ── Colors ───────────────────────────────────────────────────────────────────
+# ── Colors — neutral corporate palette (no pastel tints) ─────────────────────
 NAVY        = RGBColor(0x28, 0x3A, 0x5E)
+NAVY_DARK   = RGBColor(0x1A, 0x28, 0x48)
 TEXT_DARK   = RGBColor(0x2B, 0x2B, 0x2B)
 WHITE       = RGBColor(0xFF, 0xFF, 0xFF)
-ROW_ODD     = RGBColor(0xFE, 0xF2, 0xF2)   # light pink
-ROW_EVEN    = RGBColor(0xFF, 0xFB, 0xF0)   # light cream
+ROW_ODD     = RGBColor(0xF4, 0xF6, 0xF9)   # subtle cool gray
+ROW_EVEN    = WHITE
+GRID_LINE   = RGBColor(0xDC, 0xE2, 0xEA)
+MUTED       = RGBColor(0x94, 0xA3, 0xB8)
 
 _BADGE_MAP = {
     'very high': (RGBColor(0x99, 0x1B, 0x1B), 'VERY HIGH'),
@@ -94,11 +99,17 @@ def _rect(slide, left, top, width, height, fill_rgb):
 
 def _textbox(slide, left, top, width, height, text,
              size_pt=10, bold=False, color=TEXT_DARK,
-             font='Arial', align=PP_ALIGN.LEFT, wrap=True):
-    """Add a text box supporting multi-line text (\\n split)."""
+             font='Arial', align=PP_ALIGN.LEFT, wrap=True, anchor_middle=True):
+    """Add a text box supporting multi-line text (\\n split). Vertically centers
+    its text within (left, top, width, height) by default and uses zero internal
+    margins, so callers can pass the full row/cell box without leftover padding."""
     txb = slide.shapes.add_textbox(Emu(left), Emu(top), Emu(width), Emu(height))
     tf  = txb.text_frame
     tf.word_wrap = wrap
+    tf.margin_left = tf.margin_right = Emu(0)
+    tf.margin_top = tf.margin_bottom = Emu(0)
+    if anchor_middle:
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
     lines = str(text or '').split('\n')
     for i, line in enumerate(lines):
@@ -123,6 +134,9 @@ def _badge(slide, left, top, label, fill_rgb):
 
     tf = sp.text_frame
     tf.word_wrap = False
+    tf.margin_left = tf.margin_right = Emu(0)
+    tf.margin_top = tf.margin_bottom = Emu(0)
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     p  = tf.paragraphs[0]
     p.alignment = PP_ALIGN.CENTER
     run = p.add_run()
@@ -143,25 +157,23 @@ def _build_slide(prs, project_name, risks_batch, slide_num, total_slides):
     _textbox(slide, 505888, 18000, 13167360, HDR_T - 30000,
              f'{project_name} — Top Risks{suffix}',
              size_pt=16, bold=True, wrap=False,
-             color=RGBColor(0x1B, 0x2A, 0x4A), font='Arial Black')
+             color=RGBColor(0x1B, 0x2A, 0x4A), font='Arial', anchor_middle=False)
 
     # ── Header bar ───────────────────────────────────────────────────────────
     _rect(slide, MARGIN_L, HDR_T, CONTENT_W, HDR_H, NAVY)
 
-    hdr_ty = HDR_T + 70000
-    hdr_th = HDR_H - 80000
-    _textbox(slide, COL_RISK_L + 40000, hdr_ty, COL_RISK_W, hdr_th,
+    _textbox(slide, COL_RISK_L + 40000, HDR_T, COL_RISK_W, HDR_H,
              'Risk', size_pt=12, bold=True, color=WHITE)
-    _textbox(slide, COL_PROB_L, hdr_ty, COL_PROB_W, hdr_th,
+    _textbox(slide, COL_PROB_L, HDR_T, COL_PROB_W, HDR_H,
              'Probability', size_pt=10, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-    _textbox(slide, COL_IMP_L, hdr_ty, COL_IMP_W, hdr_th,
+    _textbox(slide, COL_IMP_L, HDR_T, COL_IMP_W, HDR_H,
              'Impact', size_pt=10, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-    _textbox(slide, COL_MIT_L, hdr_ty, COL_MIT_W, hdr_th,
+    _textbox(slide, COL_MIT_L, HDR_T, COL_MIT_W, HDR_H,
              'Mitigation / Action Plan', size_pt=12, bold=True, color=WHITE)
 
     # ── Divider lines (thin navy line between columns in header) ─────────────
     for lx in (COL_PROB_L - 20000, COL_IMP_L - 20000, COL_MIT_L - 20000):
-        _rect(slide, lx, HDR_T, 18000, HDR_H, RGBColor(0x1A, 0x28, 0x48))
+        _rect(slide, lx, HDR_T, 18000, HDR_H, NAVY_DARK)
 
     # ── Risk rows ─────────────────────────────────────────────────────────────
     row_top = FIRST_ROW_T
@@ -173,29 +185,37 @@ def _build_slide(prs, project_name, risks_batch, slide_num, total_slides):
 
         # Thin column separator lines
         for lx in (COL_PROB_L - 20000, COL_IMP_L - 20000, COL_MIT_L - 20000):
-            _rect(slide, lx, row_top, 12000, ROW_H, RGBColor(0xE2, 0xE8, 0xF0))
+            _rect(slide, lx, row_top, 12000, ROW_H, GRID_LINE)
 
-        # Risk number (small) + title
-        _textbox(slide, COL_RISK_L, row_top + 60000, 180000, ROW_H - 80000,
-                 f'{i+1}', size_pt=8, color=RGBColor(0x94, 0xA3, 0xB8))
-        _textbox(slide, COL_RISK_L + 200000, row_top + 50000, COL_RISK_W - 220000, ROW_H - 80000,
+        # Risk number (small) + title — vertically centered in the row
+        _textbox(slide, COL_RISK_L, row_top, 180000, ROW_H,
+                 f'{i+1}', size_pt=8, color=MUTED)
+        _textbox(slide, COL_RISK_L + 200000, row_top, COL_RISK_W - 240000, ROW_H,
                  risk.get('title', ''), size_pt=9.5, color=TEXT_DARK)
 
-        # Probability badge (top-aligned with text)
-        badge_top = row_top + 55000
+        # Probability / Impact badges — centered in the row
+        badge_top = row_top + (ROW_H - BADGE_H) // 2
         prob_rgb, prob_lbl = _badge_info(risk.get('probability', 'Medium'))
         _badge(slide, BADGE_PROB_L, badge_top, prob_lbl, prob_rgb)
-
-        # Impact badge
         imp_rgb, imp_lbl = _badge_info(risk.get('impact', 'Medium'))
         _badge(slide, BADGE_IMP_L, badge_top, imp_lbl, imp_rgb)
 
         # Mitigation / Action Plan text
         mit = risk.get('mitigation') or ''
-        _textbox(slide, COL_MIT_L + 40000, row_top + 50000, COL_MIT_W - 60000, ROW_H - 80000,
+        _textbox(slide, COL_MIT_L + 40000, row_top, COL_MIT_W - 80000, ROW_H,
                  mit, size_pt=9, color=TEXT_DARK)
 
         row_top += ROW_H
+
+    # ── Outer border around the whole table — drawn last so it sits on top of
+    # the row fills instead of being hidden underneath them; gives the table a
+    # finished, boxed look instead of rows floating on a bare slide ──────────
+    table_h = HDR_H + len(risks_batch) * ROW_H
+    border = slide.shapes.add_shape(MSO.RECTANGLE, Emu(MARGIN_L), Emu(HDR_T), Emu(CONTENT_W), Emu(table_h))
+    border.fill.background()
+    border.line.color.rgb = NAVY
+    border.line.width = Pt(1)
+    _strip_style(border)
 
     return slide
 

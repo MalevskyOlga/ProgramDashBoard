@@ -45,14 +45,16 @@
     --color-dep-successor:        #e65100;
 
     /* Row highlights */
-    --row-subtask-bg:              #fafbfc;
+    --row-subtask-bg:              #f2f6f3;
     --row-rework-bg:               #fff8e1;  --row-rework-border: #ffc107;
     --row-gate-passed-bg:          #e8f5e9;  --row-gate-passed-border: #4caf50;
     --row-gate-passed-rework-bg:   #fff3cd;  --row-gate-passed-rework-border: #ff9800;
 
-    /* Functional, non-decorative — do not fold into status/neutral tokens */
-    --subtask-caret-color:  #c5d6c6;
-    --subtask-indent-color: #1b3d1c;
+    /* Functional, non-decorative — do not fold into status/neutral tokens.
+       Caret reuses the brand accent so it reads as clearly interactive;
+       the pale green moved here (was previously mislabeled under -caret-). */
+    --subtask-caret-color:  var(--color-accent);
+    --subtask-indent-color: #c5d6c6;
 
     /* Type / spacing / radius / shadow */
     --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

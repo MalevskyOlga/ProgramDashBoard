@@ -134,10 +134,35 @@ class GanttPptExporter:
     FOOT_H    = 0.20
 
     def export_gantt(self, project, tasks, output_folder, save_path=None,
-                     title_prefix='', filename_override=None):
+                     title_prefix='', filename_override=None,
+                     phases=None, macro_only=False, date_from=None, date_to=None):
         try:
             # Filter to active tasks only
             tasks = [t for t in tasks if str(t.get('status', '')).strip() in ACTIVE_STATUSES]
+
+            # ── PM-selected export filters ────────────────────────────────────
+            if phases:
+                phase_set = set(phases)
+                tasks = [t for t in tasks if (t.get('phase') or 'Other').strip() in phase_set]
+            if macro_only:
+                tasks = [t for t in tasks if not t.get('parent_id')]
+
+            date_from_d = _parse_date(date_from) if date_from else None
+            date_to_d   = _parse_date(date_to) if date_to else None
+            if date_from_d or date_to_d:
+                def _in_window(t):
+                    s = _parse_date(t.get('start_date'))
+                    e = _parse_date(t.get('end_date'))
+                    if not s and not e:
+                        return False
+                    s, e = (s or e), (e or s)
+                    if date_from_d and e < date_from_d:
+                        return False
+                    if date_to_d and s > date_to_d:
+                        return False
+                    return True
+                tasks = [t for t in tasks if _in_window(t)]
+
             today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
             # ── Organise tasks by phase ──────────────────────────────────────
@@ -160,8 +185,8 @@ class GanttPptExporter:
             if not all_dates:
                 return None
 
-            min_d = min(all_dates)
-            max_d = max(all_dates)
+            min_d = date_from_d or min(all_dates)
+            max_d = date_to_d or max(all_dates)
             proj_start = datetime(min_d.year, min_d.month, 1)
             end_m = max_d.month + 1
             end_y = max_d.year

@@ -1923,7 +1923,8 @@ class DatabaseManager:
         return rows
 
     def create_risk(self, project_name, title, category, probability, impact, owner, mitigation, status, due_date,
-                    strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None):
+                    strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None,
+                    date_added=None):
         conn = self.get_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM projects WHERE name = ?', (project_name,))
@@ -1933,28 +1934,50 @@ class DatabaseManager:
             return None
         project_id = row['id']
         now = datetime.now().isoformat()
+        created_at = self._normalize_date_added(date_added) or now
         cursor.execute('''
             INSERT INTO risks (project_id, title, category, probability, impact, owner, mitigation, status, due_date,
                                strategy, risk_type, schedule_impact_weeks, outcome, date_closed, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (project_id, title, category, probability, impact, owner, mitigation, status, due_date,
-              strategy, risk_type, schedule_impact_weeks, outcome, date_closed, now, now))
+              strategy, risk_type, schedule_impact_weeks, outcome, date_closed, created_at, now))
         risk_id = cursor.lastrowid
         conn.commit()
         conn.close()
         return risk_id
 
+    @staticmethod
+    def _normalize_date_added(date_added):
+        """A bare 'YYYY-MM-DD' (from a date input or Excel) sorts correctly against
+        full created_at timestamps once padded with a time component."""
+        if not date_added:
+            return None
+        date_added = str(date_added).strip()
+        if len(date_added) == 10:
+            return date_added + 'T00:00:00'
+        return date_added
+
     def update_risk(self, risk_id, title, category, probability, impact, owner, mitigation, status, due_date,
-                    strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None):
+                    strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None,
+                    date_added=None):
         conn = self.get_connection()
         cursor = conn.cursor()
         now = datetime.now().isoformat()
-        cursor.execute('''
-            UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?, status=?, due_date=?,
-                             strategy=?, risk_type=?, schedule_impact_weeks=?, outcome=?, date_closed=?, updated_at=?
-            WHERE id=?
-        ''', (title, category, probability, impact, owner, mitigation, status, due_date,
-              strategy, risk_type, schedule_impact_weeks, outcome, date_closed, now, risk_id))
+        created_at = self._normalize_date_added(date_added)
+        if created_at:
+            cursor.execute('''
+                UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?, status=?, due_date=?,
+                                 strategy=?, risk_type=?, schedule_impact_weeks=?, outcome=?, date_closed=?, created_at=?, updated_at=?
+                WHERE id=?
+            ''', (title, category, probability, impact, owner, mitigation, status, due_date,
+                  strategy, risk_type, schedule_impact_weeks, outcome, date_closed, created_at, now, risk_id))
+        else:
+            cursor.execute('''
+                UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?, status=?, due_date=?,
+                                 strategy=?, risk_type=?, schedule_impact_weeks=?, outcome=?, date_closed=?, updated_at=?
+                WHERE id=?
+            ''', (title, category, probability, impact, owner, mitigation, status, due_date,
+                  strategy, risk_type, schedule_impact_weeks, outcome, date_closed, now, risk_id))
         success = cursor.rowcount > 0
         conn.commit()
         conn.close()
@@ -1981,16 +2004,18 @@ class DatabaseManager:
         return rows
 
     def create_pipeline_risk(self, pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date,
-                             strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None):
+                             strategy='Mitigate', risk_type='Type 1', schedule_impact_weeks=None, outcome=None, date_closed=None,
+                             date_added=None):
         conn = self.get_connection()
         cursor = conn.cursor()
         now = datetime.now().isoformat()
+        created_at = self._normalize_date_added(date_added) or now
         cursor.execute('''
             INSERT INTO risks (pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date,
                                strategy, risk_type, schedule_impact_weeks, outcome, date_closed, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (pipeline_project_id, title, category, probability, impact, owner, mitigation, status, due_date,
-              strategy, risk_type, schedule_impact_weeks, outcome, date_closed, now, now))
+              strategy, risk_type, schedule_impact_weeks, outcome, date_closed, created_at, now))
         risk_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -2107,19 +2132,34 @@ class DatabaseManager:
         for r in risks:
             risk_id = r.get('id')
             title = r.get('title') or ''
+            date_added = self._normalize_date_added(r.get('date_added'))
             if risk_id is not None and risk_id in existing_ids:
-                cursor.execute('''
-                    UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?,
-                                     status=?, due_date=?, strategy=?, risk_type=?, schedule_impact_weeks=?,
-                                     outcome=?, date_closed=?, updated_at=?
-                    WHERE id=?
-                ''', (title, r.get('category','Other'),
-                      r.get('probability','Medium'), r.get('impact','Medium'),
-                      r.get('owner',''), r.get('mitigation',''),
-                      r.get('status','In Process'), r.get('due_date'),
-                      r.get('strategy','Mitigate'), r.get('risk_type','Type 1'),
-                      r.get('schedule_impact_weeks'), r.get('outcome'),
-                      r.get('date_closed'), now, risk_id))
+                if date_added:
+                    cursor.execute('''
+                        UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?,
+                                         status=?, due_date=?, strategy=?, risk_type=?, schedule_impact_weeks=?,
+                                         outcome=?, date_closed=?, created_at=?, updated_at=?
+                        WHERE id=?
+                    ''', (title, r.get('category','Other'),
+                          r.get('probability','Medium'), r.get('impact','Medium'),
+                          r.get('owner',''), r.get('mitigation',''),
+                          r.get('status','In Process'), r.get('due_date'),
+                          r.get('strategy','Mitigate'), r.get('risk_type','Type 1'),
+                          r.get('schedule_impact_weeks'), r.get('outcome'),
+                          r.get('date_closed'), date_added, now, risk_id))
+                else:
+                    cursor.execute('''
+                        UPDATE risks SET title=?, category=?, probability=?, impact=?, owner=?, mitigation=?,
+                                         status=?, due_date=?, strategy=?, risk_type=?, schedule_impact_weeks=?,
+                                         outcome=?, date_closed=?, updated_at=?
+                        WHERE id=?
+                    ''', (title, r.get('category','Other'),
+                          r.get('probability','Medium'), r.get('impact','Medium'),
+                          r.get('owner',''), r.get('mitigation',''),
+                          r.get('status','In Process'), r.get('due_date'),
+                          r.get('strategy','Mitigate'), r.get('risk_type','Type 1'),
+                          r.get('schedule_impact_weeks'), r.get('outcome'),
+                          r.get('date_closed'), now, risk_id))
                 updated += 1
                 continue
 
@@ -2143,7 +2183,7 @@ class DatabaseManager:
                   r.get('status','In Process'), r.get('due_date'),
                   r.get('strategy','Mitigate'), r.get('risk_type','Type 1'),
                   r.get('schedule_impact_weeks'), r.get('outcome'),
-                  r.get('date_closed'), now, now))
+                  r.get('date_closed'), date_added or now, now))
             inserted += 1
             if norm_title:
                 seen_new_titles.add(norm_title)

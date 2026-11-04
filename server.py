@@ -1202,10 +1202,16 @@ def api_export_gantt_ppt(project_name):
     ]
 
     exporter = GanttPptExporter()
-    ppt_path = exporter.export_gantt(project, tasks, config.EXCEL_OUTPUT_FOLDER, save_path)
+    ppt_path = exporter.export_gantt(
+        project, tasks, config.EXCEL_OUTPUT_FOLDER, save_path,
+        phases=data.get('phases') or None,
+        macro_only=bool(data.get('macro_only')),
+        date_from=data.get('date_from') or None,
+        date_to=data.get('date_to') or None,
+    )
 
     if not ppt_path or not os.path.exists(ppt_path):
-        return jsonify({'error': 'Export failed'}), 500
+        return jsonify({'error': 'Export failed — no tasks match the selected filters'}), 500
 
     if save_path:
         return jsonify({'success': True, 'path': ppt_path})
@@ -2367,6 +2373,7 @@ def api_create_risk(project_name):
         schedule_impact_weeks=data.get('schedule_impact_weeks') or None,
         outcome=data.get('outcome', '').strip() or None,
         date_closed=data.get('date_closed') or None,
+        date_added=data.get('date_added') or None,
     )
     if risk_id is None:
         return jsonify({'error': 'Project not found'}), 404
@@ -2400,6 +2407,7 @@ def api_patch_risk(risk_id):
         schedule_impact_weeks=merged.get('schedule_impact_weeks') or None,
         outcome=(merged.get('outcome') or '').strip() or None,
         date_closed=merged.get('date_closed') or None,
+        date_added=merged.get('date_added') or None,
     )
     return jsonify({'success': True}) if success else (jsonify({'error': 'Update failed'}), 500)
 
@@ -2422,6 +2430,7 @@ def api_update_risk(risk_id):
         schedule_impact_weeks=data.get('schedule_impact_weeks') or None,
         outcome=data.get('outcome', '').strip() or None,
         date_closed=data.get('date_closed') or None,
+        date_added=data.get('date_added') or None,
     )
     if not success:
         return jsonify({'error': 'Risk not found'}), 404
@@ -2472,6 +2481,7 @@ def api_create_pipeline_risk(pipeline_project_id):
         schedule_impact_weeks=data.get('schedule_impact_weeks') or None,
         outcome=data.get('outcome', '').strip() or None,
         date_closed=data.get('date_closed') or None,
+        date_added=data.get('date_added') or None,
     )
     return jsonify({'id': risk_id}), 201
 
@@ -2482,9 +2492,9 @@ def _parse_risks_from_excel(file_bytes):
     """Parse risks from the standard Excel Risk Register template (Risk Input sheet).
     Returns list of risk dicts ready for DB insertion/update.
     Excel columns (1-based): 2=Risk ID (matches an existing risk for update instead of
-    inserting a duplicate — blank/unmatched means "new risk"), 4=Category, 5=Risk Statement,
-    6=Prob, 7=Impact, 9=Sched Impact(wks), 10=Risk Type, 12=Strategy, 13=Action Plan,
-    14=Owner, 15=Status, 16=Outcome, 17=Date Closed. Data starts row 5.
+    inserting a duplicate — blank/unmatched means "new risk"), 3=Date Added, 4=Category,
+    5=Risk Statement, 6=Prob, 7=Impact, 9=Sched Impact(wks), 10=Risk Type, 12=Strategy,
+    13=Action Plan, 14=Owner, 15=Status, 16=Outcome, 17=Date Closed. Data starts row 5.
     """
     wb = openpyxl.load_workbook(BytesIO(file_bytes), data_only=True)
     sheet_name = next((s for s in wb.sheetnames if 'risk input' in s.lower()), None)
@@ -2535,6 +2545,7 @@ def _parse_risks_from_excel(file_bytes):
 
         risks.append({
             'id':                    _norm_id(row[1]),                   # col 2
+            'date_added':            _norm_date(row[2]),                 # col 3
             'title':                 title,
             'category':              str(row[3] or 'Other').strip(),   # col 4
             'probability':           _norm_prob(row[5]),                # col 6

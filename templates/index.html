@@ -5719,9 +5719,12 @@
                     <option>Type 1</option><option>Type 2</option><option>Type 3</option>
                 </select>
             </div>
-            <div>
+            <div style="position:relative;">
                 <label style="font-size:0.78em;font-weight:600;color:var(--color-text);">Owner</label>
-                <input id="riskOwner" type="text" placeholder="Name" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid var(--color-border);border-radius:4px;font-size:0.84em;box-sizing:border-box;">
+                <input id="riskOwner" type="text" placeholder="Type or pick from discipline map…" autocomplete="off"
+                    oninput="_filterRiskOwners(this)" onfocus="_filterRiskOwners(this)" onblur="_hideRiskOwnerDropdown()"
+                    style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid var(--color-border);border-radius:4px;font-size:0.84em;box-sizing:border-box;">
+                <div id="riskOwnerDropdown" style="display:none;position:absolute;z-index:20;top:100%;left:0;right:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:4px;max-height:160px;overflow-y:auto;box-shadow:0 4px 10px rgba(0,0,0,0.15);"></div>
             </div>
             <!-- Row 3: prob, impact, sched impact, status -->
             <div>
@@ -5746,7 +5749,11 @@
                     <option>In Process</option><option>Assigned</option><option>Canceled</option><option>Completed</option>
                 </select>
             </div>
-            <!-- Row 4: due date, date closed -->
+            <!-- Row 4: date added, due date, date closed -->
+            <div>
+                <label style="font-size:0.78em;font-weight:600;color:var(--color-text);">Date Added</label>
+                <input id="riskDateAdded" type="date" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid var(--color-border);border-radius:4px;font-size:0.84em;box-sizing:border-box;">
+            </div>
             <div>
                 <label style="font-size:0.78em;font-weight:600;color:var(--color-text);">Due Date</label>
                 <input id="riskDueDate" type="date" style="width:100%;margin-top:2px;padding:5px 8px;border:1px solid var(--color-border);border-radius:4px;font-size:0.84em;box-sizing:border-box;">
@@ -5790,6 +5797,45 @@ let _projectRiskCountsByName = {};
     let _riskMode = 'gantt';
     let _riskProjectName = null;
     let _riskPipelineId  = null;
+    let _riskOwners = [];  // [{owner_name, team_name}] from the discipline map
+    let _riskOwnersPromise = null;
+
+    function _ensureRiskOwnersLoaded() {
+        if (!_riskOwnersPromise) {
+            _riskOwnersPromise = fetch('/api/known-owners').then(r => r.json()).then(data => {
+                _riskOwners = data || [];
+                return _riskOwners;
+            }).catch(() => { _riskOwnersPromise = null; return []; });
+        }
+        return _riskOwnersPromise;
+    }
+
+    window._filterRiskOwners = async function(input) {
+        await _ensureRiskOwnersLoaded();
+        const val = input.value.trim().toLowerCase();
+        const dd = document.getElementById('riskOwnerDropdown');
+        const matches = val ? _riskOwners.filter(o => o.owner_name.toLowerCase().includes(val)) : _riskOwners;
+        if (!matches.length) { dd.style.display = 'none'; return; }
+        dd.innerHTML = matches.slice(0, 20).map(o => `
+            <div onmousedown="_pickRiskOwner('${escapeJs(o.owner_name)}')"
+                 onmouseover="this.style.background='var(--color-surface-alt)'" onmouseout="this.style.background='none'"
+                 style="padding:5px 8px;cursor:pointer;font-size:0.84em;">
+                ${escapeHtml(o.owner_name)}${o.team_name ? ` <span style="color:var(--color-text-muted);font-size:0.9em;">— ${escapeHtml(o.team_name)}</span>` : ''}
+            </div>`).join('');
+        dd.style.display = 'block';
+    };
+
+    window._pickRiskOwner = function(name) {
+        document.getElementById('riskOwner').value = name;
+        _hideRiskOwnerDropdown();
+    };
+
+    window._hideRiskOwnerDropdown = function() {
+        setTimeout(() => {
+            const dd = document.getElementById('riskOwnerDropdown');
+            if (dd) dd.style.display = 'none';
+        }, 150);
+    };
 
     const SCORE = {Low:2, Medium:3, High:4, 'Very High':5};
     function rpn(p, i)    { return (SCORE[p]||3) * (SCORE[i]||3); }
@@ -5813,6 +5859,7 @@ let _projectRiskCountsByName = {};
         panel.style.display = 'flex';
         panel.style.flexDirection = 'column';
         cancelRiskForm();
+        _ensureRiskOwnersLoaded();
     }
 
     window.openRiskPanel = async function(projectName) {
@@ -5853,6 +5900,7 @@ let _projectRiskCountsByName = {};
         document.getElementById('riskImpact').value        = risk ? (risk.impact || 'Medium') : 'Medium';
         document.getElementById('riskSchedImpact').value   = risk ? (risk.schedule_impact_weeks ?? '') : '';
         document.getElementById('riskStatus').value        = risk ? (risk.status || 'In Process') : 'In Process';
+        document.getElementById('riskDateAdded').value     = risk ? (risk.created_at || '').substring(0,10) : new Date().toISOString().substring(0,10);
         document.getElementById('riskDueDate').value       = risk ? (risk.due_date || '') : '';
         document.getElementById('riskDateClosed').value    = risk ? (risk.date_closed || '') : '';
         document.getElementById('riskMitigation').value    = risk ? (risk.mitigation || '') : '';
@@ -5883,6 +5931,7 @@ let _projectRiskCountsByName = {};
             impact:                 document.getElementById('riskImpact').value,
             schedule_impact_weeks:  schedVal !== '' ? parseFloat(schedVal) : null,
             status:                 document.getElementById('riskStatus').value,
+            date_added:             document.getElementById('riskDateAdded').value || null,
             due_date:               document.getElementById('riskDueDate').value || null,
             date_closed:            document.getElementById('riskDateClosed').value || null,
             mitigation:             document.getElementById('riskMitigation').value.trim(),

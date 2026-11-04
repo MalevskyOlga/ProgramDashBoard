@@ -1180,34 +1180,68 @@
         .task-row.tailed-out { opacity: 0.6; }
         .task-row.tailed-out .task-name { text-decoration: line-through; color: var(--color-text-muted); }
 
-        /* Sub-tasks (one level deep): indented under their parent */
+        /* Macro tasks that currently have sub-tasks: bold name so the hierarchy is
+           scannable at a glance. A top-level task with no sub-tasks (yet) stays at
+           normal weight — bold is reserved for "this row is actually a parent". */
+        .task-row.has-subtasks .task-name {
+            font-weight: 700;
+        }
+
+        /* Sub-tasks (one level deep): indented under their parent, with a tree
+           connector (trunk + elbow) drawn from the macro task down into each
+           sub-task row — see .task-row.subtask::before/::after below. */
         .task-row.subtask {
+            position: relative;
             background: var(--row-subtask-bg);
         }
         .task-row.subtask:hover {
             background: #eef6ef;
         }
         .task-row.subtask .task-name {
-            padding-left: 4px;
+            padding-left: 2px;
             color: var(--color-text);
         }
         .subtask-caret {
             display: inline-block;
-            width: 14px;
+            width: 20px;
             cursor: pointer;
-            color: #2c5f2d;
-            font-size: 0.9em;
+            color: var(--subtask-caret-color);
+            font-size: 1.15em;
             user-select: none;
             margin-right: 2px;
         }
-        .subtask-caret:hover { color: #1b3d1c; }
+        .subtask-caret:hover { color: var(--color-accent-hover); }
         .subtask-indent {
             display: inline-block;
-            width: 18px;
-            border-left: 2px solid #c5d6c6;
-            margin: 0 6px 0 4px;
+            width: 16px;
+            margin-right: 4px;
             height: 1em;
             vertical-align: middle;
+        }
+        /* Tree connector: a vertical trunk line stopping at mid-row (the "last
+           child" corner case) plus a horizontal elbow stub pointing at the name.
+           .subtask-has-next (not the last sibling) extends the trunk the full row
+           height so consecutive sub-tasks read as one continuous line. */
+        .task-row.subtask::before {
+            content: '';
+            position: absolute;
+            left: 78px;
+            top: 0;
+            width: 2px;
+            height: 50%;
+            background: var(--subtask-indent-color);
+        }
+        .task-row.subtask.subtask-has-next::before {
+            height: 100%;
+        }
+        .task-row.subtask::after {
+            content: '';
+            position: absolute;
+            left: 78px;
+            top: 50%;
+            width: 12px;
+            height: 2px;
+            background: var(--subtask-indent-color);
         }
         .timeline-task-row.subtask {
             background: rgba(0, 0, 0, 0.015);
@@ -1998,6 +2032,7 @@
         <a href="/" class="btn btn-secondary" style="text-decoration: none;">🏠 Main Dashboard</a>
         {% if not is_viewer %}<button class="btn btn-primary" onclick="openAddTaskModal()">➕ Add New Task</button>{% endif %}
         <button class="btn btn-danger" onclick="showCriticalPath()">🔴 Show Critical Path</button>
+        <button class="btn btn-secondary" onclick="openDepMap()">🗺 Dependency Map</button>
         <div class="export-dropdown" id="exportDropdownWrapper">
             <button class="export-dropdown-toggle" onclick="toggleExportDropdown(event)" title="Export options">
                 📤 Export <span class="caret">▾</span>
@@ -2015,7 +2050,6 @@
             <div class="more-dropdown-menu" id="moreDropdownMenu">
                 <button onclick="openGateChangeLog(); closeMoreDropdown()">📋 Gate Change Log</button>
                 <button id="btnLongestChain" onclick="showLongestChain(); closeMoreDropdown()">🔗 Longest Chain</button>
-                <button onclick="openDepMap(); closeMoreDropdown()">🗺 Dependency Map</button>
                 <div class="more-divider"></div>
                 {% if not is_viewer %}<button id="whatIfBtn" onclick="toggleWhatIf(); closeMoreDropdown()" title="Try date changes without saving — discard or commit when done">🧪 What-If</button>{% endif %}
                 <button onclick="refreshDashboard(); closeMoreDropdown()" title="Clear cache and reload">🔄 Force Refresh</button>
@@ -3168,8 +3202,46 @@
             return ordered;
         }
 
+        // Assign WBS-style row numbers: top-level tasks get plain sequential integers
+        // (1, 2, 3...), and each one's sub-tasks get "<parent>.<n>" (2.1, 2.2, ...)
+        // nested under it. Requires `list` to already be hierarchy-ordered (each
+        // parent immediately followed by its own children) via orderTasksByHierarchy().
+        // An orphaned sub-task (parent missing/filtered, caught by that function's own
+        // safety net) falls back to a flat number instead of attaching to the wrong
+        // parent's WBS number.
+        function assignRowNumbers(list) {
+            let topLevelCounter = 0;
+            let lastTopLevelId = null;
+            let lastTopLevelNum = null;
+            let childCounter = 0;
+            list.forEach(t => {
+                if (!t.parent_id) {
+                    topLevelCounter += 1;
+                    lastTopLevelId = t.id;
+                    lastTopLevelNum = topLevelCounter;
+                    childCounter = 0;
+                    t.rowNum = topLevelCounter;
+                } else if (t.parent_id === lastTopLevelId) {
+                    childCounter += 1;
+                    t.rowNum = `${lastTopLevelNum}.${childCounter}`;
+                } else {
+                    topLevelCounter += 1;
+                    t.rowNum = topLevelCounter;
+                }
+            });
+        }
+
         function hasSubtasks(taskId) {
             return tasks.some(t => t.parent_id === taskId);
+        }
+
+        // Is `task` the last (visually lowest) sub-task among its siblings? Used to
+        // decide whether a sub-task row's tree-connector line continues down into the
+        // next row, or stops here (the "corner" / last-child case).
+        function isLastChild(task) {
+            if (!task.parent_id) return false;
+            const siblings = tasks.filter(t => t.parent_id === task.parent_id);
+            return siblings.length > 0 && siblings[siblings.length - 1].id === task.id;
         }
 
         function toggleSubtasks(taskId) {
@@ -3320,7 +3392,7 @@
                 document.getElementById('reparent-picker-popup')?.remove();
                 document.removeEventListener('click', _dismissReparentPicker);
                 tasks = orderTasksByHierarchy(tasks);
-                tasks.forEach((t, i) => { t.rowNum = i + 1; });
+                assignRowNumbers(tasks);
                 applyFilters();
                 showNotification('✓ Task assigned to macro task', 'success');
             } catch (error) {
@@ -3343,7 +3415,7 @@
                 }
                 task.parent_id = null;
                 tasks = orderTasksByHierarchy(tasks);
-                tasks.forEach((t, i) => { t.rowNum = i + 1; });
+                assignRowNumbers(tasks);
                 applyFilters();
                 showNotification('✓ Task promoted to top-level', 'success');
             } catch (error) {
@@ -3417,9 +3489,9 @@
                 updateTailedOutBtn();
                 
                 sortTasksChronologically();
-                // Assign stable sequential row numbers after hierarchy ordering (so a
-                // sub-task's row number always follows its parent's).
-                tasks.forEach((t, i) => { t.rowNum = i + 1; });
+                // Assign WBS-style row numbers after hierarchy ordering (so a sub-task
+                // gets "<parent>.<n>" nested under its macro task's own number).
+                assignRowNumbers(tasks);
                 console.log('✓ Tasks loaded from API');
                 console.log('✓ Loaded', tasks.length, 'tasks');
 
@@ -6405,7 +6477,7 @@
                     const gatePassedAfterRework = signOff && signOff.status === 'Passed' && !!signOff.rework_sign_off_date;
                     const gatePassed = signOff && signOff.status === 'Passed' && !gatePassedAfterRework;
 
-                    const rowClass = `task-row ${isSub ? 'subtask' : ''} ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${isDisplayCritical(task) ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
+                    const rowClass = `task-row ${isSub ? 'subtask' : ''} ${isParent ? 'has-subtasks' : ''} ${isSub && !isLastChild(task) ? 'subtask-has-next' : ''} ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${isDisplayCritical(task) ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
 
                     const statusClass = task.status.toLowerCase().replace(' ', '-');
                     const statusLabel = task.status === 'In Process' ? 'In Process' : task.status;
@@ -7793,7 +7865,7 @@
                     // directly under its parent if it's a sub-task, and (b) immediately gets
                     // a real "#" value instead of showing "undefined" until the next reload.
                     tasks = orderTasksByHierarchy(tasks);
-                    tasks.forEach((t, i) => { t.rowNum = i + 1; });
+                    assignRowNumbers(tasks);
                     showNotification('✓ Task added successfully!', 'success');
 
                     // Sync dependencies for new task
@@ -9620,21 +9692,53 @@
     <div class="modal" id="ganttPptModal" style="display:none;">
         <div class="modal-content" style="max-width:900px;width:95vw;">
             <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
-                <span>📑 Gantt PPT Preview — All Tasks</span>
+                <span>📑 Gantt PPT Export</span>
                 <button onclick="closeGanttPptModal()" style="background:none;border:none;color:white;font-size:1.4em;cursor:pointer;line-height:1;">×</button>
             </div>
             <div style="padding:16px 20px 0;">
+                <!-- Filter what to include -->
+                <div style="background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:6px;padding:12px 14px;margin-bottom:14px;">
+                    <div style="font-weight:600;margin-bottom:8px;font-size:0.9em;">What to include</div>
+
+                    <div style="margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                            <label style="font-size:0.78em;font-weight:600;color:var(--color-text-muted);">Gates / Phases</label>
+                            <span>
+                                <button type="button" onclick="_setAllPptPhases(true)" style="background:none;border:none;color:var(--color-accent);font-size:0.78em;cursor:pointer;text-decoration:underline;padding:0 4px;">All</button>
+                                <button type="button" onclick="_setAllPptPhases(false)" style="background:none;border:none;color:var(--color-accent);font-size:0.78em;cursor:pointer;text-decoration:underline;padding:0 4px;">None</button>
+                            </span>
+                        </div>
+                        <div id="pptPhaseChecklist" style="line-height:1.9;"></div>
+                    </div>
+
+                    <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;">
+                        <label style="display:flex;align-items:center;gap:6px;font-size:0.85em;font-weight:normal;cursor:pointer;">
+                            <input type="checkbox" id="pptMacroOnly" onchange="_drawGanttPptPreview()">
+                            Macro tasks only (hide sub-tasks)
+                        </label>
+                        <div>
+                            <label style="font-size:0.78em;font-weight:600;color:var(--color-text-muted);display:block;">From</label>
+                            <input type="date" id="pptDateFrom" onchange="_drawGanttPptPreview()" style="padding:4px 6px;border:1px solid var(--color-border);border-radius:4px;font-size:0.85em;">
+                        </div>
+                        <div>
+                            <label style="font-size:0.78em;font-weight:600;color:var(--color-text-muted);display:block;">To</label>
+                            <input type="date" id="pptDateTo" onchange="_drawGanttPptPreview()" style="padding:4px 6px;border:1px solid var(--color-border);border-radius:4px;font-size:0.85em;">
+                        </div>
+                        <button type="button" onclick="_resetPptDateRange()" style="background:none;border:none;color:var(--color-accent);font-size:0.82em;cursor:pointer;text-decoration:underline;padding:0 0 6px;">Full project span</button>
+                    </div>
+                </div>
+
                 <!-- Canvas preview -->
                 <div style="border:1px solid var(--color-border);border-radius:6px;overflow:hidden;background:#f9f9f9;margin-bottom:14px;">
                     <canvas id="ganttPptCanvas" style="display:block;width:100%;"></canvas>
                 </div>
                 <p style="font-size:0.82em;color:var(--color-text-muted);margin-bottom:14px;">
-                    Preview shows <strong id="pptTaskCount">—</strong> active tasks (Planned + In Process + On Hold + Review) across all phases.
+                    Preview shows <strong id="pptTaskCount">—</strong> task(s) matching the filters above.
                     The exported PPT is generated with crisp vector graphics.
                 </p>
                 <!-- Actions -->
                 <div style="background:#f0f9f0;border:1px solid #c3e6cb;border-radius:6px;padding:14px;margin-bottom:10px;">
-                    <div style="font-weight:600;margin-bottom:10px;font-size:0.95em;">Export options</div>
+                    <div style="font-weight:600;margin-bottom:10px;font-size:0.95em;">Generate</div>
                     <button onclick="downloadGanttPpt()" class="btn btn-primary" style="background:#1B4332;border-color:#1B4332;margin-bottom:10px;">
                         📑 Export &amp; Open in PowerPoint
                     </button>
@@ -9659,11 +9763,51 @@
         // ── Gantt PPT Export ─────────────────────────────────────────────────
         function openGanttPptModal() {
             document.getElementById('ganttPptModal').style.display = 'flex';
+            populatePptPhaseChecklist();
+            document.getElementById('pptMacroOnly').checked = false;
+            document.getElementById('pptDateFrom').value = '';
+            document.getElementById('pptDateTo').value = '';
             _drawGanttPptPreview();
         }
 
         function closeGanttPptModal() {
             document.getElementById('ganttPptModal').style.display = 'none';
+        }
+
+        // Builds the Gate/Phase checklist from this project's actual phase values,
+        // all checked by default (unchecking narrows the export, same as the dashboard's phase filter).
+        function populatePptPhaseChecklist() {
+            const phases = [...new Set(tasks.map(t => t.phase))].filter(Boolean).sort(comparePhases);
+            const wrap = document.getElementById('pptPhaseChecklist');
+            wrap.innerHTML = phases.map(p => `
+                <label style="display:inline-flex;align-items:center;gap:4px;margin:2px 10px 2px 0;font-weight:normal;font-size:0.85em;cursor:pointer;">
+                    <input type="checkbox" class="ppt-phase-cb" value="${escapeHtml(p)}" checked onchange="_drawGanttPptPreview()">
+                    ${escapeHtml(p)}
+                </label>`).join('');
+        }
+
+        function _setAllPptPhases(checked) {
+            document.querySelectorAll('.ppt-phase-cb').forEach(cb => cb.checked = checked);
+            _drawGanttPptPreview();
+        }
+
+        function _resetPptDateRange() {
+            document.getElementById('pptDateFrom').value = '';
+            document.getElementById('pptDateTo').value = '';
+            _drawGanttPptPreview();
+        }
+
+        // Current filter selections, shared by the preview renderer and the export calls
+        // so what you see in the preview is exactly what gets generated.
+        function _collectPptExportFilters() {
+            const boxes = document.querySelectorAll('.ppt-phase-cb');
+            const selected = Array.from(boxes).filter(cb => cb.checked).map(cb => cb.value);
+            return {
+                phases: (boxes.length && selected.length < boxes.length) ? selected : null,
+                macro_only: document.getElementById('pptMacroOnly').checked,
+                date_from: document.getElementById('pptDateFrom').value || null,
+                date_to: document.getElementById('pptDateTo').value || null,
+            };
         }
 
         function _drawGanttPptPreview() {
@@ -9676,18 +9820,49 @@
             ctx.clearRect(0, 0, CW, CH);
 
             // Active tasks: Planned, In Process, On Hold, Review (Completed/Cancelled excluded, like done/closed work)
-            const allTasks = tasks.filter(t => ['In Process', 'Planned', 'On Hold', 'Review'].includes(t.status));
-            document.getElementById('pptTaskCount').textContent = allTasks.length;
+            let allTasks = tasks.filter(t => ['In Process', 'Planned', 'On Hold', 'Review'].includes(t.status));
 
-            // Date range across ALL tasks (so timeline spans full project)
+            // ── PM-selected export filters (mirrored server-side in gantt_ppt_exporter.py) ──
+            const filters = _collectPptExportFilters();
+            if (filters.phases) {
+                const phaseSet = new Set(filters.phases);
+                allTasks = allTasks.filter(t => phaseSet.has((t.phase || 'Other').trim()));
+            }
+            if (filters.macro_only) allTasks = allTasks.filter(t => !t.parent_id);
+
+            const dfFilter = filters.date_from ? new Date(filters.date_from) : null;
+            const dtFilter = filters.date_to   ? new Date(filters.date_to)   : null;
+            if (dfFilter || dtFilter) {
+                allTasks = allTasks.filter(t => {
+                    let s = t.entered ? new Date(t.entered) : null;
+                    let e = t.due     ? new Date(t.due)     : null;
+                    if (!s && !e) return false;
+                    s = s || e; e = e || s;
+                    if (dfFilter && e < dfFilter) return false;
+                    if (dtFilter && s > dtFilter) return false;
+                    return true;
+                });
+            }
+
+            document.getElementById('pptTaskCount').textContent = allTasks.length;
+            if (!allTasks.length) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '14px Segoe UI,sans-serif';
+                ctx.fillText('No tasks match the selected filters', 40, 40);
+                return;
+            }
+
+            // Date range: spans the filtered task set, unless an explicit From/To overrides it
             let minD = null, maxD = null;
-            tasks.forEach(t => {
+            allTasks.forEach(t => {
                 const s = t.entered ? new Date(t.entered) : null;
                 const e = t.due     ? new Date(t.due)     : null;
                 if (s && (!minD || s < minD)) minD = s;
                 if (e && (!maxD || e > maxD)) maxD = e;
             });
-            if (!minD) { ctx.fillStyle = 'var(--color-text-muted)'; ctx.fillText('No dated tasks', 40, 40); return; }
+            if (dfFilter) minD = dfFilter;
+            if (dtFilter) maxD = dtFilter;
+            if (!minD || !maxD) { ctx.fillStyle = 'var(--color-text-muted)'; ctx.fillText('No dated tasks', 40, 40); return; }
 
             // Snap to month boundaries
             const projStart = new Date(minD.getFullYear(), minD.getMonth(), 1);
@@ -9973,7 +10148,7 @@
                 const resp = await fetch(API_BASE + '/export-gantt-ppt', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ critical_ids: critIds })
+                    body: JSON.stringify({ critical_ids: critIds, ..._collectPptExportFilters() })
                 });
                 await _downloadPptResponse(resp, 'gantt.pptx');
                 showNotification('✅ PPT downloaded!', 'success');
@@ -9994,7 +10169,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         save_path: path,
-                        critical_ids: (_criticalPathIds && _criticalPathIds.size > 0) ? Array.from(_criticalPathIds) : null
+                        critical_ids: (_criticalPathIds && _criticalPathIds.size > 0) ? Array.from(_criticalPathIds) : null,
+                        ..._collectPptExportFilters()
                     })
                 });
                 const data = await resp.json();

@@ -5,7 +5,7 @@
 ; ============================================================
 
 #define AppName        "Overall Programs Dashboard"
-#define AppVersion     "1.3.12"
+#define AppVersion     "1.3.13"
 #define AppPublisher   "Emerson"
 #define ServiceName    "OverallDashboard"
 #define DefaultPort    "8092"
