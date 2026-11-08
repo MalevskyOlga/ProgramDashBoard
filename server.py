@@ -148,6 +148,16 @@ def block_viewer_writes():
             return jsonify({'error': 'View-only access — you do not have permission to make changes.'}), 403
 
 
+def _active_division_name():
+    """Display name of the division the logged-in user is viewing ('' if none)."""
+    try:
+        key = tenancy.current_division_key()
+        div = tenancy.get_division_by_key(key) if key else None
+        return (div or {}).get('name') or ''
+    except Exception:
+        return ''
+
+
 @app.context_processor
 def inject_user_context():
     """Make the current user + division list available to all templates."""
@@ -168,6 +178,7 @@ def inject_user_context():
         'is_division_admin': session.get('role') == 'division_admin',
         'is_viewer': session.get('role') == 'viewer',
         'active_division': tenancy.current_division_key(),
+        'active_division_name': _active_division_name(),
         'all_divisions': divisions,
     }
 
@@ -320,6 +331,42 @@ def admin_home():
     return render_template('admin.html',
                            divisions=tenancy.list_divisions(include_inactive=True),
                            users=tenancy.list_users())
+
+
+@app.route('/admin/backup')
+@superadmin_required
+def admin_backup():
+    """Download one zip with the control DB and every division DB (superadmin only)."""
+    import io
+    import sqlite3
+    import tempfile
+    import zipfile
+    from datetime import datetime
+
+    stamp = datetime.now().strftime('%Y-%m-%d_%H%M%S')
+    sources = [('control.db', config.CONTROL_DATABASE_PATH)]
+    sources += [(f'divisions/{p.name}', p) for p in sorted(config.DIVISIONS_DIR.glob('*.db'))]
+
+    buf = io.BytesIO()
+    with tempfile.TemporaryDirectory() as tmp, zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for arcname, src in sources:
+            dst = os.path.join(tmp, os.path.basename(arcname))
+            # SQLite online-backup API: consistent copy even while the app is writing
+            src_conn = sqlite3.connect(str(src), timeout=config.DB_TIMEOUT)
+            try:
+                dst_conn = sqlite3.connect(dst)
+                try:
+                    src_conn.backup(dst_conn)
+                finally:
+                    dst_conn.close()
+            finally:
+                src_conn.close()
+            zf.write(dst, arcname)
+
+    buf.seek(0)
+    return send_file(buf, as_attachment=True,
+                     download_name=f'OverallDashboard_Backup_{stamp}.zip',
+                     mimetype='application/zip')
 
 
 @app.route('/admin/divisions', methods=['POST'])
@@ -685,6 +732,12 @@ def api_create_task(project_name):
 
     try:
         task_id = db_manager.create_task(data)
+        insert_after = data.get('insert_after_task_id')
+        insert_before = data.get('insert_before_task_id')
+        if task_id and insert_before:
+            db_manager.place_task_after(project['id'], task_id, int(insert_before), side='before')
+        elif task_id and insert_after:
+            db_manager.place_task_after(project['id'], task_id, int(insert_after))
     except ValueError as ve:
         return jsonify({'error': str(ve)}), 409
 
@@ -1150,6 +1203,26 @@ def api_export_schematic_to_ppt(project_name):
         )
 
     return jsonify({'error': 'Failed to export schematic to PowerPoint'}), 500
+
+
+@app.route('/api/resource-load/export-ppt', methods=['POST'])
+def api_export_resource_load_ppt():
+    """Build a PowerPoint deck from the sections and tasks ticked in the Overall Resource Load tab."""
+    try:
+        from resource_ppt_exporter import ResourceLoadPptExporter
+        data = request.get_json(silent=True) or {}
+        div = _get_current_division()
+        division_name = div['name'] if div else 'Portfolio'
+        buf = ResourceLoadPptExporter(division_name).build(data)
+        stamp = datetime.now().strftime('%Y-%m-%d')
+        return send_file(
+            buf, as_attachment=True,
+            download_name=f'Resource Load - {division_name} - {stamp}.pptx',
+            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/portfolio-schedule/export-ppt')

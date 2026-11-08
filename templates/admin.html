@@ -94,6 +94,14 @@
         </div>
 
         <div class="card">
+            <h2>Backup</h2>
+            <p class="muted">Downloads one zip with the control database (users, divisions) and every division database. Only superadmins can see this page.</p>
+            <form method="get" action="{{ url_for('admin_backup') }}">
+                <button class="primary" type="submit">⬇ Download backup</button>
+            </form>
+        </div>
+
+        <div class="card">
             <h2>Users</h2>
             <table>
                 <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Division</th>

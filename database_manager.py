@@ -558,6 +558,55 @@ class DatabaseManager:
                 (max_due, datetime.now().isoformat(), parent_id)
             )
 
+    def place_task_after(self, project_id, new_task_id, anchor_task_id, side='after'):
+        """Give a newly created task the row position directly after (or before) the anchor.
+
+        The anchor's whole block (its top-level ancestor and all of that ancestor's
+        sub-tasks) stays together, so the new task lands just after or just before that
+        block. Every task in the project is then renumbered (row_order = 10, 20, 30, ...).
+        Returns False if either task is not in the project.
+        """
+        conn = self.get_connection()
+        try:
+            cursor = conn.cursor()
+            rows = cursor.execute(
+                'SELECT id, parent_id FROM tasks WHERE project_id = ? ORDER BY row_order, id',
+                (project_id,)
+            ).fetchall()
+            parent_of = {r[0]: r[1] for r in rows}
+            if anchor_task_id not in parent_of or new_task_id not in parent_of:
+                return False
+
+            # Walk up from the anchor to its top-level ancestor (guarded against bad data)
+            top = anchor_task_id
+            hops = 0
+            while parent_of.get(top) is not None and hops <= len(parent_of):
+                top = parent_of[top]
+                hops += 1
+
+            def in_block(task_id):
+                current, steps = task_id, 0
+                while current is not None and steps <= len(parent_of):
+                    if current == top:
+                        return True
+                    current = parent_of.get(current)
+                    steps += 1
+                return False
+
+            ids = [r[0] for r in rows if r[0] != new_task_id]
+            block_positions = [i for i, tid in enumerate(ids) if in_block(tid)]
+            if side == 'before':
+                insert_at = block_positions[0] if block_positions else len(ids)
+            else:
+                insert_at = block_positions[-1] + 1 if block_positions else len(ids)
+            ids.insert(insert_at, new_task_id)
+            for order, tid in enumerate(ids, start=1):
+                cursor.execute('UPDATE tasks SET row_order = ? WHERE id = ?', (order * 10, tid))
+            conn.commit()
+            return True
+        finally:
+            conn.close()
+
     def create_task(self, task_data):
         """Create a new task"""
         conn = self.get_connection()
@@ -1475,6 +1524,7 @@ class DatabaseManager:
             SELECT
                 p.name AS project_name,
                 p.manager AS project_manager,
+                p.gate_5_date AS manual_gate_5_date,
                 t.id AS task_id,
                 t.name AS task_name,
                 t.phase,
@@ -1725,7 +1775,9 @@ class DatabaseManager:
                 'delayed_critical_count': sum(1 for task in chain if task['is_delayed']),
                 'active_critical_count': sum(1 for task in chain if task['is_active_today']),
                 'milestone_critical_count': sum(1 for task in chain if task['milestone']),
-                'gate_5_date': target_gate['end_date'] if target_gate.get('gate_number') == 5 else None,
+                # Manual Gate 5 date (set from the project header Edit dialog) overrides the Gantt milestone
+                'gate_5_date': (project_tasks[0].get('manual_gate_5_date')
+                                or (target_gate['end_date'] if target_gate.get('gate_number') == 5 else None)),
                 'next_gate_name': selected_gate['gate_name'],
                 'next_gate_date': selected_gate['gate_date'],
                 'next_gate_is_upcoming': selected_gate['is_upcoming'],

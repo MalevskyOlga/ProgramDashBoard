@@ -485,6 +485,29 @@
             height: 41px;
         }
 
+        /* "+ Add new task" strip between top-level rows: hidden until the pointer reaches it */
+        .task-row { position: relative; }
+        .insert-task-zone {
+            position: absolute; left: 0; right: 0; bottom: -7px; height: 14px; z-index: 6;
+            display: flex; justify-content: center; align-items: center; cursor: pointer;
+        }
+        /* Small gray "+" beside the row number; click adds a task after that row */
+        .rownum-cell { display: flex; align-items: center; gap: 4px; }
+        .rownum-add {
+            width: 16px; height: 16px; padding: 0; line-height: 1; border-radius: 50%;
+            border: 1px solid #c9ced6; background: var(--color-surface); color: #9aa3ad;
+            font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+        }
+        .rownum-add:hover { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+
+        /* Macro/sub-task view switch in the Gantt toolbar */
+        .subtask-view-btn {
+            border: none; background: transparent; padding: 6px 12px; border-radius: 6px;
+            font-size: 12px; font-weight: 600; color: var(--color-text-muted); cursor: pointer;
+        }
+        .subtask-view-btn.active { background: var(--color-accent); color: #fff; }
+        .task-row.row-selected { background: #e3edf9; box-shadow: inset 4px 0 0 var(--color-accent); }
+
         .task-row:hover {
             background: #e8f5e9;
         }
@@ -1809,6 +1832,24 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
+        /* Add/Edit Task window docked to the left edge: no dimming, the page stays visible and clickable */
+        .modal.task-side-panel {
+            background: transparent;
+            pointer-events: none;
+            align-items: stretch;
+            justify-content: flex-start;
+        }
+        .modal.task-side-panel .modal-content {
+            pointer-events: auto;
+            max-width: none;
+            width: min(480px, 92vw);
+            height: 100vh;
+            max-height: 100vh;
+            border-radius: 0 12px 12px 0;
+            box-shadow: 6px 0 24px rgba(0,0,0,0.25);
+            padding: 22px 22px 18px;
+        }
+
         .modal-header {
             font-size: 1.5em;
             margin-bottom: 20px;
@@ -1997,9 +2038,32 @@
             <span class="header-meta-item">Program Manager: <span id="programManagerDisplay" {% if not is_viewer %}class="editable-header-field" title="Click to edit" onclick="editProgramManager()"{% endif %}>{{PROGRAM_MANAGER or 'Click to add…'}}</span></span>
             <span class="header-meta-item">Start: <strong id="headerStartDate">—</strong></span>
             <span class="header-meta-item">Expected End (Gate 5): <span id="headerEndDate" {% if not is_viewer %}class="editable-header-field" title="Click to set date" onclick="editGate5Date()"{% endif %}>—</span></span>
+            {% if not is_viewer %}<button type="button" class="header-meta-edit-btn" onclick="openHeaderEditModal()" title="Edit project manager, program manager and Gate 5 date">✏️ Edit</button>{% endif %}
         </div>
         <div class="save-indicator" id="saveIndicator"></div>
     </div>
+
+    {% if not is_viewer %}
+    <div id="headerEditOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;" onclick="closeHeaderEditModal()"></div>
+    <div id="headerEditModal" role="dialog" aria-modal="true" aria-labelledby="headerEditTitle" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(440px,94vw);background:#fff;color:#222;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.25);z-index:9001;padding:18px 20px;font-size:14px;">
+        <div id="headerEditTitle" style="font-weight:700;font-size:1.05em;margin-bottom:12px;">Edit project details</div>
+        <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-weight:600;font-size:0.85em;">Project Manager
+            <input type="text" id="headerEditPM" style="padding:6px 8px;border:1px solid #bbb;border-radius:4px;font-size:14px;font-weight:400;">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-weight:600;font-size:0.85em;">Program Manager
+            <input type="text" id="headerEditPGM" style="padding:6px 8px;border:1px solid #bbb;border-radius:4px;font-size:14px;font-weight:400;">
+        </label>
+        <label style="display:flex;flex-direction:column;gap:4px;margin-bottom:6px;font-weight:600;font-size:0.85em;">Expected End (Gate 5)
+            <input type="date" id="headerEditGate5" style="padding:6px 8px;border:1px solid #bbb;border-radius:4px;font-size:14px;font-weight:400;">
+        </label>
+        <div style="font-size:0.78em;color:#666;margin-bottom:6px;">Leave the date empty to use the Gate 5 milestone from the Gantt.</div>
+        <div id="headerEditError" style="color:#b91c1c;font-size:0.85em;min-height:1em;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;">
+            <button type="button" onclick="closeHeaderEditModal()" style="background:#f1f1f1;color:#222;border:1px solid #ccc;border-radius:6px;padding:6px 14px;cursor:pointer;">Cancel</button>
+            <button type="button" id="headerEditSave" onclick="saveHeaderEdit()" style="background:#1d4ed8;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-weight:600;cursor:pointer;">Save</button>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="stats-bar" id="stats">
         <div class="stat-item">
@@ -2065,6 +2129,11 @@
             <button class="gantt-view-btn" data-view="highlevel">⚡ High Level</button>
         </div>
         
+        <div class="gantt-view-toggle" id="subtaskViewToggle" title="Show or hide the sub-tasks under each macro task">
+            <button type="button" class="subtask-view-btn" data-subview="collapsed" onclick="setSubtaskView('collapsed')">▸ Collapse macro tasks</button>
+            <button type="button" class="subtask-view-btn active" data-subview="open" onclick="setSubtaskView('open')">▾ Overall open tasks</button>
+        </div>
+
         <span class="toolbar-label">Zoom:</span>
         <div class="view-toggle">
             <button class="view-btn active" onclick="changeZoom('month')">Monthly</button>
@@ -2251,10 +2320,23 @@
         ✓ Changes saved successfully
     </div>
 
+    {% if not is_viewer %}
+    <!-- Row action bar: shown while a row is selected -->
+    <div id="rowActionBar" style="display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:8000;background:var(--color-surface);border:1px solid var(--color-border);border-radius:10px;box-shadow:var(--shadow-md);padding:8px 12px;align-items:center;gap:10px;font-size:13px;">
+        <span id="rowActionLabel" style="font-weight:600;color:var(--color-text);"></span>
+        <button type="button" class="btn btn-primary" onclick="openAddTaskRelative(selectedRowTaskId, 'above')">↑ Add task above</button>
+        <button type="button" class="btn btn-primary" onclick="openAddTaskRelative(selectedRowTaskId, 'below')">↓ Add task below</button>
+        <button type="button" onclick="clearRowSelection()" title="Deselect" style="background:none;border:1px solid var(--color-border);border-radius:6px;padding:4px 9px;cursor:pointer;color:var(--color-text-muted);">✕</button>
+    </div>
+    {% endif %}
+
     <!-- Add/Edit Task Modal -->
-    <div class="modal" id="taskModal">
+    <div class="modal task-side-panel" id="taskModal">
         <div class="modal-content">
-            <div class="modal-header" id="modalTitle">Add New Task</div>
+            <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <span id="modalTitle">Add New Task</span>
+                <button type="button" onclick="closeTaskModal()" title="Close" aria-label="Close" style="background:none;border:none;font-size:0.8em;line-height:1;cursor:pointer;color:var(--color-text-muted);padding:4px 8px;">✕</button>
+            </div>
             <form id="taskForm" onsubmit="saveTask(event)">
                 <div class="form-group">
                     <label>Task Name *</label>
@@ -3165,6 +3247,9 @@
         
         let currentEditId = null;
         let pendingSubtaskParentId = null; // set while the add modal is in "sub-task" mode
+        let pendingInsertAfterId = null;   // set when adding via the "+ Add new task" strip between rows
+        let pendingInsertBeforeId = null;  // set when adding "above" the selected row
+        let selectedRowTaskId = null;      // row the user is standing on (drives the row action bar)
         let editingCell = null;
         let currentZoom = 'month';
         let currentGanttView = 'detailed'; // 'detailed' or 'highlevel'
@@ -3252,6 +3337,34 @@
             if (collapsedParents.has(taskId)) collapsedParents.delete(taskId);
             else collapsedParents.add(taskId);
             applyFilters();
+            renderSubtaskViewToggle();
+        }
+
+        // Toolbar switch: "Collapse macro tasks" hides every macro task's sub-tasks;
+        // "Overall open tasks" (default) shows all sub-tasks open.
+        function subtaskParentIds() {
+            return tasks.filter(t => !t.parent_id && hasSubtasks(t.id)).map(t => t.id);
+        }
+
+        function currentSubtaskView() {
+            const parents = subtaskParentIds();
+            if (!parents.length || collapsedParents.size === 0) return 'open';
+            if (parents.every(id => collapsedParents.has(id))) return 'collapsed';
+            return 'mixed'; // some macro tasks opened by hand with the caret
+        }
+
+        function setSubtaskView(mode) {
+            collapsedParents.clear();
+            if (mode === 'collapsed') subtaskParentIds().forEach(id => collapsedParents.add(id));
+            applyFilters();
+            renderSubtaskViewToggle();
+        }
+
+        function renderSubtaskViewToggle() {
+            const view = currentSubtaskView();
+            document.querySelectorAll('.subtask-view-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.subview === view);
+            });
         }
 
         // Bidirectional client-side mirror of the server-side hard-block rule (instant
@@ -4248,6 +4361,12 @@
                     taskData.parent_id = task.parent_id || null;
                 }
 
+                if (isNew && task.insert_after_task_id) {
+                    taskData.insert_after_task_id = task.insert_after_task_id;
+                }
+                if (isNew && task.insert_before_task_id) {
+                    taskData.insert_before_task_id = task.insert_before_task_id;
+                }
                 let response;
                 if (isNew) {
                     response = await fetch(`${API_BASE}/task`, {
@@ -4693,6 +4812,81 @@
             };
             input.addEventListener('blur', save);
             input.addEventListener('keydown', e => { if (e.key === 'Enter') input.blur(); if (e.key === 'Escape') { input.value = current; input.blur(); } });
+        }
+
+        // ── Header "Edit" dialog: PM, PGM and Gate 5 date in one place ──
+        let headerEditOriginal = { project_manager: '', program_manager: '', gate_5_date: '' };
+
+        function _headerFieldText(spanId) {
+            const text = (document.getElementById(spanId)?.textContent || '').trim();
+            return text === 'Click to add…' ? '' : text;
+        }
+
+        function openHeaderEditModal() {
+            headerEditOriginal = {
+                project_manager: _headerFieldText('projectManagerDisplay'),
+                program_manager: _headerFieldText('programManagerDisplay'),
+                gate_5_date: manualGate5Date || ''
+            };
+            document.getElementById('headerEditPM').value = headerEditOriginal.project_manager;
+            document.getElementById('headerEditPGM').value = headerEditOriginal.program_manager;
+            document.getElementById('headerEditGate5').value = headerEditOriginal.gate_5_date;
+            document.getElementById('headerEditError').textContent = '';
+            const modal = document.getElementById('headerEditModal');
+            modal.onkeydown = e => {
+                if (e.key === 'Escape') closeHeaderEditModal();
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') saveHeaderEdit();
+            };
+            document.getElementById('headerEditOverlay').style.display = 'block';
+            modal.style.display = 'block';
+            document.getElementById('headerEditPM').focus();
+        }
+
+        function closeHeaderEditModal() {
+            document.getElementById('headerEditOverlay').style.display = 'none';
+            document.getElementById('headerEditModal').style.display = 'none';
+        }
+
+        function _setHeaderFieldText(spanId, value) {
+            const el = document.getElementById(spanId);
+            if (el) el.textContent = value || 'Click to add…';
+        }
+
+        async function saveHeaderEdit() {
+            const fields = {
+                project_manager: document.getElementById('headerEditPM').value.trim(),
+                program_manager: document.getElementById('headerEditPGM').value.trim(),
+                gate_5_date: document.getElementById('headerEditGate5').value.trim()
+            };
+            const changed = Object.keys(fields).filter(key => fields[key] !== headerEditOriginal[key]);
+            if (changed.length === 0) { closeHeaderEditModal(); return; }
+
+            const btn = document.getElementById('headerEditSave');
+            const errEl = document.getElementById('headerEditError');
+            btn.disabled = true;
+            errEl.textContent = '';
+            try {
+                for (const key of changed) {
+                    const res = await fetch(`${API_BASE}/${key}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ [key]: fields[key] })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+                }
+                headerEditOriginal = { ...fields };
+                _setHeaderFieldText('projectManagerDisplay', fields.project_manager);
+                _setHeaderFieldText('programManagerDisplay', fields.program_manager);
+                manualGate5Date = fields.gate_5_date;
+                updateHeaderDates();
+                closeHeaderEditModal();
+            } catch (err) {
+                console.error('Header edit save failed:', err);
+                errEl.textContent = 'Save failed: ' + err.message;
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         function editGate5Date() {
@@ -6481,7 +6675,7 @@
                     const gatePassedAfterRework = signOff && signOff.status === 'Passed' && !!signOff.rework_sign_off_date;
                     const gatePassed = signOff && signOff.status === 'Passed' && !gatePassedAfterRework;
 
-                    const rowClass = `task-row ${isSub ? 'subtask' : ''} ${isParent ? 'has-subtasks' : ''} ${isSub && !isLastChild(task) ? 'subtask-has-next' : ''} ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${isDisplayCritical(task) ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
+                    const rowClass = `task-row ${isSub ? 'subtask' : ''} ${isParent ? 'has-subtasks' : ''} ${isSub && !isLastChild(task) ? 'subtask-has-next' : ''} ${selectedRowTaskId === task.id ? 'row-selected' : ''} ${task.exceedsGateDeadline ? 'exceeds-gate-deadline' : ''} ${task.gateMoved ? 'gate-moved' : ''} ${isDisplayCritical(task) ? 'critical' : ''} ${isTaskOverdue ? 'overdue' : ''} ${task.tailed_out ? 'tailed-out' : ''} ${task.is_rework_cause && !isGate ? 'rework-cause' : ''} ${gatePassedRework ? 'gate-passed-rework' : (gatePassed || gatePassedAfterRework) ? 'gate-passed' : ''}`;
 
                     const statusClass = task.status.toLowerCase().replace(' ', '-');
                     const statusLabel = task.status === 'In Process' ? 'In Process' : task.status;
@@ -6541,7 +6735,7 @@
                     const showReworkPill = (gatePassedRework || gatePassedAfterRework) && signOff && signOff.rework_due_date;
                     taskHTML += `
                         <div class="${rowClass}" data-task-id="${task.id}">
-                            <div>${rowNum}</div>
+                            <div class="rownum-cell"><span>${rowNum}</span>${(!IS_VIEWER && !task.parent_id) ? `<button type="button" class="rownum-add" onclick="event.stopPropagation();openAddTaskAfter(${task.id})" title="Add a new task after #${rowNum}">+</button>` : ''}</div>
                             <div class="task-name" title="${task.name}">${caretHTML}${task.tailed_out ? '🚫' : task.milestone ? '⭐' : ''}${criticalBadgeHTML}${clonedFromBadge}${commentBadge}${attachBadge} ${task.name}${gateBadge}${reworkTasksBtnHTML}</div>
                             <div>${task.owner}</div>
                             <div class="dept-cell${getTaskDepartments(task).includes('Unassigned') ? ' dept-unassigned' : ''}" title="${escapeHtml(getTaskDepartmentLabel(task))}">${escapeHtml(getTaskDepartmentLabel(task))}</div>
@@ -7597,7 +7791,70 @@
             };
         }
 
+        // Add a task right after another top-level task (the "+ Add new task" strip between rows)
+        function openAddTaskAfter(anchorId) {
+            const anchor = tasks.find(t => t.id === anchorId);
+            openAddTaskModal();
+            pendingInsertAfterId = anchorId;
+            if (anchor) {
+                document.getElementById('taskPhase').value = anchor.phase;
+                document.getElementById('modalTitle').textContent = `Add New Task after #${anchor.rowNum ?? ''}`;
+            }
+        }
+
+        // Add a task above or below the selected row (uses the row's top-level block)
+        function openAddTaskRelative(anchorId, side) {
+            const anchor = tasks.find(t => t.id === anchorId);
+            if (!anchor) return;
+            openAddTaskModal();
+            if (side === 'above') pendingInsertBeforeId = anchorId;
+            else pendingInsertAfterId = anchorId;
+            document.getElementById('taskPhase').value = anchor.phase;
+            document.getElementById('modalTitle').textContent = `Add New Task ${side} #${anchor.rowNum ?? ''}`;
+        }
+
+        function renderRowActionBar() {
+            const bar = document.getElementById('rowActionBar');
+            if (!bar) return;
+            const t = selectedRowTaskId !== null ? tasks.find(x => x.id === selectedRowTaskId) : null;
+            if (!t) { bar.style.display = 'none'; return; }
+            document.getElementById('rowActionLabel').textContent = `Selected: #${t.rowNum ?? ''} ${t.name}`;
+            bar.style.display = 'flex';
+        }
+
+        function selectTaskRow(id) {
+            selectedRowTaskId = id;
+            document.querySelectorAll('#taskTableBody .task-row.row-selected').forEach(r => r.classList.remove('row-selected'));
+            const row = document.querySelector(`#taskTableBody .task-row[data-task-id="${id}"]`);
+            if (row) row.classList.add('row-selected');
+            renderRowActionBar();
+        }
+
+        function clearRowSelection() {
+            selectedRowTaskId = null;
+            document.querySelectorAll('#taskTableBody .task-row.row-selected').forEach(r => r.classList.remove('row-selected'));
+            renderRowActionBar();
+        }
+
+        // Click a row (not one of its buttons or inputs) to stand on it
+        document.addEventListener('click', e => {
+            if (IS_VIEWER) return;
+            if (e.target.closest('#rowActionBar, #taskModal')) return;
+            const row = e.target.closest('#taskTableBody .task-row[data-task-id]');
+            if (!row) return;
+            if (e.target.closest('button, input, select, textarea, a, .insert-task-zone, .gantt-menu')) return;
+            selectTaskRow(Number(row.dataset.taskId));
+        });
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && selectedRowTaskId !== null && !document.getElementById('taskModal').classList.contains('active')) {
+                clearRowSelection();
+            }
+        });
+
         function openAddTaskModal() {
+            pendingInsertAfterId = null;
+            pendingInsertBeforeId = null;
             currentEditId = null;
             pendingSubtaskParentId = null;
             document.getElementById('modalTitle').textContent = 'Add New Task';
@@ -7697,6 +7954,7 @@
         }
 
         function closeTaskModal() {
+            pendingInsertAfterId = null;
             document.getElementById('taskModal').classList.remove('active');
             currentEditId = null;
             pendingSubtaskParentId = null;
@@ -7861,6 +8119,12 @@
                 } else {
                     // Add new task (possibly a sub-task)
                     taskData.parent_id = pendingSubtaskParentId || null;
+                    const insertAfterId = pendingInsertAfterId;
+                    const insertBeforeId = pendingInsertBeforeId;
+                    pendingInsertAfterId = null;
+                    pendingInsertBeforeId = null;
+                    if (insertAfterId) taskData.insert_after_task_id = insertAfterId;
+                    if (insertBeforeId) taskData.insert_before_task_id = insertBeforeId;
                     const savedTask = await saveToAPI(taskData, true);
 
                     // Add to local array with server-assigned ID
@@ -7870,6 +8134,8 @@
                     // a real "#" value instead of showing "undefined" until the next reload.
                     tasks = orderTasksByHierarchy(tasks);
                     assignRowNumbers(tasks);
+                    // Inserted next to an existing row: reload so the server's row order and numbers apply
+                    if (insertAfterId || insertBeforeId) await loadFromAPI();
                     showNotification('✓ Task added successfully!', 'success');
 
                     // Sync dependencies for new task
