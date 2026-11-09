@@ -1968,9 +1968,8 @@ def api_resource_project_matrix():
     all_disciplines = sorted(set(row[1] for row in mappings))
 
     # Count tasks per (project, owner) in the active window
-    db_path = config.DATABASE_PATH
-    t_conn = sqlite3.connect(str(db_path))
-    t_conn.row_factory = sqlite3.Row
+    # Read from the logged-in division's DB (same source as the discipline mappings above).
+    t_conn = db_manager.get_connection()
     task_rows = t_conn.execute("""
         SELECT p.name AS project_name, TRIM(t.owner) AS owner, COUNT(*) AS cnt
         FROM tasks t
@@ -2073,8 +2072,8 @@ def api_discipline_resource_load():
     cutoff_date = _date(cutoff_year, cutoff_month, 1).isoformat()
 
     # Load active tasks — optionally filtered to one project
-    db_path = config.DATABASE_PATH
-    t_conn = sqlite3.connect(str(db_path))
+    # Read from the logged-in division's DB (not the legacy config.DATABASE_PATH file).
+    t_conn = db_manager.get_connection()
     t_conn.execute('''
         CREATE TABLE IF NOT EXISTS archived_projects (
             id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -2149,8 +2148,7 @@ def api_discipline_resource_load():
 
     # Inject PM overhead (skip for single-project view — overhead is portfolio-level)
     if not project_name_filter:
-        pm_conn = sqlite3.connect(str(db_path))
-        pm_conn.row_factory = sqlite3.Row
+        pm_conn = db_manager.get_connection()
         pm_proj_rows = pm_conn.execute(f"""
             SELECT TRIM(p.manager) AS manager,
                    MIN(CASE WHEN t.status IN ({active_statuses}) THEN t.start_date ELSE NULL END) AS proj_start,
